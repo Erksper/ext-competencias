@@ -1,0 +1,14 @@
+{
+    "entity": false,
+    "layouts": false,
+    "tab": true,
+    "acl": false,
+    "customizable": false,
+    "importable": false,
+    "notifications": false,
+    "stream": false,
+    "disabled": false,
+    "type": "Base",
+    "module": "Competencias",
+    "object": false
+}

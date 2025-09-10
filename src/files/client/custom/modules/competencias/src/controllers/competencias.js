@@ -13,14 +13,14 @@ define(['controller'], function (Controller) {
         roleSelection: function (options) {
             this.main('CompetenciasSeleccionRol', {
                 teamId: options.teamId,
-                teamName: decodeURIComponent(options.teamName)
+                teamName: decodeURIComponent(options.teamName || '')
             });
         },
         
         userSelection: function (options) {
             this.main('CompetenciasSeleccionUsuario', {
                 teamId: options.teamId,
-                teamName: decodeURIComponent(options.teamName),
+                teamName: decodeURIComponent(options.teamName || ''),
                 role: options.role
             });
         },
@@ -28,9 +28,9 @@ define(['controller'], function (Controller) {
         survey: function (options) {
             this.main('CompetenciasEncuesta', {
                 teamId: options.teamId,
-                teamName: decodeURIComponent(options.teamName),
+                teamName: decodeURIComponent(options.teamName || ''),
                 userId: options.userId,
-                userName: decodeURIComponent(options.userName),
+                userName: decodeURIComponent(options.userName || ''),
                 role: options.role
             });
         }
