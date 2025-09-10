@@ -1,0 +1,21 @@
+{
+    "controller": {
+        "Competencias": "competencias:controllers.competencias"
+    },
+    "views": {
+        "CompetenciasIndex": "competencias:views.competencias-index",
+        "CompetenciasSeleccionEquipo": "competencias:views.seleccion-equipo",
+        "CompetenciasSeleccionRol": "competencias:views.seleccion-rol", 
+        "CompetenciasSeleccionUsuario": "competencias:views.seleccion-usuario",
+        "CompetenciasEncuesta": "competencias:views.encuesta"
+    },
+    "menu": {
+        "tab": {
+            "Competencias": {
+                "iconClass": "fas fa-chart-bar",
+                "isInMore": false,
+                "order": 15
+            }
+        }
+    }
+}

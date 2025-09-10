@@ -1,0 +1,14 @@
+{
+    "module": "Competencias",
+    "name": "Competencias",
+    "description": "Encuestas y graficas de evaluaciones de competencias de asesores y gerentes.",
+    "author": "Sebastian Silva",
+    "bundled": true,
+    "acceptableVersions": [
+        ">=9.1.0"
+    ],
+    "php": [
+        ">=8.2"
+    ],
+    "scripts": []
+}

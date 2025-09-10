@@ -1,0 +1,18 @@
+[
+    {
+        "route": "/Competencias/:action",
+        "method": "get",
+        "params": {
+            "controller": "Competencias",
+            "action": ":action"
+        }
+    },
+    {
+        "route": "/Competencias/:action",
+        "method": "post",
+        "params": {
+            "controller": "Competencias",
+            "action": ":action"
+        }
+    }
+]

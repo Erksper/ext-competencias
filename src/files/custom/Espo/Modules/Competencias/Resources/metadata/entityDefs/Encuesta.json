@@ -1,0 +1,80 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 150
+        },
+        "equipo": {
+            "type": "link",
+            "entity": "Team"
+        },
+        "usuarioEvaluado": {
+            "type": "link",
+            "entity": "User"
+        },
+        "usuarioEvaluador": {
+            "type": "link",
+            "entity": "User"
+        },
+        "rolUsuario": {
+            "type": "enum",
+            "options": ["asesor", "gerente"],
+            "required": true
+        },
+        "fechaEncuesta": {
+            "type": "datetime",
+            "required": true
+        },
+        "estado": {
+            "type": "enum",
+            "options": ["borrador", "completada"],
+            "default": "completada"
+        },
+        "totalPreguntas": {
+            "type": "int",
+            "default": 0
+        },
+        "preguntasRespondidas": {
+            "type": "int",
+            "default": 0
+        },
+        "porcentajeCompletado": {
+            "type": "int",
+            "default": 0
+        },
+        "fechaCreacion": {
+            "type": "datetime"
+        },
+        "fechaModificacion": {
+            "type": "datetime"
+        },
+        "observaciones": {
+            "type": "text"
+        }
+    },
+    "links": {
+        "equipo": {
+            "type": "belongsTo",
+            "entity": "Team"
+        },
+        "usuarioEvaluado": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "usuarioEvaluador": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "respuestasEncuesta": {
+            "type": "hasMany",
+            "entity": "RespuestaEncuesta",
+            "foreignKey": "encuestaId",
+            "foreign": "encuesta"
+        }
+    },
+    "collection": {
+        "orderBy": "fechaEncuesta",
+        "order": "desc"
+    }
+}

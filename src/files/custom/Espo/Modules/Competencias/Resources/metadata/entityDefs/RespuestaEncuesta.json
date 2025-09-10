@@ -1,0 +1,49 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": false,
+            "maxLength": 150
+        },
+        "encuesta": {
+            "type": "link",
+            "entity": "Encuesta",
+            "required": true
+        },
+        "pregunta": {
+            "type": "link", 
+            "entity": "Pregunta",
+            "required": true
+        },
+        "respuesta": {
+            "type": "enum",
+            "options": ["verde", "amarillo", "rojo"],
+            "required": true
+        },
+        "fechaCreacion": {
+            "type": "datetime"
+        },
+        "fechaModificacion": {
+            "type": "datetime"
+        },
+        "comentario": {
+            "type": "text"
+        }
+    },
+    "links": {
+        "encuesta": {
+            "type": "belongsTo",
+            "entity": "Encuesta",
+             "foreign": "respuestasEncuesta"
+        },
+        "pregunta": {
+            "type": "belongsTo",
+            "entity": "Pregunta",
+            "foreign": "respuestasEncuesta"
+        }       
+    },
+    "collection": {
+        "orderBy": "fechaCreacion",
+        "order": "desc"
+    }
+}

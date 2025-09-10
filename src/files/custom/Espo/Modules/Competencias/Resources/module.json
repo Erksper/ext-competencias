@@ -1,0 +1,6 @@
+{
+    "order": 20,
+    "bundled": true,
+    "jsTranspiled": true,
+    "skipRebuild": false
+}
