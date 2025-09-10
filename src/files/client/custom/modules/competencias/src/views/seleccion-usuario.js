@@ -2,7 +2,7 @@ define(['view'], function (View) {
     
     return View.extend({
         
-        template: 'competencias:user-selection',
+        template: 'competencias:seleccion-usuario',
         
         events: {
             'click [data-action="selectUser"]': function (e) {

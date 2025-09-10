@@ -2,7 +2,7 @@ define(['view'], function (View) {
     
     return View.extend({
         
-        template: 'competencias:survey',
+        template: 'competencias:encuesta',
         
         events: {
             'click [data-action="selectColor"]': function (e) {

@@ -2,7 +2,7 @@ define(['view'], function (View) {
     
     return View.extend({
         
-        template: 'competencias:team-selection',
+        template: 'competencias:seleccion-equipo',
         
         events: {
             'click [data-action="selectTeam"]': function (e) {
