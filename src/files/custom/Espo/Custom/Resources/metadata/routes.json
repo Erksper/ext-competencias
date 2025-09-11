@@ -1,0 +1,22 @@
+[
+    {
+        "route": "Competencias/team-selection",
+        "controller": "Competencias",
+        "action": "teamSelection"
+    },
+    {
+        "route": "Competencias/role-selection/:teamId/:teamName",
+        "controller": "Competencias",
+        "action": "roleSelection"
+    },
+    {
+        "route": "Competencias/user-selection/:teamId/:teamName/:role",
+        "controller": "Competencias",
+        "action": "userSelection"
+    },
+    {
+        "route": "Competencias/survey/:teamId/:teamName/:role/:userId/:userName",
+        "controller": "Competencias",
+        "action": "survey"
+    }
+]

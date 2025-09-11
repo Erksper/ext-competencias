@@ -1,7 +1,7 @@
 {
     "module": "Competencias",
     "name": "Competencias",
-    "description": "Encuestas y graficas de evaluaciones de competencias de asesores y gerentes.",
+    "description": "Modulo de evaluacion de competencias.",
     "author": "Sebastian Silva",
     "bundled": true,
     "acceptableVersions": [

@@ -1,9 +1,12 @@
 {
+    "controllers": {
+        "Competencias": "competencias:controllers/competencias"
+    },
     "views": {
-        "CompetenciasIndex": "custom:modules/competencias/src/views/competencias-index",
-        "CompetenciasSeleccionEquipo": "custom:modules/competencias/src/views/seleccion-equipo",
-        "CompetenciasSeleccionRol": "custom:modules/competencias/src/views/seleccion-rol",
-        "CompetenciasSeleccionUsuario": "custom:modules/competencias/src/views/seleccion-usuario",
-        "CompetenciasEncuesta": "custom:modules/competencias/src/views/encuesta"
+        "CompetenciasIndex": "competencias:views/competenciasIndex",
+        "CompetenciasSeleccionEquipo": "competencias:views/seleccionEquipo",
+        "CompetenciasSeleccionRol": "competencias:views/seleccionRol",
+        "CompetenciasSeleccionUsuario": "competencias:views/seleccionUsuario",
+        "CompetenciasEncuesta": "competencias:views/encuesta"
     }
 }

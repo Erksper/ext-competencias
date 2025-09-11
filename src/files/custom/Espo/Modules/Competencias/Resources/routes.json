@@ -1,18 +1,1 @@
-[
-    {
-        "route": "/CompetenciasApp",
-        "method": "get",
-        "params": {
-            "controller": "CompetenciasApp",
-            "action": "index"
-        }
-    },
-    {
-        "route": "/CompetenciasApp/:action",
-        "method": "get",
-        "params": {
-            "controller": "CompetenciasApp",
-            "action": ":action"
-        }
-    }
-]
+[]

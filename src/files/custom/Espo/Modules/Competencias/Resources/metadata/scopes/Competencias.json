@@ -4,19 +4,12 @@
     "tab": true,
     "acl": true,
     "customizable": true,
-    "importable": false,
-    "notifications": false,
-    "stream": false,
-    "disabled": false,
-    "type": "Base",
-    "module": "Competencias",
-    "object": true,
     "menu": {
         "list": {
             "iconClass": "fas fa-chart-bar",
             "isInMore": false,
             "order": 15,
-            "url": "#CompetenciasApp"
+            "url": "#Competencias"
         }
     }
 }

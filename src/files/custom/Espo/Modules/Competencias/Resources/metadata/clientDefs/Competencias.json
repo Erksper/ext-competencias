@@ -1,0 +1,11 @@
+{
+    "controller": "competencias:controllers/competencias",
+    "views": {
+        "list": "competencias:views/list"
+    },
+    "menu": {
+        "list": {
+            "buttons": []
+        }
+    }
+}

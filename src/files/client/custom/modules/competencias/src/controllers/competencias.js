@@ -1,17 +1,45 @@
-define(['controllers/base'], function (BaseController) {
-    return BaseController.extend({
+define('competencias:controllers/competencias', ['controllers/base'], function (Base) {
+
+    return Base.extend({
         
         checkAccess: function () {
             return true;
         },
-        
-        actionList: function () {
-            console.log('Cargando aplicación Competencias directamente');
-            this.entire('CompetenciasIndex', {}, function (view) {
+
+        index: function () {
+            console.log('Custom index action executed!');
+            this.entire('competencias:views/competenciasIndex', {}, function (view) {
                 view.render();
             });
         },
-        
-        defaultAction: 'list'
+
+        teamSelection: function () {
+            this.entire('competencias:views/seleccionEquipo', {}, view => view.render());
+        },
+
+        roleSelection: function (params) {
+            this.entire('competencias:views/seleccionRol', {
+                teamId: params.teamId,
+                teamName: params.teamName
+            }, view => view.render());
+        },
+
+        userSelection: function (params) {
+            this.entire('competencias:views/seleccionUsuario', {
+                teamId: params.teamId,
+                teamName: params.teamName,
+                role: params.role
+            }, view => view.render());
+        },
+
+        survey: function (params) {
+            this.entire('competencias:views/encuesta', {
+                teamId: params.teamId,
+                teamName: params.teamName,
+                role: params.role,
+                userId: params.userId,
+                userName: params.userName
+            }, view => view.render());
+        }
     });
 });
