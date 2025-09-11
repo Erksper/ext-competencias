@@ -3,7 +3,13 @@ define(['controllers/list'], function (ListController) {
         defaultAction: 'list',
         
         beforeBeforeRender: function () {
-            this.getRouter().navigate('#CompetenciasModule', {trigger: true});
+            console.log('Redirigiendo desde entidad Competencias a CompetenciasApp');
+            this.getRouter().navigate('#CompetenciasApp', {trigger: true, replace: true});
+            return false;
+        },
+        
+        list: function () {
+            this.getRouter().navigate('#CompetenciasApp', {trigger: true, replace: true});
         }
     });
 });

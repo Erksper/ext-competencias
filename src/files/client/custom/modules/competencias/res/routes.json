@@ -1,0 +1,39 @@
+{
+    "routes": [
+        {
+            "route": "CompetenciasApp",
+            "controller": "CompetenciasApp",
+            "action": "index"
+        },
+        {
+            "route": "CompetenciasApp/:action",
+            "controller": "CompetenciasApp",
+            "action": ":action"
+        },
+        {
+            "route": "Competencias",
+            "controller": "CompetenciasApp", 
+            "action": "index"
+        },
+        {
+            "route": "Competencias/teamSelection",
+            "controller": "CompetenciasApp",
+            "action": "teamSelection"
+        },
+        {
+            "route": "Competencias/roleSelection",
+            "controller": "CompetenciasApp",
+            "action": "roleSelection"
+        },
+        {
+            "route": "Competencias/userSelection",
+            "controller": "CompetenciasApp",
+            "action": "userSelection"
+        },
+        {
+            "route": "Competencias/survey",
+            "controller": "CompetenciasApp",
+            "action": "survey"
+        }
+    ]
+}

@@ -1,13 +1,12 @@
 {
     "controller": {
-        "CompetenciasApp": "custom:modules/competencias/controllers/competencias-app"
+        "CompetenciasApp": "modules/competencias:src/controllers/competencias-app"
     },
     "views": {
-        "competencias/list": "custom:src/views/competencias/list",
-        "CompetenciasIndex": "custom:modules/competencias/views/competencias-index",
-        "CompetenciasSeleccionEquipo": "custom:modules/competencias/views/seleccion-equipo",
-        "CompetenciasSeleccionRol": "custom:modules/competencias/views/seleccion-rol",
-        "CompetenciasSeleccionUsuario": "custom:modules/competencias/views/seleccion-usuario",
-        "CompetenciasEncuesta": "custom:modules/competencias/views/encuesta"
+        "CompetenciasIndex": "modules/competencias:src/views/competencias-index",
+        "CompetenciasSeleccionEquipo": "modules/competencias:src/views/seleccion-equipo",
+        "CompetenciasSeleccionRol": "modules/competencias:src/views/seleccion-rol",
+        "CompetenciasSeleccionUsuario": "modules/competencias:src/views/seleccion-usuario",
+        "CompetenciasEncuesta": "modules/competencias:src/views/encuesta"
     }
 }
