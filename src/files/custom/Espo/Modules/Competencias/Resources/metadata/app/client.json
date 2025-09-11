@@ -1,21 +1,13 @@
 {
     "controller": {
-        "Competencias": "competencias:controllers.competencias"
+        "CompetenciasApp": "custom:modules/competencias/controllers/competencias-app"
     },
     "views": {
-        "CompetenciasIndex": "competencias:views.competencias-index",
-        "CompetenciasSeleccionEquipo": "competencias:views.seleccion-equipo",
-        "CompetenciasSeleccionRol": "competencias:views.seleccion-rol", 
-        "CompetenciasSeleccionUsuario": "competencias:views.seleccion-usuario",
-        "CompetenciasEncuesta": "competencias:views.encuesta"
-    },
-    "menu": {
-        "tab": {
-            "Competencias": {
-                "iconClass": "fas fa-chart-bar",
-                "isInMore": false,
-                "order": 15
-            }
-        }
+        "competencias/list": "custom:src/views/competencias/list",
+        "CompetenciasIndex": "custom:modules/competencias/views/competencias-index",
+        "CompetenciasSeleccionEquipo": "custom:modules/competencias/views/seleccion-equipo",
+        "CompetenciasSeleccionRol": "custom:modules/competencias/views/seleccion-rol",
+        "CompetenciasSeleccionUsuario": "custom:modules/competencias/views/seleccion-usuario",
+        "CompetenciasEncuesta": "custom:modules/competencias/views/encuesta"
     }
 }

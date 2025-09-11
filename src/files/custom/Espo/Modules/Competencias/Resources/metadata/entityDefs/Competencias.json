@@ -1,0 +1,29 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255
+        },
+        "description": {
+            "type": "text"
+        },
+        "status": {
+            "type": "enum",
+            "options": ["activo", "inactivo"],
+            "default": "activo"
+        },
+        "createdAt": {
+            "type": "datetime"
+        },
+        "modifiedAt": {
+            "type": "datetime"
+        }
+    },
+    "links": {},
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {}
+}

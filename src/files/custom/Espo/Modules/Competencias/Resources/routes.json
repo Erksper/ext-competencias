@@ -1,17 +1,17 @@
 [
     {
-        "route": "/Competencias/:action",
+        "route": "/CompetenciasApp",
         "method": "get",
         "params": {
-            "controller": "Competencias",
-            "action": ":action"
+            "controller": "CompetenciasApp",
+            "action": "index"
         }
     },
     {
-        "route": "/Competencias/:action",
-        "method": "post",
+        "route": "/CompetenciasApp/:action",
+        "method": "get",
         "params": {
-            "controller": "Competencias",
+            "controller": "CompetenciasApp",
             "action": ":action"
         }
     }

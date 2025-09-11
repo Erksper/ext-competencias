@@ -1,14 +1,21 @@
 {
-    "entity": false,
-    "layouts": false,
+    "entity": true,
+    "layouts": true,
     "tab": true,
-    "acl": false,
-    "customizable": false,
+    "acl": true,
+    "customizable": true,
     "importable": false,
     "notifications": false,
     "stream": false,
     "disabled": false,
     "type": "Base",
     "module": "Competencias",
-    "object": false
+    "object": true,
+    "menu": {
+        "list": {
+            "iconClass": "fas fa-chart-bar",
+            "isInMore": false,
+            "order": 15
+        }
+    }
 }
