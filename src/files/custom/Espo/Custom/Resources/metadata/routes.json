@@ -5,17 +5,17 @@
         "action": "teamSelection"
     },
     {
-        "route": "Competencias/role-selection/:teamId/:teamName",
+        "route": "Competencias/roleSelection",
         "controller": "Competencias",
         "action": "roleSelection"
     },
     {
-        "route": "Competencias/user-selection/:teamId/:teamName/:role",
+        "route": "Competencias/user-selection",
         "controller": "Competencias",
         "action": "userSelection"
     },
     {
-        "route": "Competencias/survey/:teamId/:teamName/:role/:userId/:userName",
+        "route": "Competencias/survey",
         "controller": "Competencias",
         "action": "survey"
     }

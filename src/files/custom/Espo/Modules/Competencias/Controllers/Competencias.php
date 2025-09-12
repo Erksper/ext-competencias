@@ -34,7 +34,7 @@ class Competencias extends Base
 
     public function actionObtenerUsuariosEquipo()
     {
-        $datos = $this->getRequestData();
+        $datos = $this->getRequest()->getParsedBody();
         
         if (!isset($datos['equipoId']) || !isset($datos['rol'])) {
             throw new BadRequest('equipoId y rol son requeridos');
@@ -43,22 +43,32 @@ class Competencias extends Base
         $equipoId = $datos['equipoId'];
         $rol = $datos['rol'];
 
+        // Buscar usuarios que pertenezcan al equipo
         $usuarios = $this->getEntityManager()
             ->getRepository('User')
+            ->distinct()
+            ->join('teams')
             ->where([
-                'teamsIds' => [$equipoId],
-                'rol' => $rol,
+                'teams.id' => $equipoId,
                 'isActive' => true
             ])
             ->find();
 
         $resultado = [];
         foreach ($usuarios as $usuario) {
-            $resultado[] = [
-                'id' => $usuario->get('id'),
-                'name' => $usuario->get('name'),
-                'rol' => $usuario->get('rol')
-            ];
+            // Filtrar por rol si el usuario tiene ese campo
+            $usuarioRol = $usuario->get('type') ?? 'regular';
+            
+            // Asumimos que gerentes tienen type 'admin' o un campo específico
+            $esGerente = ($usuario->get('type') === 'admin') || ($usuario->get('isPortalUser') === false && $usuario->get('type') === 'regular');
+            
+            if (($rol === 'gerente' && $esGerente) || ($rol === 'asesor' && !$esGerente)) {
+                $resultado[] = [
+                    'id' => $usuario->get('id'),
+                    'name' => $usuario->get('name'),
+                    'rol' => $rol
+                ];
+            }
         }
 
         return $resultado;
@@ -66,7 +76,7 @@ class Competencias extends Base
 
     public function actionObtenerPreguntasPorRol()
     {
-        $datos = $this->getRequestData();
+        $datos = $this->getRequest()->getParsedBody();
         $rol = $datos['rol'] ?? 'asesor';
 
         $preguntas = $this->getEntityManager()
@@ -97,7 +107,7 @@ class Competencias extends Base
 
     public function actionGuardarEncuesta()
     {
-        $datos = $this->getRequestData();
+        $datos = $this->getRequest()->getParsedBody();
 
         if (!isset($datos['equipoId']) || !isset($datos['usuarioEvaluadoId']) || !isset($datos['respuestas'])) {
             throw new BadRequest('Faltan datos requeridos');
@@ -144,19 +154,30 @@ class Competencias extends Base
         $entityManager = $this->getEntityManager();
         $usuarioActual = $this->getUser();
         
+        $creadas = 0;
+        
         foreach ($preguntas as $datoPregunta) {
-            $entityManager->createEntity('Pregunta', [
-                'name' => substr($datoPregunta['texto'], 0, 100),
-                'textoPregunta' => $datoPregunta['texto'],
-                'categoria' => $datoPregunta['categoria'],
-                'rolObjetivo' => $datoPregunta['rolObjetivo'],
-                'estaActiva' => true,
-                'orden' => $datoPregunta['orden'],
-                'creadoPorId' => $usuarioActual->get('id')
-            ]);
+            try {
+                $entityManager->createEntity('Pregunta', [
+                    'name' => substr($datoPregunta['texto'], 0, 100),
+                    'textoPregunta' => $datoPregunta['texto'],
+                    'categoria' => $datoPregunta['categoria'],
+                    'rolObjetivo' => $datoPregunta['rolObjetivo'],
+                    'estaActiva' => true,
+                    'orden' => $datoPregunta['orden'],
+                    'creadoPorId' => $usuarioActual->get('id')
+                ]);
+                $creadas++;
+            } catch (\Exception $e) {
+                // Log error but continue with next question
+                error_log("Error creando pregunta: " . $e->getMessage());
+            }
         }
         
-        return ['exito' => true, 'mensaje' => 'Preguntas inicializadas correctamente'];
+        return [
+            'exito' => true, 
+            'mensaje' => "Se crearon {$creadas} preguntas correctamente"
+        ];
     }
 
     private function obtenerPreguntasPorDefecto()

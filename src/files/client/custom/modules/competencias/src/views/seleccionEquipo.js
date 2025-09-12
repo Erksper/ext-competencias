@@ -2,7 +2,7 @@ define(['view'], function (View) {
     
     return View.extend({
         
-        template: 'competencias:seleccion-equipo',
+        template: 'competencias:seleccionEquipo',
         
         events: {
             'click [data-action="selectTeam"]': function (e) {
@@ -26,7 +26,13 @@ define(['view'], function (View) {
                 url: 'Competencias/obtenerEquipos',
                 type: 'GET',
                 success: function (equipos) {
+                    console.log('Equipos cargados:', equipos);
                     this.equipos = equipos;
+                    this.wait(false);
+                }.bind(this),
+                error: function (xhr, status, error) {
+                    console.error('Error cargando equipos:', error);
+                    Espo.Ui.error('Error cargando equipos: ' + error);
                     this.wait(false);
                 }.bind(this)
             });
