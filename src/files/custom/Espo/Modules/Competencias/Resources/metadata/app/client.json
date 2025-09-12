@@ -4,7 +4,7 @@
     },
     "views": {
         "CompetenciasIndex": "competencias:views/competenciasIndex",
-        "CompetenciasSeleccionEquipo": "competencias:views/seleccionEquipo",
+        "CompetenciasSeleccionEquipo": "competencias:views/seleccionEquipo", 
         "CompetenciasSeleccionRol": "competencias:views/seleccionRol",
         "CompetenciasSeleccionUsuario": "competencias:views/seleccionUsuario",
         "CompetenciasEncuesta": "competencias:views/encuesta"

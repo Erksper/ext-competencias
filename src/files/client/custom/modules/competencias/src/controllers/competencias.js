@@ -6,34 +6,34 @@ define('competencias:controllers/competencias', ['controllers/base'], function (
             return true;
         },
 
-        index: function () {
-            console.log('Custom index action executed!');
-            this.entire('competencias:views/competenciasIndex', {}, function (view) {
+        actionIndex: function () {
+            console.log('Custom actionIndex executed!');
+            this.main('competencias:views/competenciasIndex', {}, function (view) {
                 view.render();
             });
         },
 
-        teamSelection: function () {
-            this.entire('competencias:views/seleccionEquipo', {}, view => view.render());
+        actionTeamSelection: function () {
+            this.main('competencias:views/seleccionEquipo', {}, view => view.render());
         },
 
-        roleSelection: function (params) {
-            this.entire('competencias:views/seleccionRol', {
+        actionRoleSelection: function (params) {
+            this.main('competencias:views/seleccionRol', {
                 teamId: params.teamId,
                 teamName: params.teamName
             }, view => view.render());
         },
 
-        userSelection: function (params) {
-            this.entire('competencias:views/seleccionUsuario', {
+        actionUserSelection: function (params) {
+            this.main('competencias:views/seleccionUsuario', {
                 teamId: params.teamId,
                 teamName: params.teamName,
                 role: params.role
             }, view => view.render());
         },
 
-        survey: function (params) {
-            this.entire('competencias:views/encuesta', {
+        actionSurvey: function (params) {
+            this.main('competencias:views/encuesta', {
                 teamId: params.teamId,
                 teamName: params.teamName,
                 role: params.role,

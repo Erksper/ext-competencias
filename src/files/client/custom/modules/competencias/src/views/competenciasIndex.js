@@ -1,6 +1,6 @@
 define(['view'], function (View) {
     return View.extend({
-        template: 'competencias:competencias-index',
+        template: 'competencias:competenciasIndex',
         
         events: {
             'click [data-action="startSurvey"]': function () {

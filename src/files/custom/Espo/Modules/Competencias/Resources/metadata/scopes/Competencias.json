@@ -9,7 +9,7 @@
             "iconClass": "fas fa-chart-bar",
             "isInMore": false,
             "order": 15,
-            "url": "#Competencias"
+            "url": "#Competencias/teamSelection"
         }
     }
 }
