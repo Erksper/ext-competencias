@@ -4,7 +4,8 @@ namespace Espo\Modules\Competencias\Controllers;
 
 use Espo\Core\Controllers\Base;
 use Espo\Core\Exceptions\BadRequest;
-use Espo\Core\Exceptions\Forbidden;
+use Espo\Core\Api\Request;
+use Espo\Core\Api\Response;
 
 class Competencias extends Base
 {
@@ -15,7 +16,8 @@ class Competencias extends Base
         ];
     }
 
-    public function actionObtenerEquipos()
+    // Action estándar para obtener equipos
+    public function getActionObtenerEquipos(Request $request, Response $response): void
     {
         $equipos = $this->getEntityManager()
             ->getRepository('Team')
@@ -29,12 +31,13 @@ class Competencias extends Base
             ];
         }
 
-        return $resultado;
+        $response->writeBody(json_encode($resultado));
+        $response->setHeader('Content-Type', 'application/json');
     }
 
-    public function actionObtenerUsuariosEquipo()
+    public function postActionObtenerUsuariosEquipo(Request $request, Response $response): void
     {
-        $datos = $this->getRequest()->getParsedBody();
+        $datos = $request->getParsedBody();
         
         if (!isset($datos['equipoId']) || !isset($datos['rol'])) {
             throw new BadRequest('equipoId y rol son requeridos');
@@ -71,12 +74,13 @@ class Competencias extends Base
             }
         }
 
-        return $resultado;
+        $response->writeBody(json_encode($resultado));
+        $response->setHeader('Content-Type', 'application/json');
     }
 
-    public function actionObtenerPreguntasPorRol()
+    public function postActionObtenerPreguntasPorRol(Request $request, Response $response): void
     {
-        $datos = $this->getRequest()->getParsedBody();
+        $datos = $request->getParsedBody();
         $rol = $datos['rol'] ?? 'asesor';
 
         $preguntas = $this->getEntityManager()
@@ -102,12 +106,13 @@ class Competencias extends Base
             ];
         }
 
-        return $resultado;
+        $response->writeBody(json_encode($resultado));
+        $response->setHeader('Content-Type', 'application/json');
     }
 
-    public function actionGuardarEncuesta()
+    public function postActionGuardarEncuesta(Request $request, Response $response): void
     {
-        $datos = $this->getRequest()->getParsedBody();
+        $datos = $request->getParsedBody();
 
         if (!isset($datos['equipoId']) || !isset($datos['usuarioEvaluadoId']) || !isset($datos['respuestas'])) {
             throw new BadRequest('Faltan datos requeridos');
@@ -140,14 +145,17 @@ class Competencias extends Base
             ]);
         }
 
-        return [
+        $resultado = [
             'exito' => true,
             'encuestaId' => $encuesta->get('id'),
             'mensaje' => 'Encuesta guardada exitosamente'
         ];
+
+        $response->writeBody(json_encode($resultado));
+        $response->setHeader('Content-Type', 'application/json');
     }
 
-    public function actionInicializarPreguntas()
+    public function postActionInicializarPreguntas(Request $request, Response $response): void
     {
         $preguntas = $this->obtenerPreguntasPorDefecto();
         
@@ -169,15 +177,17 @@ class Competencias extends Base
                 ]);
                 $creadas++;
             } catch (\Exception $e) {
-                // Log error but continue with next question
                 error_log("Error creando pregunta: " . $e->getMessage());
             }
         }
         
-        return [
+        $resultado = [
             'exito' => true, 
             'mensaje' => "Se crearon {$creadas} preguntas correctamente"
         ];
+
+        $response->writeBody(json_encode($resultado));
+        $response->setHeader('Content-Type', 'application/json');
     }
 
     private function obtenerPreguntasPorDefecto()
