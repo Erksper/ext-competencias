@@ -10,9 +10,14 @@
             "required": true
         },
         "categoria": {
-            "type": "varchar",
-            "maxLength": 100,
+            "type": "enum",
+            "options": ["Personalidad", "Competencias Técnicas", "Competencias Funcionales"],
             "required": true
+        },
+        "subCategoria": {
+            "type": "varchar",
+            "maxLength": 150,
+            "required": false
         },
         "rolObjetivo": {
             "type": "multiEnum",
@@ -54,7 +59,7 @@
         }
     },
     "collection": {
-        "orderBy": "orden",
+        "orderBy": "categoria",
         "order": "asc"
     }
 }
