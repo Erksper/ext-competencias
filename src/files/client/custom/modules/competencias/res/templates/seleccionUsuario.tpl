@@ -13,6 +13,10 @@
         <div class="panel panel-default">
             <div class="panel-body">
                 {{#if usuarios.length}}
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <input type="text" class="form-control" data-action="filterUsers" placeholder="Buscar usuario...">
+                    </div>
+
                     {{#each usuarios}}
                     <div class="user-item" style="margin-bottom: 10px;">
                         <button class="btn btn-default btn-block text-left" data-action="selectUser" data-user-id="{{id}}" data-user-name="{{name}}">

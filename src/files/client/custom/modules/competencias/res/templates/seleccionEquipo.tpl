@@ -6,6 +6,11 @@
     <div class="col-md-6 col-md-offset-3">
         <div class="panel panel-default">
             <div class="panel-body">
+                {{#if equipos.length}}
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <input type="text" class="form-control" data-action="filterTeams" placeholder="Buscar equipo...">
+                </div>
+                {{/if}}
                 {{#each equipos}}
                 <div class="team-item" style="margin-bottom: 10px;">
                     <button class="btn btn-default btn-block text-left" data-action="selectTeam" data-team-id="{{id}}" data-team-name="{{name}}">

@@ -13,6 +13,9 @@ define(['view'], function (View) {
             },
             'click [data-action="back"]': function () {
                 this.getRouter().navigate('#Competencias', {trigger: true});
+            },
+            'keyup [data-action="filterTeams"]': function (e) {
+                this.filterTeams(e);
             }
         },
         
@@ -21,6 +24,15 @@ define(['view'], function (View) {
             this.cargarEquipos();
         },
         
+        filterTeams: function (e) {
+            var searchText = $(e.currentTarget).val().toLowerCase();
+            this.$el.find('.team-item').each(function (index, item) {
+                var $item = $(item);
+                var teamName = $item.find('button').data('team-name').toLowerCase();
+                $item.toggle(teamName.includes(searchText));
+            });
+        },
+
         cargarEquipos: function () {
             // Usar API estándar de EspoCRM en lugar de rutas custom
             this.getModelFactory().create('Team', function (model) {

@@ -8,8 +8,8 @@
         <div class="panel panel-default">
             <div class="panel-body">
                 <div style="margin-bottom: 20px;">
-                    <button class="btn btn-success btn-lg btn-block" data-action="selectRole" data-role="gerente">
-                        <i class="fas fa-user-tie"></i> Evaluación de Gerentes
+                    <button class="btn btn-lg btn-block" data-action="selectRole" data-role="gerente">
+                        <i class="fas fa-user-tie"></i> Evaluación de Gerentes y Directores
                     </button>
                 </div>
                 
@@ -27,3 +27,18 @@
         </div>
     </div>
 </div>
+
+<style>
+.panel-body .btn[data-action="selectRole"] {
+    background-color: #666;
+    border-color: #555;
+    color: #fff;
+}
+
+.panel-body .btn[data-action="selectRole"]:hover,
+.panel-body .btn[data-action="selectRole"]:focus {
+    background-color: #555;
+    border-color: #444;
+    color: #fff;
+}
+</style>

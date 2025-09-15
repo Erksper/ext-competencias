@@ -20,15 +20,12 @@
                 <div class="panel-body">
                     <div class="row">
                         <div class="col-md-6 col-md-offset-3 text-center">
-                            <div style="margin: 30px 0;">
-                                <button class="btn btn-primary btn-lg btn-block" data-action="startSurvey" style="margin-bottom: 20px;">
+                            <div style="margin: 30px 0 40px 0;">
+                                <button class="btn btn-lg btn-block" data-action="startSurvey" style="margin-bottom: 20px;">
                                     <i class="fas fa-clipboard-list"></i> Iniciar Evaluación
                                 </button>
-                            </div>
-                            
-                            <div style="margin: 20px 0;">
-                                <button class="btn btn-default btn-block" data-action="initQuestions">
-                                    <i class="fas fa-database"></i> Inicializar Preguntas
+                                <button class="btn btn-lg btn-block" data-action="viewReports">
+                                    <i class="fas fa-chart-bar"></i> Reportes
                                 </button>
                             </div>
                         </div>
@@ -38,3 +35,19 @@
         </div>
     </div>
 </div>
+
+<style>
+.panel-body .btn[data-action="startSurvey"],
+.panel-body .btn[data-action="viewReports"] {
+    background-color: #666;
+    border-color: #555;
+    color: #fff;
+}
+
+.panel-body .btn[data-action="startSurvey"]:hover,
+.panel-body .btn[data-action="viewReports"]:hover {
+    background-color: #555;
+    border-color: #444;
+    color: #fff;
+}
+</style>

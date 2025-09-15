@@ -13,6 +13,9 @@ define(['view'], function (View) {
             },
             'click [data-action="back"]': function () {
                 this.getRouter().navigate('#Competencias/roleSelection?teamId=' + this.options.teamId + '&teamName=' + encodeURIComponent(this.options.teamName), {trigger: true});
+            },
+            'keyup [data-action="filterUsers"]': function (e) {
+                this.filterUsers(e);
             }
         },
         
@@ -28,6 +31,15 @@ define(['view'], function (View) {
             });
             
             this.cargarUsuariosAPI();
+        },
+
+        filterUsers: function (e) {
+            var searchText = $(e.currentTarget).val().toLowerCase();
+            this.$el.find('.user-item').each(function (index, item) {
+                var $item = $(item);
+                var userName = $item.find('button').data('user-name').toLowerCase();
+                $item.toggle(userName.includes(searchText));
+            });
         },
         
         cargarUsuariosAPI: function () {
