@@ -196,140 +196,369 @@ class Competencias extends Base
     private function obtenerPreguntasPorDefecto()
     {
         return [
-            // ASESORES - PERSONALIDAD
+            // ==============================
+            // PREGUNTAS COMPARTIDAS (AMBOS ROLES)
+            // ==============================
+
+            // COMPETENCIAS TÉCNICAS - Conocimiento importante para la actividad inmobiliaria (COMPARTIDAS)
             [
-                'texto' => 'Capacidad de automotivación y autodisciplina',
-                'categoria' => 'Personalidad',
-                'subCategoria' => 'Competencias Individuales',
-                'rolObjetivo' => ['asesor'],
+                'texto' => 'Paso a paso de la realización de un negocio inmobiliario',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Conocimiento importante para la actividad inmobiliaria',
+                'rolObjetivo' => ['gerente', 'asesor'],
                 'orden' => 1
             ],
             [
-                'texto' => 'Flexibilidad ante cambios del mercado',
-                'categoria' => 'Personalidad', 
-                'subCategoria' => 'Competencias Individuales',
-                'rolObjetivo' => ['asesor'],
+                'texto' => 'Manejo de las Leyes inmobiliarias básicas para atender un cliente',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Conocimiento importante para la actividad inmobiliaria',
+                'rolObjetivo' => ['gerente', 'asesor'],
                 'orden' => 2
             ],
             [
-                'texto' => 'Habilidades de relacionamiento con clientes',
-                'categoria' => 'Personalidad',
-                'subCategoria' => 'Competencias Sociales',
-                'rolObjetivo' => ['asesor'],
+                'texto' => 'Conocimiento básicos para la realización de un AMC',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Conocimiento importante para la actividad inmobiliaria',
+                'rolObjetivo' => ['gerente', 'asesor'],
                 'orden' => 3
             ],
             [
-                'texto' => 'Claridad y efectividad en la comunicación',
-                'categoria' => 'Personalidad',
-                'subCategoria' => 'Competencias Sociales',
-                'rolObjetivo' => ['asesor'],
+                'texto' => 'Conocimiento del Manual interno de operaciones de la Oficina (MIO)',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Conocimiento importante para la actividad inmobiliaria',
+                'rolObjetivo' => ['gerente', 'asesor'],
                 'orden' => 4
             ],
 
-            // ASESORES - COMPETENCIAS TÉCNICAS
+            // COMPETENCIAS TÉCNICAS - Marketing (COMPARTIDAS)
             [
-                'texto' => 'Conocimiento importante para la industria inmobiliaria',
+                'texto' => 'Tiene activo digital disponible en Meta',
                 'categoria' => 'Competencias Técnicas',
-                'subCategoria' => 'Conocimiento del Sector',
-                'rolObjetivo' => ['asesor'],
+                'subCategoria' => 'Marketing',
+                'rolObjetivo' => ['gerente', 'asesor'],
                 'orden' => 5
             ],
             [
-                'texto' => 'Manejo de la Ley de Inversiones de un mercado inmobiliario',
+                'texto' => 'Utiliza lenguaje cliente en sus publicaciones',
                 'categoria' => 'Competencias Técnicas',
-                'subCategoria' => 'Conocimiento del Sector',
-                'rolObjetivo' => ['asesor'],
+                'subCategoria' => 'Marketing',
+                'rolObjetivo' => ['gerente', 'asesor'],
                 'orden' => 6
             ],
             [
-                'texto' => 'Conocimiento del Procedimiento de compraventa en Oficina',
+                'texto' => 'Sabe como utilizar las herramientas tecnológicas para crear Post - Videos',
                 'categoria' => 'Competencias Técnicas',
-                'subCategoria' => 'Herramientas y Procesos',
-                'rolObjetivo' => ['asesor'],
+                'subCategoria' => 'Marketing',
+                'rolObjetivo' => ['gerente', 'asesor'],
                 'orden' => 7
             ],
             [
-                'texto' => 'Manejo de herramientas tecnológicas',
+                'texto' => 'Sabe como segmentar en Meta con base de datos y con video',
                 'categoria' => 'Competencias Técnicas',
-                'subCategoria' => 'Herramientas y Procesos',
-                'rolObjetivo' => ['asesor'],
+                'subCategoria' => 'Marketing',
+                'rolObjetivo' => ['gerente', 'asesor'],
                 'orden' => 8
             ],
-
-            // GERENTES - PERSONALIDAD
             [
-                'texto' => 'Capacidad para dirigir y motivar equipos',
-                'categoria' => 'Personalidad',
-                'subCategoria' => 'Liderazgo',
-                'rolObjetivo' => ['gerente'],
-                'orden' => 1
-            ],
-            [
-                'texto' => 'Inspirar y energizar al equipo',
-                'categoria' => 'Personalidad',
-                'subCategoria' => 'Liderazgo', 
-                'rolObjetivo' => ['gerente'],
-                'orden' => 2
-            ],
-            [
-                'texto' => 'Inteligencia emocional y manejo del estrés',
-                'categoria' => 'Personalidad',
-                'subCategoria' => 'Inteligencia Emocional',
-                'rolObjetivo' => ['gerente'],
-                'orden' => 3
-            ],
-            [
-                'texto' => 'Capacidad de análisis y decisión bajo presión',
-                'categoria' => 'Personalidad',
-                'subCategoria' => 'Inteligencia Emocional',
-                'rolObjetivo' => ['gerente'],
-                'orden' => 4
-            ],
-
-            // GERENTES - COMPETENCIAS TÉCNICAS  
-            [
-                'texto' => 'Conocimiento avanzado de la industria inmobiliaria',
+                'texto' => 'Sabe como automatizar su mercadeo en meta',
                 'categoria' => 'Competencias Técnicas',
-                'subCategoria' => 'Conocimiento del Sector',
-                'rolObjetivo' => ['gerente'],
-                'orden' => 5
-            ],
-            [
-                'texto' => 'Estrategias de ventas y marketing',
-                'categoria' => 'Competencias Técnicas',
-                'subCategoria' => 'Planificación',
-                'rolObjetivo' => ['gerente'],
-                'orden' => 6
-            ],
-            [
-                'texto' => 'Manejo financiero del área',
-                'categoria' => 'Competencias Técnicas',
-                'subCategoria' => 'Planificación',
-                'rolObjetivo' => ['gerente'],
-                'orden' => 7
-            ],
-            [
-                'texto' => 'Interpretación de indicadores y métricas',
-                'categoria' => 'Competencias Técnicas',
-                'subCategoria' => 'Análisis',
-                'rolObjetivo' => ['gerente'],
-                'orden' => 8
-            ],
-
-            // AMBOS ROLES - PLANIFICACIÓN
-            [
-                'texto' => 'Gestión eficiente de horarios y prioridades',
-                'categoria' => 'Planificación',
-                'subCategoria' => 'Organización',
-                'rolObjetivo' => ['asesor', 'gerente'],
+                'subCategoria' => 'Marketing',
+                'rolObjetivo' => ['gerente', 'asesor'],
                 'orden' => 9
             ],
             [
-                'texto' => 'Definición de metas claras y alcanzables',
-                'categoria' => 'Planificación',
-                'subCategoria' => 'Objetivos',
-                'rolObjetivo' => ['asesor', 'gerente'],
+                'texto' => 'Sabe hacer publicidad en Google',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Marketing',
+                'rolObjetivo' => ['gerente', 'asesor'],
                 'orden' => 10
+            ],
+
+            // COMPETENCIAS FUNCIONALES (COMPARTIDAS)
+            [
+                'texto' => 'Orientación a la Mejora continua Personal',
+                'categoria' => 'Competencias Funcionales',
+                'subCategoria' => 'Competencias Esenciales',
+                'rolObjetivo' => ['gerente', 'asesor'],
+                'orden' => 11
+            ],
+            [
+                'texto' => 'Autoconfianza',
+                'categoria' => 'Competencias Funcionales',
+                'subCategoria' => 'Competencias Esenciales',
+                'rolObjetivo' => ['gerente', 'asesor'],
+                'orden' => 12
+            ],
+            [
+                'texto' => 'Sentido del Negocio',
+                'categoria' => 'Competencias Funcionales',
+                'subCategoria' => 'Competencias Esenciales',
+                'rolObjetivo' => ['gerente', 'asesor'],
+                'orden' => 13
+            ],
+            [
+                'texto' => 'Capacidad de asumir la Necesidad del cliente',
+                'categoria' => 'Competencias Funcionales',
+                'subCategoria' => 'Competencias Esenciales',
+                'rolObjetivo' => ['gerente', 'asesor'],
+                'orden' => 14
+            ],
+            [
+                'texto' => 'Efectividad interpersonal',
+                'categoria' => 'Competencias Funcionales',
+                'subCategoria' => 'Competencias Esenciales',
+                'rolObjetivo' => ['gerente', 'asesor'],
+                'orden' => 15
+            ],
+            [
+                'texto' => 'Gestión de la Información',
+                'categoria' => 'Competencias Funcionales',
+                'subCategoria' => 'Competencias Esenciales',
+                'rolObjetivo' => ['gerente', 'asesor'],
+                'orden' => 16
+            ],
+            [
+                'texto' => 'Capacidad de respuesta',
+                'categoria' => 'Competencias Funcionales',
+                'subCategoria' => 'Competencias Esenciales',
+                'rolObjetivo' => ['gerente', 'asesor'],
+                'orden' => 17
+            ],
+            [
+                'texto' => 'Planificación semanal',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Planificación',
+                'rolObjetivo' => ['gerente', 'asesor'],
+                'orden' => 18
+            ],
+
+            // ==============================
+            // PREGUNTAS EXCLUSIVAS DE GERENTES/DIRECTORES
+            // ==============================
+
+            // COMPETENCIAS TÉCNICAS - Transformación de Información a Aprendizaje
+            [
+                'texto' => 'Elige capacitaciones con metodología',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Transformación de Información a Aprendizaje',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 19
+            ],
+            [
+                'texto' => 'Metodología de práctica en equipo en la oficina',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Transformación de Información a Aprendizaje',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 20
+            ],
+            [
+                'texto' => 'Metodología de sombra con el cliente',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Transformación de Información a Aprendizaje',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 21
+            ],
+
+            // COMPETENCIAS TÉCNICAS - Negociación (GERENTES)
+            [
+                'texto' => 'Manejo de estructura comunicacional para las objeciones',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Negociación',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 22
+            ],
+
+            // COMPETENCIAS TÉCNICAS - Aspectos Técnicos Generales
+            [
+                'texto' => 'Manejo del sistema Tecnológico de la Oficina (21 Online)',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Aspectos Técnicos Generales',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 23
+            ],
+            [
+                'texto' => 'Control de expedientes',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Aspectos Técnicos Generales',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 24
+            ],
+            [
+                'texto' => 'Metodología para evitar problemas en las negociaciones',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Aspectos Técnicos Generales',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 25
+            ],
+            [
+                'texto' => 'Manejo metodológico de las reuniones 1 a 1 con el asesor',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Aspectos Técnicos Generales',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 26
+            ],
+            [
+                'texto' => 'Aplicación de encuesta de calidad de servicio',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Aspectos Técnicos Generales',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 27
+            ],
+            [
+                'texto' => 'Manejo metodológico del inventario',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Aspectos Técnicos Generales',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 28
+            ],
+            [
+                'texto' => 'Reclutamiento y selección: Manejo metodológico - 60% del equipo hace 1 lado por mes por asesor',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Aspectos Técnicos Generales',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 29
+            ],
+            [
+                'texto' => 'Tiene la Planificación Anual de todo el equipo de asesores',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Aspectos Técnicos Generales',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 30
+            ],
+            [
+                'texto' => 'Realizó el análisis de competencias del equipo',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Aspectos Técnicos Generales',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 31
+            ],
+            [
+                'texto' => 'Tiene el Plan de formación anual',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Aspectos Técnicos Generales',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 32
+            ],
+
+            // COMPETENCIAS TÉCNICAS - Marketing (EXCLUSIVAS GERENTES)
+            [
+                'texto' => 'Tiene un Plan de mercadeo digital para la oficina',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Marketing',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 33
+            ],
+            [
+                'texto' => 'Tiene un Plan de mercadeo digital para los asesores',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Marketing',
+                'rolObjetivo' => ['gerente'],
+                'orden' => 34
+            ],
+
+            // ==============================
+            // PREGUNTAS EXCLUSIVAS DE ASESORES
+            // ==============================
+
+            // PERSONALIDAD - Competencias de la Personalidad
+            [
+                'texto' => 'Competencias Intelectual',
+                'categoria' => 'Personalidad',
+                'subCategoria' => 'Competencias de la Personalidad',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 35
+            ],
+            [
+                'texto' => 'Competencias Emocionales',
+                'categoria' => 'Personalidad',
+                'subCategoria' => 'Competencias de la Personalidad',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 36
+            ],
+            [
+                'texto' => 'Competencias Éticas',
+                'categoria' => 'Personalidad',
+                'subCategoria' => 'Competencias de la Personalidad',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 37
+            ],
+            [
+                'texto' => 'Competencias Sociales',
+                'categoria' => 'Personalidad',
+                'subCategoria' => 'Competencias de la Personalidad',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 38
+            ],
+
+            // COMPETENCIAS TÉCNICAS - Planificación (EXCLUSIVAS ASESORES)
+            [
+                'texto' => 'Agenda',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Planificación',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 39
+            ],
+
+            // COMPETENCIAS TÉCNICAS - Comunicación de ventas
+            [
+                'texto' => 'Primer contacto',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Comunicación de ventas',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 40
+            ],
+            [
+                'texto' => 'Primera reunión',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Comunicación de ventas',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 41
+            ],
+            [
+                'texto' => 'Presentación de la propiedad',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Comunicación de ventas',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 42
+            ],
+
+            // COMPETENCIAS TÉCNICAS - Negociación (ASESORES)
+            [
+                'texto' => 'Manejo del sistema Tecnológico de la Oficina (21 Online)',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Negociación',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 44
+            ],
+            [
+                'texto' => 'Fotografía',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Negociación',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 45
+            ],
+            [
+                'texto' => 'Herramientas de Office',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Negociación',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 46
+            ],
+            [
+                'texto' => 'Atención al Cliente: Satisfacción de clientes mayor a 90%',
+                'categoria' => 'Competencias Técnicas',
+                'subCategoria' => 'Negociación',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 47
+            ],
+
+            // COMPETENCIAS FUNCIONALES - Competencias Profesionales (EXCLUSIVAS ASESORES)
+            [
+                'texto' => 'Organización',
+                'categoria' => 'Competencias Funcionales',
+                'subCategoria' => 'Competencias Profesionales',
+                'rolObjetivo' => ['asesor'],
+                'orden' => 48
             ]
         ];
     }

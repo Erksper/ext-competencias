@@ -9,16 +9,12 @@
         </div>
         {{#if esAdmin}}
         <div class="col-sm-5 text-right">
-            {{#if mostrarBotonCrear}}
-            <button class="btn btn-warning btn-sm" data-action="crearPreguntas" title="Crear preguntas del sistema">
-                <i class="fas fa-plus-circle"></i> Crear Preguntas
-            </button>
-            {{else}}
+            {{#unless mostrarBotonCrear}}
             <small class="text-muted">
                 <i class="fas fa-check-circle text-success"></i> 
                 Sistema inicializado ({{totalPreguntas}} preguntas)
             </small>
-            {{/if}}
+            {{/unless}}
         </div>
         {{/if}}
     </div>
@@ -55,6 +51,18 @@
                 </div>
             </div>
             {{/if}}
+            {{else}}
+            <!-- Mensaje para usuarios no admin cuando no hay preguntas -->
+            {{#if sinPreguntas}}
+            <div class="alert alert-info" style="margin-bottom: 20px;">
+                <div class="row">
+                    <div class="col-md-12 text-center">
+                        <h4><i class="fas fa-info-circle"></i> Sistema en configuración</h4>
+                        <p>El sistema de competencias está siendo configurado por el administrador. Los botones se habilitarán una vez completada la configuración.</p>
+                    </div>
+                </div>
+            </div>
+            {{/if}}
             {{/if}}
 
             <!-- Panel Principal -->
@@ -66,11 +74,16 @@
                     <div class="row">
                         <div class="col-md-6 col-md-offset-3 text-center">
                             <div style="margin: 30px 0 40px 0;">
-                                <button class="btn btn-lg btn-block" data-action="startSurvey" style="margin-bottom: 20px;">
+                                <button class="btn btn-lg btn-block {{#if sinPreguntas}}btn-disabled{{/if}}" 
+                                        data-action="startSurvey" 
+                                        style="margin-bottom: 20px;">
                                     <i class="fas fa-clipboard-list"></i> Iniciar Evaluación
+                                    {{#if sinPreguntas}}<small style="display: block; font-size: 0.8em; margin-top: 5px;">⚠️ Requiere preguntas configuradas</small>{{/if}}
                                 </button>
-                                <button class="btn btn-lg btn-block" data-action="viewReports">
+                                <button class="btn btn-lg btn-block {{#if sinPreguntas}}btn-disabled{{/if}}" 
+                                        data-action="viewReports">
                                     <i class="fas fa-chart-bar"></i> Reportes
+                                    {{#if sinPreguntas}}<small style="display: block; font-size: 0.8em; margin-top: 5px;">⚠️ Requiere datos de evaluaciones</small>{{/if}}
                                 </button>
                             </div>
                         </div>
@@ -82,21 +95,44 @@
 </div>
 
 <style>
-.panel-body .btn[data-action="startSurvey"],
-.panel-body .btn[data-action="viewReports"] {
+/* Botones normales habilitados */
+.panel-body .btn[data-action="startSurvey"]:not(.btn-disabled),
+.panel-body .btn[data-action="viewReports"]:not(.btn-disabled) {
     background-color: #666;
     border-color: #555;
     color: #fff;
 }
 
-.panel-body .btn[data-action="startSurvey"]:hover,
-.panel-body .btn[data-action="viewReports"]:hover {
+.panel-body .btn[data-action="startSurvey"]:not(.btn-disabled):hover,
+.panel-body .btn[data-action="viewReports"]:not(.btn-disabled):hover {
     background-color: #555;
     border-color: #444;
     color: #fff;
 }
 
-/* Estilo para el botón de crear preguntas */
+/* Botones deshabilitados */
+.panel-body .btn.btn-disabled {
+    background-color: #f5f5f5 !important;
+    border-color: #ddd !important;
+    color: #999 !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+    pointer-events: auto; /* Permitir hover para mostrar tooltip */
+}
+
+.panel-body .btn.btn-disabled:hover {
+    background-color: #f5f5f5 !important;
+    border-color: #ddd !important;
+    color: #999 !important;
+    transform: none;
+}
+
+.panel-body .btn.btn-disabled small {
+    color: #d9534f;
+    font-weight: normal;
+}
+
+/* Estilo para el botón de crear preguntas DEL CENTRO */
 .btn[data-action="crearPreguntas"] {
     background-color: #f0ad4e;
     border-color: #eea236;
@@ -109,6 +145,11 @@
     color: #fff;
 }
 
+.btn[data-action="crearPreguntas"].disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* Estilos para las alertas */
 .alert-warning {
     border-color: #f0ad4e;
@@ -118,5 +159,10 @@
 .alert-success {
     border-color: #5cb85c;
     background-color: #dff0d8;
+}
+
+.alert-info {
+    border-color: #5bc0de;
+    background-color: #d9edf7;
 }
 </style>
