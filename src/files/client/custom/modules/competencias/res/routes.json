@@ -7,7 +7,7 @@
         },
         {
             "route": "Competencias/teamSelection",
-            "controller": "Competencias",
+            "controller": "Competencias", 
             "action": "teamSelection"
         },
         {
@@ -16,7 +16,7 @@
             "action": "roleSelection"
         },
         {
-            "route": "Competencias/userSelection",
+            "route": "Competencias/userSelection", 
             "controller": "Competencias",
             "action": "userSelection"
         },
@@ -24,6 +24,36 @@
             "route": "Competencias/survey",
             "controller": "Competencias",
             "action": "survey"
+        },
+        {
+            "route": "Competencias/action/verificarEntidades",
+            "controller": "Competencias",
+            "action": "verificarEntidades",
+            "method": "POST"
+        },
+        {
+            "route": "Competencias/action/obtenerEquipos",
+            "controller": "Competencias", 
+            "action": "obtenerEquipos",
+            "method": "GET"
+        },
+        {
+            "route": "Competencias/action/obtenerUsuariosEquipo",
+            "controller": "Competencias",
+            "action": "obtenerUsuariosEquipo", 
+            "method": "POST"
+        },
+        {
+            "route": "Competencias/action/obtenerPreguntasPorRol",
+            "controller": "Competencias",
+            "action": "obtenerPreguntasPorRol",
+            "method": "POST"
+        },
+        {
+            "route": "Competencias/action/guardarEncuesta",
+            "controller": "Competencias",
+            "action": "guardarEncuesta",
+            "method": "POST"
         }
     ]
 }

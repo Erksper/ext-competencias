@@ -84,10 +84,9 @@ class Competencias extends Base
             $datos = $request->getParsedBody();
             $rol = $datos['rol'] ?? 'asesor';
 
-            // Verificar si la entidad Pregunta existe
-            if (!$this->getEntityManager()->hasRepository('Pregunta')) {
-                $resultado = $this->getPreguntasPrueba($rol);
-            } else {
+            $resultado = [];
+
+            if ($this->getEntityManager()->hasRepository('Pregunta')) {
                 // Buscar preguntas agrupadas por categoría y subcategoría
                 $preguntas = $this->getEntityManager()
                     ->getRepository('Pregunta')
@@ -98,11 +97,10 @@ class Competencias extends Base
                     ->order(['categoria', 'subCategoria', 'orden'], 'ASC')
                     ->find();
 
-                $resultado = [];
                 foreach ($preguntas as $pregunta) {
                     $categoria = $pregunta->get('categoria');
                     $subCategoria = $pregunta->get('subCategoria') ?: 'General';
-                    
+
                     // Estructura: Categoria > SubCategoria > Preguntas
                     if (!isset($resultado[$categoria])) {
                         $resultado[$categoria] = [];
@@ -110,7 +108,7 @@ class Competencias extends Base
                     if (!isset($resultado[$categoria][$subCategoria])) {
                         $resultado[$categoria][$subCategoria] = [];
                     }
-                    
+
                     $resultado[$categoria][$subCategoria][] = [
                         'id' => $pregunta->get('id'),
                         'texto' => $pregunta->get('textoPregunta'),
@@ -119,11 +117,6 @@ class Competencias extends Base
                         'subCategoria' => $subCategoria
                     ];
                 }
-
-                // Si no hay preguntas en DB, usar las de prueba
-                if (empty($resultado)) {
-                    $resultado = $this->getPreguntasPrueba($rol);
-                }
             }
 
             $response->writeBody(json_encode($resultado));
@@ -131,12 +124,11 @@ class Competencias extends Base
 
         } catch (\Exception $e) {
             error_log("Error en obtenerPreguntasPorRol: " . $e->getMessage());
-            
-            // Fallback a preguntas de prueba
-            $rol = $request->getParsedBody()['rol'] ?? 'asesor';
-            $resultado = $this->getPreguntasPrueba($rol);
-            
-            $response->writeBody(json_encode($resultado));
+            $response->setStatus(500);
+            $response->writeBody(json_encode([
+                'error' => 'Error del servidor al obtener las preguntas.',
+                'message' => $e->getMessage()
+            ]));
             $response->setHeader('Content-Type', 'application/json');
         }
     }
@@ -638,6 +630,72 @@ class Competencias extends Base
             $response->setHeader('Content-Type', 'application/json');
         }
     }
+
+    private function generarNombrePregunta($datoPregunta)
+    {
+        $categoria = substr($datoPregunta['categoria'], 0, 3); // Primeras 3 letras
+        $subcategoria = isset($datoPregunta['subCategoria']) ? 
+            ' - ' . substr($datoPregunta['subCategoria'], 0, 20) : '';
+        $texto = substr($datoPregunta['texto'], 0, 40);
+        
+        return $categoria . $subcategoria . ' - ' . $texto . '...';
+    }
+
+    // Agregar este método al controlador PHP
+    public function postActionVerificarEntidades(Request $request, Response $response): void
+    {
+        try {
+            $entityManager = $this->getEntityManager();
+            
+            // Verificar si la entidad Pregunta existe
+            $entidadExiste = $entityManager->hasRepository('Pregunta');
+            $totalPreguntas = 0;
+            
+            if ($entidadExiste) {
+                try {
+                    // Intentar contar preguntas activas
+                    $totalPreguntas = $entityManager
+                        ->getRepository('Pregunta')
+                        ->where(['estaActiva' => true])
+                        ->count();
+                } catch (\Exception $e) {
+                    // Si falla el conteo, verificar si hay algún registro
+                    try {
+                        $totalPreguntas = $entityManager
+                            ->getRepository('Pregunta')
+                            ->count();
+                    } catch (\Exception $e2) {
+                        error_log("Error contando preguntas: " . $e2->getMessage());
+                        $totalPreguntas = 0;
+                    }
+                }
+            }
+            
+            $resultado = [
+                'entidadExiste' => $entidadExiste,
+                'totalPreguntas' => $totalPreguntas,
+                'mensaje' => $entidadExiste ? 
+                    "Entidad existe con {$totalPreguntas} preguntas" : 
+                    "La entidad Pregunta no existe"
+            ];
+            
+            $response->writeBody(json_encode($resultado));
+            $response->setHeader('Content-Type', 'application/json');
+            
+        } catch (\Exception $e) {
+            error_log("Error verificando entidades: " . $e->getMessage());
+            
+            $resultado = [
+                'entidadExiste' => false,
+                'totalPreguntas' => -1,
+                'error' => $e->getMessage()
+            ];
+            
+            $response->writeBody(json_encode($resultado));
+            $response->setHeader('Content-Type', 'application/json');
+        }
+    }
+
     public function postActionGuardarEncuesta(Request $request, Response $response): void
     {
         $datos = $request->getParsedBody();

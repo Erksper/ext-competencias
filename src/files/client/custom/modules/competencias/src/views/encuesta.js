@@ -51,7 +51,7 @@ define(['view'], function (View) {
             console.log('Cargando preguntas para rol:', this.options.role);
             
             $.ajax({
-                url: 'api/v1/action/CompetenciasObtenerPreguntasPorRol',
+                url: 'api/v1/Competencias/action/obtenerPreguntasPorRol',
                 type: 'POST',
                 data: JSON.stringify({
                     rol: this.options.role
@@ -63,11 +63,9 @@ define(['view'], function (View) {
                     this.wait(false);
                 }.bind(this),
                 error: function (xhr, status, error) {
-                    console.error('Error cargando preguntas:', error);
-                    
-                    // Datos de prueba si falla la carga
-                    this.preguntas = this.obtenerPreguntasPrueba();
+                    console.error('Error cargando preguntas:', error, xhr.responseJSON || xhr.responseText);
                     this.wait(false);
+                    Espo.Ui.error('No se pudieron cargar las preguntas. Revisa la consola para más detalles.');
                 }.bind(this)
             });
         },
@@ -193,7 +191,7 @@ define(['view'], function (View) {
             this.disableButton('saveSurvey');
             
             $.ajax({
-                url: 'api/v1/action/CompetenciasGuardarEncuesta',
+                url: 'api/v1/Competencias/action/guardarEncuesta',
                 type: 'POST',
                 data: JSON.stringify({
                     equipoId: this.options.teamId,
