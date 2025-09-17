@@ -25,7 +25,8 @@
 {{#each preguntas}}
 <div class="categoria-principal" style="margin-bottom: 15px;">
     <h3 class="categoria-header" data-action="toggleCategoria" data-categoria="{{@key}}">
-        {{@key}}
+        <span>{{@key}}</span>
+        <span class="estado-completitud"></span>
         <i class="fas fa-chevron-down categoria-chevron"></i>
     </h3>
     
@@ -33,7 +34,8 @@
         {{#each this}}
         <div class="subcategoria-section" style="margin-bottom: 15px;">
             <h5 class="subcategoria-header" data-action="toggleSubcategoria" data-subcategoria="{{@key}}">
-                <i class="fas fa-folder-open"></i> {{@key}}
+                <span><i class="fas fa-folder-open"></i> {{@key}}</span>
+                <span class="estado-completitud"></span>
                 <i class="fas fa-chevron-down subcategoria-chevron"></i>
             </h5>
             
@@ -43,9 +45,9 @@
                         <thead>
                             <tr style="background: #f5f5f5;">
                                 <th style="border: 1px solid #000; width: 70%;">Competencia</th>
-                                <th style="border: 1px solid #000; width: 10%; text-align: center;">Verde</th>
-                                <th style="border: 1px solid #000; width: 10%; text-align: center;">Amarillo</th>
-                                <th style="border: 1px solid #000; width: 10%; text-align: center;">Rojo</th>
+                                <th style="border: 1px solid #000; width: 10%; text-align: center;"><i class="fas fa-circle" style="color: #4CAF50; margin-right: 5px;"></i>Verde</th>
+                                <th style="border: 1px solid #000; width: 10%; text-align: center;"><i class="fas fa-circle" style="color: #FFC107; margin-right: 5px;"></i>Amarillo</th>
+                                <th style="border: 1px solid #000; width: 10%; text-align: center;"><i class="fas fa-circle" style="color: #F44336; margin-right: 5px;"></i>Rojo</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -103,6 +105,32 @@
 </div>
 
 <style>
+/* Estilos para los indicadores de progreso */
+.estado-completitud {
+    font-size: 11px;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 10px;
+    margin-left: 15px;
+    color: white;
+    vertical-align: middle;
+}
+/* 2. Mover indicador de completitud a la derecha */
+.categoria-header .estado-completitud,
+.subcategoria-header .estado-completitud {
+    position: absolute;
+    right: 40px; /* Espacio a la izquierda del chevron */
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.estado-completitud.completo {
+    background-color: #4CAF50; /* Verde */
+}
+.estado-completitud.incompleto {
+    background-color: #FFC107; /* Amarillo */
+    color: #333;
+}
 /* Estilos para categorías principales */
 .categoria-header {
     background: #666;
@@ -186,7 +214,7 @@
     border-radius: 6px;
     border: 2px solid #ddd;
     cursor: pointer;
-    background-color: #5a5a5a;
+    background-color: transparent; /* 1. Fondo transparente para botones de opción */
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 

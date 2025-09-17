@@ -1,0 +1,694 @@
+<?php
+
+namespace Espo\Modules\Competencias\Controllers;
+
+use Espo\Core\Controllers\Base;
+use Espo\Core\Api\Request;
+use Espo\Core\Api\Response;
+
+class Competencias extends Base
+{
+    protected function checkAccess(): bool
+    {
+        return $this->getUser()->isAdmin() || $this->getUser()->isRegular();
+    }
+
+    public function postActionObtenerPreguntasPorRol(Request $request, Response $response): Response
+    {
+        error_log("=== INICIO obtenerPreguntasPorRol ===");
+        
+        if (!$this->checkAccess()) {
+            error_log("Access denied para usuario: " . $this->getUser()->get('userName'));
+            return $response->withStatus(403)->withBody('Access denied');
+        }
+
+        try {
+            $data = $request->getParsedBody();
+            error_log("Datos recibidos: " . print_r($data, true));
+            
+            $rol = $data['rol'] ?? null;
+
+            if (!$rol) {
+                error_log("ERROR: Rol no proporcionado");
+                return $response->withStatus(400)
+                              ->withHeader('Content-Type', 'application/json')
+                              ->withBody(json_encode(['success' => false, 'error' => 'Rol es requerido']));
+            }
+
+            error_log("Buscando preguntas para rol: " . $rol);
+
+            $entityManager = $this->getEntityManager();
+            
+            // Verificar que la entidad Pregunta existe
+            if (!$entityManager->hasRepository('Pregunta')) {
+                error_log("ERROR: Repository 'Pregunta' no encontrado");
+                return $response->withStatus(500)
+                              ->withHeader('Content-Type', 'application/json')
+                              ->withBody(json_encode(['success' => false, 'error' => 'Entity Pregunta no encontrada']));
+            }
+
+            // Obtener preguntas con QueryBuilder más simple
+            $repository = $entityManager->getRepository('Pregunta');
+            
+            // Primero intentar obtener todas las preguntas
+            $todasPreguntas = $repository->find();
+            error_log("Total preguntas en BD: " . count($todasPreguntas));
+            
+            $preguntasValidas = [];
+            
+            foreach ($todasPreguntas as $pregunta) {
+                $rolesPermitidos = $pregunta->get('rolesPermitidos');
+                error_log("Pregunta ID " . $pregunta->getId() . " - Roles: " . print_r($rolesPermitidos, true));
+                
+                // Convertir rolesPermitidos a array si es string JSON
+                if (is_string($rolesPermitidos)) {
+                    $decoded = json_decode($rolesPermitidos, true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $rolesPermitidos = $decoded;
+                    } else {
+                        // Si no es JSON válido, tratarlo como string simple
+                        $rolesPermitidos = [$rolesPermitidos];
+                    }
+                }
+                
+                // Asegurar que sea array
+                if (!is_array($rolesPermitidos)) {
+                    $rolesPermitidos = [$rolesPermitidos];
+                }
+                
+                // Verificar si la pregunta aplica para este rol
+                $incluir = false;
+                foreach ($rolesPermitidos as $rolPermitido) {
+                    if ($rolPermitido === 'ambos' || $rolPermitido === $rol) {
+                        $incluir = true;
+                        break;
+                    }
+                }
+                
+                if ($incluir) {
+                    $preguntasValidas[] = [
+                        'id' => $pregunta->getId(),
+                        'pregunta' => $pregunta->get('pregunta') ?: $pregunta->get('textoPregunta'),
+                        'categoria' => $pregunta->get('categoria'),
+                        'subcategoria' => $pregunta->get('subcategoria') ?: $pregunta->get('subCategoria'),
+                        'tipoRespuesta' => $pregunta->get('tipoRespuesta') ?: 'color',
+                        'rolesPermitidos' => $rolesPermitidos,
+                        'orden' => $pregunta->get('orden') ?: 0
+                    ];
+                }
+            }
+
+            error_log("Preguntas válidas para rol '$rol': " . count($preguntasValidas));
+
+            // Ordenar por orden
+            usort($preguntasValidas, function($a, $b) {
+                return ($a['orden'] ?? 0) <=> ($b['orden'] ?? 0);
+            });
+
+            $responseData = [
+                'success' => true,
+                'preguntas' => $preguntasValidas,
+                'total' => count($preguntasValidas),
+                'rol' => $rol,
+                'debug' => [
+                    'totalEnBD' => count($todasPreguntas),
+                    'rolBuscado' => $rol
+                ]
+            ];
+
+            error_log("Respuesta final: " . print_r($responseData, true));
+            error_log("=== FIN obtenerPreguntasPorRol ===");
+
+            return $response->withHeader('Content-Type', 'application/json')
+                          ->withBody(json_encode($responseData));
+
+        } catch (\Exception $e) {
+            error_log('ERROR en obtenerPreguntasPorRol: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            
+            return $response->withStatus(500)
+                          ->withHeader('Content-Type', 'application/json')
+                          ->withBody(json_encode([
+                              'success' => false,
+                              'error' => $e->getMessage(),
+                              'trace' => $e->getTraceAsString()
+                          ]));
+        }
+    }
+
+    public function postActionCrearPreguntas(Request $request, Response $response): Response
+    {
+        error_log("=== INICIO crearPreguntas ===");
+        
+        if (!$this->checkAccess()) {
+            return $response->withStatus(403)->withBody('Access denied');
+        }
+
+        try {
+            $entityManager = $this->getEntityManager();
+
+            // Verificar si ya existen preguntas
+            $existingCount = $entityManager->getRepository('Pregunta')->count();
+            error_log("Preguntas existentes: " . $existingCount);
+
+            if ($existingCount > 0) {
+                error_log("Las preguntas ya existen, saltando creación");
+                return $response->withHeader('Content-Type', 'application/json')
+                              ->withBody(json_encode([
+                                  'success' => true,
+                                  'message' => 'Las preguntas ya existen',
+                                  'preguntasCreadas' => 0,
+                                  'preguntasExistentes' => $existingCount
+                              ]));
+            }
+
+            // Crear preguntas
+            $preguntasCreadas = $this->crearPreguntasIniciales($entityManager);
+            error_log("Preguntas creadas: " . $preguntasCreadas);
+
+            error_log("=== FIN crearPreguntas ===");
+
+            return $response->withHeader('Content-Type', 'application/json')
+                          ->withBody(json_encode([
+                              'success' => true,
+                              'message' => 'Preguntas creadas exitosamente',
+                              'preguntasCreadas' => $preguntasCreadas
+                          ]));
+
+        } catch (\Exception $e) {
+            error_log('ERROR creando preguntas: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            
+            return $response->withStatus(500)
+                          ->withHeader('Content-Type', 'application/json')
+                          ->withBody(json_encode([
+                              'success' => false,
+                              'error' => $e->getMessage()
+                          ]));
+        }
+    }
+
+    public function getActionVerificarPreguntas(Request $request, Response $response): Response
+    {
+        try {
+            $entityManager = $this->getEntityManager();
+            
+            $count = $entityManager
+                ->getRepository('Pregunta')
+                ->count();
+
+            return $response->withHeader('Content-Type', 'application/json')
+                          ->withBody(json_encode([
+                              'success' => true,
+                              'tienePreguntas' => $count > 0,
+                              'totalPreguntas' => $count
+                          ]));
+
+        } catch (\Exception $e) {
+            return $response->withStatus(500)
+                          ->withHeader('Content-Type', 'application/json')
+                          ->withBody(json_encode([
+                              'success' => false,
+                              'error' => $e->getMessage()
+                          ]));
+        }
+    }
+
+    public function postActionGuardarEncuesta(Request $request, Response $response): Response
+    {
+        error_log("=== INICIO guardarEncuesta ===");
+        
+        if (!$this->checkAccess()) {
+            return $response->withStatus(403)->withBody('Access denied');
+        }
+
+        try {
+            $data = $request->getParsedBody();
+            error_log("Datos encuesta recibidos: " . print_r($data, true));
+            
+            $entityManager = $this->getEntityManager();
+
+            // Crear la encuesta
+            $encuesta = $entityManager->getNewEntity('Encuesta');
+            $encuesta->set([
+                'evaluado' => $data['evaluado'],
+                'evaluador' => $data['evaluador'],
+                'rol' => $data['rol'],
+                'equipo' => $data['equipo'],
+                'fechaEvaluacion' => date('Y-m-d H:i:s'),
+                'estado' => 'completada'
+            ]);
+            
+            $entityManager->saveEntity($encuesta);
+            error_log("Encuesta creada con ID: " . $encuesta->getId());
+
+            // Guardar las respuestas
+            $respuestasGuardadas = 0;
+            foreach ($data['respuestas'] as $respuestaData) {
+                $respuesta = $entityManager->getNewEntity('RespuestaEncuesta');
+                $respuesta->set([
+                    'encuestaId' => $encuesta->getId(),
+                    'preguntaId' => $respuestaData['pregunta'],
+                    'respuesta' => $respuestaData['color'],
+                    'comentario' => $respuestaData['comentario'] ?? ''
+                ]);
+                
+                $entityManager->saveEntity($respuesta);
+                $respuestasGuardadas++;
+            }
+
+            error_log("Respuestas guardadas: " . $respuestasGuardadas);
+            error_log("=== FIN guardarEncuesta ===");
+
+            return $response->withHeader('Content-Type', 'application/json')
+                          ->withBody(json_encode([
+                              'success' => true,
+                              'encuestaId' => $encuesta->getId(),
+                              'respuestasGuardadas' => $respuestasGuardadas
+                          ]));
+
+        } catch (\Exception $e) {
+            error_log('ERROR guardando encuesta: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            
+            return $response->withStatus(500)
+                          ->withHeader('Content-Type', 'application/json')
+                          ->withBody(json_encode([
+                              'success' => false,
+                              'error' => $e->getMessage()
+                          ]));
+        }
+    }
+
+    private function crearPreguntasIniciales($entityManager)
+    {
+        $preguntas = $this->obtenerPreguntasDefinidas();
+        $count = 0;
+
+        foreach ($preguntas as $preguntaData) {
+            $pregunta = $entityManager->getNewEntity('Pregunta');
+            $pregunta->set($preguntaData);
+            $entityManager->saveEntity($pregunta);
+            $count++;
+        }
+
+        return $count;
+    }
+
+    private function obtenerPreguntasDefinidas()
+    {
+        return [
+            // LIDERAZGO - 8 preguntas
+            [
+                'pregunta' => '¿Logras que otros compartan tu visión y se comprometan con ella?',
+                'categoria' => 'Liderazgo',
+                'subcategoria' => 'Visión y Dirección',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 1
+            ],
+            [
+                'pregunta' => '¿Tomas decisiones efectivas bajo presión?',
+                'categoria' => 'Liderazgo',
+                'subcategoria' => 'Toma de Decisiones',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 2
+            ],
+            [
+                'pregunta' => '¿Motivas y desarrollas a tu equipo de trabajo?',
+                'categoria' => 'Liderazgo',
+                'subcategoria' => 'Desarrollo de Personas',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 3
+            ],
+            [
+                'pregunta' => '¿Delegas responsabilidades de manera efectiva?',
+                'categoria' => 'Liderazgo',
+                'subcategoria' => 'Delegación',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 4
+            ],
+            [
+                'pregunta' => '¿Manejas eficazmente los conflictos en el equipo?',
+                'categoria' => 'Liderazgo',
+                'subcategoria' => 'Gestión de Conflictos',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 5
+            ],
+            [
+                'pregunta' => '¿Das feedback constructivo y oportuno?',
+                'categoria' => 'Liderazgo',
+                'subcategoria' => 'Retroalimentación',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 6
+            ],
+            [
+                'pregunta' => '¿Reconoces y celebras los logros del equipo?',
+                'categoria' => 'Liderazgo',
+                'subcategoria' => 'Reconocimiento',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 7
+            ],
+            [
+                'pregunta' => '¿Mantienes la calma y das ejemplo en situaciones difíciles?',
+                'categoria' => 'Liderazgo',
+                'subcategoria' => 'Ejemplo y Estabilidad',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 8
+            ],
+
+            // GESTIÓN ESTRATÉGICA - 10 preguntas (solo gerentes)
+            [
+                'pregunta' => '¿Tienes una visión clara del futuro del negocio inmobiliario?',
+                'categoria' => 'Gestión Estratégica',
+                'subcategoria' => 'Visión de Negocio',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 9
+            ],
+            [
+                'pregunta' => '¿Planificas estratégicamente para alcanzar los objetivos?',
+                'categoria' => 'Gestión Estratégica',
+                'subcategoria' => 'Planificación',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 10
+            ],
+            [
+                'pregunta' => '¿Analizas y usas datos de mercado para tomar decisiones?',
+                'categoria' => 'Gestión Estratégica',
+                'subcategoria' => 'Análisis de Mercado',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 11
+            ],
+            [
+                'pregunta' => '¿Identificas y aprovechas oportunidades de crecimiento?',
+                'categoria' => 'Gestión Estratégica',
+                'subcategoria' => 'Oportunidades',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 12
+            ],
+            [
+                'pregunta' => '¿Gestionas eficientemente los recursos disponibles?',
+                'categoria' => 'Gestión Estratégica',
+                'subcategoria' => 'Gestión de Recursos',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 13
+            ],
+            [
+                'pregunta' => '¿Monitoras y evalúas el rendimiento del equipo regularmente?',
+                'categoria' => 'Gestión Estratégica',
+                'subcategoria' => 'Monitoreo de Rendimiento',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 14
+            ],
+            [
+                'pregunta' => '¿Implementas mejoras basadas en resultados y feedback?',
+                'categoria' => 'Gestión Estratégica',
+                'subcategoria' => 'Mejora Continua',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 15
+            ],
+            [
+                'pregunta' => '¿Te adaptas rápidamente a los cambios del mercado?',
+                'categoria' => 'Gestión Estratégica',
+                'subcategoria' => 'Adaptabilidad',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 16
+            ],
+            [
+                'pregunta' => '¿Mantienes relaciones estratégicas con stakeholders clave?',
+                'categoria' => 'Gestión Estratégica',
+                'subcategoria' => 'Relaciones Estratégicas',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 17
+            ],
+            [
+                'pregunta' => '¿Comunicas la estrategia de manera clara y motivadora?',
+                'categoria' => 'Gestión Estratégica',
+                'subcategoria' => 'Comunicación Estratégica',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['gerente'],
+                'orden' => 18
+            ],
+
+            // COMPETENCIAS COMERCIALES - 13 preguntas (solo asesores)
+            [
+                'pregunta' => '¿Generas leads de calidad de manera consistente?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Generación de Leads',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 19
+            ],
+            [
+                'pregunta' => '¿Realizas presentaciones de propiedades de forma atractiva?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Presentación de Propiedades',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 20
+            ],
+            [
+                'pregunta' => '¿Manejas eficazmente las objeciones de los clientes?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Manejo de Objeciones',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 21
+            ],
+            [
+                'pregunta' => '¿Cierras ventas exitosamente?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Cierre de Ventas',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 22
+            ],
+            [
+                'pregunta' => '¿Sigues sistemáticamente a los prospectos?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Seguimiento',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 23
+            ],
+            [
+                'pregunta' => '¿Utilizas herramientas de CRM efectivamente?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Uso de Tecnología',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 24
+            ],
+            [
+                'pregunta' => '¿Preparas y presentas propuestas profesionales?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Propuestas',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 25
+            ],
+            [
+                'pregunta' => '¿Manejas la documentación legal adecuadamente?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Documentación Legal',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 26
+            ],
+            [
+                'pregunta' => '¿Te mantienes actualizado sobre el mercado inmobiliario?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Conocimiento de Mercado',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 27
+            ],
+            [
+                'pregunta' => '¿Cumples consistentemente con tus metas de ventas?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Cumplimiento de Metas',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 28
+            ],
+            [
+                'pregunta' => '¿Desarrollas una red de contactos efectiva?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Networking',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 29
+            ],
+            [
+                'pregunta' => '¿Manejas múltiples clientes simultáneamente?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Gestión de Cartera',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 30
+            ],
+            [
+                'pregunta' => '¿Aprovechas oportunidades de referidos?',
+                'categoria' => 'Competencias Comerciales',
+                'subcategoria' => 'Referidos',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['asesor'],
+                'orden' => 31
+            ],
+
+            // COMPETENCIAS TRANSVERSALES - 17 preguntas (ambos roles)
+            [
+                'pregunta' => '¿Te comunicas de manera clara y efectiva?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Comunicación',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 32
+            ],
+            [
+                'pregunta' => '¿Escuchas activamente a clientes y colegas?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Escucha Activa',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 33
+            ],
+            [
+                'pregunta' => '¿Trabajas eficazmente en equipo?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Trabajo en Equipo',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 34
+            ],
+            [
+                'pregunta' => '¿Resuelves problemas de manera creativa?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Resolución de Problemas',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 35
+            ],
+            [
+                'pregunta' => '¿Gestionas tu tiempo eficientemente?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Gestión del Tiempo',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 36
+            ],
+            [
+                'pregunta' => '¿Te adaptas bien a los cambios?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Adaptabilidad',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 37
+            ],
+            [
+                'pregunta' => '¿Mantienes una actitud positiva ante los desafíos?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Actitud Positiva',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 38
+            ],
+            [
+                'pregunta' => '¿Actúas con integridad y ética profesional?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Ética e Integridad',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 39
+            ],
+            [
+                'pregunta' => '¿Te responsabilizas por tus acciones y resultados?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Responsabilidad',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 40
+            ],
+            [
+                'pregunta' => '¿Buscas continuamente oportunidades de aprendizaje?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Aprendizaje Continuo',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 41
+            ],
+            [
+                'pregunta' => '¿Manejas el estrés de manera efectiva?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Manejo del Estrés',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 42
+            ],
+            [
+                'pregunta' => '¿Demuestras empatía hacia otros?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Empatía',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 43
+            ],
+            [
+                'pregunta' => '¿Prestas atención a los detalles importantes?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Atención al Detalle',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 44
+            ],
+            [
+                'pregunta' => '¿Tomas iniciativa para mejorar procesos?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Iniciativa',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 45
+            ],
+            [
+                'pregunta' => '¿Mantienes la confidencialidad cuando es necesario?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Confidencialidad',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 46
+            ],
+            [
+                'pregunta' => '¿Buscas y valoras el feedback de otros?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Recepción de Feedback',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 47
+            ],
+            [
+                'pregunta' => '¿Mantienes un equilibrio saludable entre trabajo y vida personal?',
+                'categoria' => 'Competencias Transversales',
+                'subcategoria' => 'Equilibrio Vida-Trabajo',
+                'tipoRespuesta' => 'color',
+                'rolesPermitidos' => ['ambos'],
+                'orden' => 48
+            ]
+        ];
+    }
+}

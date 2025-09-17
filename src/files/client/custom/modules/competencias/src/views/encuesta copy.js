@@ -132,18 +132,22 @@ define(['view'], function (View) {
                 var rolObjetivo = pregunta.rolObjetivo || [];
                 var incluir = false;
                 
-                console.log('Pregunta:', pregunta.textoPregunta || pregunta.name, 'RolObjetivo:', rolObjetivo);
+                console.log('Pregunta:', pregunta.pregunta || pregunta.textoPregunta, 'RolObjetivo:', rolObjetivo);
                 
                 if (Array.isArray(rolObjetivo)) {
-                    // REFACTOR: Lógica simplificada y más robusta para determinar si se incluye la pregunta.
-                    if (rolObjetivo.includes(this.role)) {
+                    // Si tiene múltiples roles y incluye gerente+asesor = compartida
+                    if (rolObjetivo.length > 1 && 
+                        rolObjetivo.includes('gerente') && 
+                        rolObjetivo.includes('asesor')) {
+                        incluir = true; // Pregunta compartida
+                        console.log('✅ Pregunta compartida incluida');
+                    }
+                    // Si es específica para este rol
+                    else if (rolObjetivo.includes(this.role)) {
                         incluir = true;
-                        if (rolObjetivo.length > 1) {
-                            console.log('✅ Pregunta compartida incluida');
-                        } else {
-                            console.log('✅ Pregunta específica para', this.role);
-                        }
-                    } else {
+                        console.log('✅ Pregunta específica para', this.role);
+                    }
+                    else {
                         console.log('❌ Pregunta excluida, no es para', this.role);
                     }
                 }
@@ -151,7 +155,7 @@ define(['view'], function (View) {
                 if (incluir) {
                     preguntasFiltradas.push({
                         id: pregunta.id,
-                        texto: pregunta.textoPregunta || pregunta.name, // Usar 'texto' directamente
+                        pregunta: pregunta.pregunta || pregunta.textoPregunta,
                         categoria: pregunta.categoria || 'Sin Categoría',
                         subcategoria: pregunta.subCategoria || 'General',
                         orden: pregunta.orden || 0
@@ -188,7 +192,7 @@ define(['view'], function (View) {
                 
                 preguntasAgrupadas[categoria][subcategoria].push({
                     id: pregunta.id,
-                    texto: pregunta.texto,
+                    texto: pregunta.pregunta, // La API devuelve "pregunta", el template espera "texto"
                     orden: pregunta.orden || 0
                 });
             });
@@ -248,8 +252,7 @@ define(['view'], function (View) {
                         }
                     });
 
-                    // FIX: Corregir selector para que coincida con el atributo 'data-subcategoria' de la plantilla.
-                    var selectorSubcat = `.subcategoria-header[data-subcategoria="${subcategoriaNombre.replace(/"/g, '\\"')}"] .estado-completitud`;
+                    var selectorSubcat = `.subcategoria-header[data-subcategoria-nombre='${subcategoriaNombre.replace(/'/g, "\\'")}'] .estado-completitud`;
                     var $indicadorSubcat = this.$el.find(selectorSubcat);
                     if (totalPreguntasSubcat > 0) {
                         if (respondidasSubcat === totalPreguntasSubcat) {
@@ -263,8 +266,7 @@ define(['view'], function (View) {
                     respondidasCategoria += respondidasSubcat;
                 }.bind(this));
 
-                // FIX: Corregir selector para que coincida con el atributo 'data-categoria' de la plantilla.
-                var selectorCat = `.categoria-header[data-categoria="${categoriaNombre.replace(/"/g, '\\"')}"] .estado-completitud`;
+                var selectorCat = `.categoria-header[data-categoria-nombre='${categoriaNombre.replace(/'/g, "\\'")}'] .estado-completitud`;
                 var $indicadorCat = this.$el.find(selectorCat);
                 if (totalPreguntasCategoria > 0) {
                     if (respondidasCategoria === totalPreguntasCategoria) {
@@ -326,28 +328,34 @@ define(['view'], function (View) {
             this.disableButton('saveSurvey');
             Espo.Ui.notify('Guardando encuesta...', 'info');
             
-            // REFACTOR: Usar this.ajax.post para una llamada más limpia y segura.
-            this.ajax.post('Competencias/action/guardarEncuesta', {
-                evaluado: this.userName,
-                evaluador: this.getUser().get('name'), 
-                rol: this.role,
-                equipo: this.teamName,
-                respuestas: this.convertirRespuestasParaAPI()
-            }).then(function (response) {
-                console.log('✅ Encuesta guardada exitosamente:', response);
-                
-                if (response.success) {
-                    Espo.Ui.success('✅ Encuesta guardada exitosamente');
-                    this.getRouter().navigate('#Competencias', {trigger: true});
-                } else {
-                    throw new Error(response.error || 'Error desconocido al guardar.');
-                }
-            }.bind(this)).fail(function (xhr) {
-                console.error('❌ Error guardando encuesta:', xhr);
-                var message = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'Error desconocido.';
-                Espo.Ui.error('❌ Error al guardar la encuesta: ' + message);
-                this.enableButton('saveSurvey');
-            }.bind(this));
+            // USAR LA RUTA EXISTENTE DE TU ROUTES.JSON  
+            $.ajax({
+                url: 'api/v1/Competencias/action/guardarEncuesta',
+                type: 'POST',
+                data: JSON.stringify({
+                    evaluado: this.userName,
+                    evaluador: this.getUser().get('name'), 
+                    rol: this.role,
+                    equipo: this.teamName,
+                    respuestas: this.convertirRespuestasParaAPI()
+                }),
+                contentType: 'application/json',
+                success: function (response) {
+                    console.log('✅ Encuesta guardada exitosamente:', response);
+                    
+                    if (response.success) {
+                        Espo.Ui.success('✅ Encuesta guardada exitosamente');
+                        this.getRouter().navigate('#Competencias', {trigger: true});
+                    } else {
+                        throw new Error(response.error || 'Error desconocido');
+                    }
+                }.bind(this),
+                error: function (xhr, status, error) {
+                    console.error('❌ Error guardando encuesta:', xhr, status, error);
+                    Espo.Ui.error('❌ Error al guardar la encuesta: ' + error);
+                    this.enableButton('saveSurvey');
+                }.bind(this)
+            });
         },
 
         convertirRespuestasParaAPI: function () {

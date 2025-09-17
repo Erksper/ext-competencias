@@ -1,0 +1,6 @@
+{
+    "CompetenciasVerificarPreguntas": {
+        "controllerClassName": "Espo\\Modules\\Competencias\\Controllers\\Competencias",
+        "implementationClassName": "Espo\\Modules\\Competencias\\Controllers\\Competencias"
+    }
+}
