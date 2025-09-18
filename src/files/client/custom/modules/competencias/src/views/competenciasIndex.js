@@ -18,7 +18,7 @@ define(['view'], function (View) {
                     Espo.Ui.warning('⚠️ No hay datos para mostrar. Primero crea las preguntas e inicia algunas evaluaciones.');
                     return false;
                 }
-                this.getRouter().navigate('#Competencias/reportes', {trigger: true});
+                this.getRouter().navigate('#Competencias/reports', {trigger: true});
             },
             'click [data-action="crearPreguntas"]': function () {
                 this.crearPreguntas();

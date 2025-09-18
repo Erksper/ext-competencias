@@ -40,24 +40,12 @@
         {{#if disponible}}
         <div class="col-md-6" style="margin-bottom: 20px;">
             <div class="report-card panel panel-default" style="height: 200px; cursor: pointer; transition: all 0.3s ease; border: 2px solid #ddd;">
-                <div class="panel-body text-center" data-action="{{tipo}}" style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                <div class="panel-body text-center" data-action="reporte{{tipo}}" style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
                     <div class="report-icon" style="font-size: 3em; margin-bottom: 15px; color: #D4AF37;">
-                        {{#eq tipo 'asesores'}}
-                        <i class="fas fa-users"></i>
-                        {{/eq}}
-                        {{#eq tipo 'gerentes'}}
-                        <i class="fas fa-user-tie"></i>
-                        {{/eq}}
+                        <i class="fas {{icono}}"></i>
                     </div>
                     <h4 style="color: #333; font-weight: bold;">{{titulo}}</h4>
-                    <p style="color: #666; margin-top: 10px;">
-                        {{#eq tipo 'asesores'}}
-                        Matriz de competencias evaluadas para todos los asesores
-                        {{/eq}}
-                        {{#eq tipo 'gerentes'}}
-                        Matriz de competencias evaluadas para gerentes y directores
-                        {{/eq}}
-                    </p>
+                    <p style="color: #666; margin-top: 10px;">{{descripcion}}</p>
                 </div>
             </div>
         </div>

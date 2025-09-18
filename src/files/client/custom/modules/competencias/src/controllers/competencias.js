@@ -40,6 +40,28 @@ define('competencias:controllers/competencias', ['controllers/base'], function (
                 userId: params.userId,
                 userName: params.userName
             }, view => view.render());
+        },
+
+        // NUEVAS ACCIONES PARA REPORTES
+        actionReports: function () {
+            console.log('Custom actionReports executed!');
+            this.main('competencias:views/reportes', {}, function (view) {
+                view.render();
+            });
+        },
+
+        actionReporteAsesores: function () {
+            console.log('Custom actionReporteAsesores executed!');
+            this.main('competencias:views/reporteAsesores', {}, function (view) {
+                view.render();
+            });
+        },
+
+        actionReporteGerentes: function () {
+            console.log('Custom actionReporteGerentes executed!');
+            this.main('competencias:views/reporteGerentes', {}, function (view) {
+                view.render();
+            });
         }
     });
 });

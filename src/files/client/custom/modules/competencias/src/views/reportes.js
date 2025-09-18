@@ -5,10 +5,10 @@ define(['view'], function (View) {
         template: 'competencias:reportes',
         
         events: {
-            'click [data-action="reporteAsesores"]': function () {
+            'click [data-action="reporteasesores"]': function () {
                 this.verReporteAsesores();
             },
-            'click [data-action="reporteGerentes"]': function () {
+            'click [data-action="reportegerentes"]': function () {
                 this.verReporteGerentes();
             },
             'click [data-action="back"]': function () {
@@ -26,44 +26,89 @@ define(['view'], function (View) {
 
         verificarReportesDisponibles: function () {
             console.log('🔍 Verificando reportes disponibles para usuario:', this.usuarioActual.get('name'));
-            
-            // Verificar si hay encuestas disponibles y qué tipos de reportes puede ver este usuario
-            $.ajax({
-                url: 'api/v1/action/verificarReportesDisponibles',
-                type: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                data: JSON.stringify({
-                    userId: this.usuarioActual.get('id'),
-                    userName: this.usuarioActual.get('name'),
-                    userType: this.usuarioActual.get('type')
-                }),
-                success: function (response) {
-                    console.log('✅ Reportes disponibles:', response);
-                    
-                    if (response.success) {
-                        this.reportesDisponibles = response.reportes || [];
-                        this.estadisticasGenerales = response.estadisticas || {};
-                    } else {
-                        console.warn('⚠️ No se pudieron verificar los reportes disponibles');
-                        this.reportesDisponibles = [];
-                    }
-                    
-                    this.wait(false);
-                }.bind(this),
-                error: function (xhr, status, error) {
-                    console.error('❌ Error verificando reportes:', error);
-                    Espo.Ui.error('Error al cargar los reportes disponibles');
-                    
-                    // Fallback: mostrar reportes básicos sin filtrado
-                    this.reportesDisponibles = [
-                        {tipo: 'asesores', titulo: 'Reporte de Asesores', disponible: true},
-                        {tipo: 'gerentes', titulo: 'Reporte de Gerentes', disponible: true}
-                    ];
-                    this.wait(false);
-                }.bind(this)
+
+            this.estadisticasGenerales = {
+                totalEncuestas: '(Cargando...)',
+                encuestasAsesor: 0,
+                encuestasGerente: 0
+            };
+
+            // Llamadas a la API estándar de la entidad 'Encuesta' para obtener las estadísticas.
+            // Esto evita la necesidad de una acción de controlador personalizada.
+            var fetchTotal = $.ajax({
+                url: 'api/v1/Encuesta',
+                data: { select: 'id', maxSize: 1 }
             });
+
+            var fetchAsesores = $.ajax({
+                url: 'api/v1/Encuesta',
+                data: {
+                    where: [{ type: 'equals', attribute: 'rolUsuario', value: 'asesor' }],
+                    select: 'id',
+                    maxSize: 1
+                }
+            });
+
+            var fetchGerentes = $.ajax({
+                url: 'api/v1/Encuesta',
+                data: {
+                    where: [{ type: 'equals', attribute: 'rolUsuario', value: 'gerente' }],
+                    select: 'id',
+                    maxSize: 1
+                }
+            });
+
+            Promise.all([fetchTotal, fetchAsesores, fetchGerentes]).then(function(results) {
+                var totalEncuestas = results[0].total || 0;
+                var encuestasAsesor = results[1].total || 0;
+                var encuestasGerente = results[2].total || 0;
+
+                console.log('✅ Estadísticas obtenidas desde API Encuesta:', {
+                    total: totalEncuestas,
+                    asesores: encuestasAsesor,
+                    gerentes: encuestasGerente
+                });
+
+                this.estadisticasGenerales = {
+                    totalEncuestas: totalEncuestas,
+                    encuestasAsesor: encuestasAsesor,
+                    encuestasGerente: encuestasGerente
+                };
+
+                var reportes = [];
+                if (encuestasAsesor > 0) {
+                    reportes.push({
+                        tipo: 'asesores', 
+                        titulo: 'Reporte de Asesores', 
+                        descripcion: 'Matriz de competencias evaluadas para todos los asesores', 
+                        icono: 'fa-users', 
+                        disponible: true,
+                        cantidadEncuestas: encuestasAsesor
+                    });
+                }
+                if (encuestasGerente > 0) {
+                    reportes.push({
+                        tipo: 'gerentes', 
+                        titulo: 'Reporte de Gerentes', 
+                        descripcion: 'Matriz de competencias evaluadas para gerentes y directores', 
+                        icono: 'fa-user-tie', 
+                        disponible: true,
+                        cantidadEncuestas: encuestasGerente
+                    });
+                }
+                
+                this.reportesDisponibles = reportes;
+                this.reRender();
+                this.wait(false);
+
+            }.bind(this)).catch(function(error) {
+                console.warn('⚠️ No se pudo verificar con el servidor:', error);
+                console.log('📋 Usando reportes por defecto');
+                this.reportesDisponibles = [];
+                this.estadisticasGenerales = { totalEncuestas: 'N/A', encuestasAsesor: 'N/A', encuestasGerente: 'N/A' };
+                this.reRender();
+                this.wait(false);
+            }.bind(this));
         },
 
         verReporteAsesores: function () {

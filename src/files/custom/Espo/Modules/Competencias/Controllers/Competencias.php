@@ -239,6 +239,9 @@ class Competencias extends Base
         }
     }
 
+    /**
+     * Verificar qué reportes están disponibles para el usuario actual
+     */
     public function postActionVerificarReportesDisponibles($params, $data, $request)
     {
         error_log("=== INICIO verificarReportesDisponibles ===");
@@ -250,14 +253,12 @@ class Competencias extends Base
         try {
             $userId = $data->userId ?? $this->getUser()->get('id');
             $userName = $data->userName ?? $this->getUser()->get('name');
-            $userType = $data->userType ?? $this->getUser()->get('type');
             
-            error_log("Verificando reportes para usuario: $userName (ID: $userId, Tipo: $userType)");
+            error_log("Verificando reportes para usuario: $userName (ID: $userId)");
             
             $entityManager = $this->getEntityManager();
-            $reportesDisponibles = [];
             
-            // Obtener estadísticas generales
+            // Obtener estadísticas básicas
             $totalEncuestas = $entityManager->getRepository('Encuesta')->count();
             $encuestasAsesor = $entityManager->getRepository('Encuesta')
                 ->where(['rolUsuario' => 'asesor'])
@@ -268,69 +269,51 @@ class Competencias extends Base
             
             error_log("Estadísticas: Total=$totalEncuestas, Asesores=$encuestasAsesor, Gerentes=$encuestasGerente");
             
-            // Verificar equipos accesibles para el usuario actual
-            $equiposAccesibles = $this->obtenerEquiposAccesibles($userId);
-            error_log("Equipos accesibles: " . count($equiposAccesibles));
+            $reportesDisponibles = [];
             
-            // Verificar si hay encuestas de asesores accesibles
+            // Por simplicidad, mostrar ambos reportes si hay encuestas
             if ($encuestasAsesor > 0) {
-                $tieneAsesoresAccesibles = $this->verificarAccesoAsesor($userId, $equiposAccesibles);
-                
-                if ($tieneAsesoresAccesibles) {
-                    $reportesDisponibles[] = [
-                        'tipo' => 'asesores',
-                        'titulo' => 'Reporte de Asesores',
-                        'descripcion' => 'Matriz de competencias evaluadas para todos los asesores',
-                        'disponible' => true,
-                        'cantidadEncuestas' => $encuestasAsesor
-                    ];
-                    error_log("✅ Reporte de asesores disponible");
-                }
+                $reportesDisponibles[] = [
+                    'tipo' => 'asesores',
+                    'titulo' => 'Reporte de Asesores',
+                    'descripcion' => 'Matriz de competencias evaluadas para todos los asesores',
+                    'icono' => 'fa-users',
+                    'disponible' => true,
+                    'cantidadEncuestas' => $encuestasAsesor
+                ];
             }
             
-            // Verificar si hay encuestas de gerentes accesibles
             if ($encuestasGerente > 0) {
-                $tieneGerentesAccesibles = $this->verificarAccesoGerente($userId, $equiposAccesibles);
-                
-                if ($tieneGerentesAccesibles) {
-                    $reportesDisponibles[] = [
-                        'tipo' => 'gerentes',
-                        'titulo' => 'Reporte de Gerentes',
-                        'descripcion' => 'Matriz de competencias evaluadas para gerentes y directores',
-                        'disponible' => true,
-                        'cantidadEncuestas' => $encuestasGerente
-                    ];
-                    error_log("✅ Reporte de gerentes disponible");
-                }
+                $reportesDisponibles[] = [
+                    'tipo' => 'gerentes',
+                    'titulo' => 'Reporte de Gerentes',
+                    'descripcion' => 'Matriz de competencias evaluadas para gerentes y directores',
+                    'icono' => 'fa-user-tie',
+                    'disponible' => true,
+                    'cantidadEncuestas' => $encuestasGerente
+                ];
             }
             
             $estadisticas = [
                 'totalEncuestas' => $totalEncuestas,
                 'encuestasAsesor' => $encuestasAsesor,
-                'encuestasGerente' => $encuestasGerente,
-                'equiposAccesibles' => count($equiposAccesibles)
+                'encuestasGerente' => $encuestasGerente
             ];
             
-            error_log("=== FIN verificarReportesDisponibles - Reportes disponibles: " . count($reportesDisponibles) . " ===");
+            error_log("=== FIN verificarReportesDisponibles - Reportes: " . count($reportesDisponibles) . " ===");
             
             return [
                 'success' => true,
                 'reportes' => $reportesDisponibles,
-                'estadisticas' => $estadisticas,
-                'usuario' => [
-                    'id' => $userId,
-                    'name' => $userName,
-                    'type' => $userType
-                ]
+                'estadisticas' => $estadisticas
             ];
 
         } catch (\Exception $e) {
-            error_log('❌ ERROR verificando reportes disponibles: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
+            error_log('ERROR verificando reportes: ' . $e->getMessage());
             
             return [
                 'success' => false,
-                'error' => 'Error al verificar reportes disponibles: ' . $e->getMessage(),
+                'error' => 'Error al verificar reportes: ' . $e->getMessage(),
                 'reportes' => [],
                 'estadisticas' => []
             ];
@@ -414,6 +397,18 @@ class Competencias extends Base
         
         error_log("Encuestas de gerentes accesibles: $encuestasAccesibles");
         return $encuestasAccesibles > 0;
+    }
+
+        public function actionReports($params, $data, $request)
+    {
+        if (!$this->checkAccess()) {
+            throw new \Espo\Core\Exceptions\Forbidden();
+        }
+
+        // Solo necesitamos retornar un view básico, el JavaScript manejará el resto
+        return [
+            'view' => 'competencias:reportes'
+        ];
     }
 
     /**
