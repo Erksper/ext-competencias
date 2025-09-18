@@ -28,8 +28,8 @@
         },
         "estado": {
             "type": "enum",
-            "options": ["borrador", "completada"],
-            "default": "completada"
+            "options": ["incompleta", "completada"],
+            "default": "incompleta"
         },
         "totalPreguntas": {
             "type": "int",

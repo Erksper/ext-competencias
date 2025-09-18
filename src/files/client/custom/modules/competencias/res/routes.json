@@ -26,6 +26,21 @@
             "action": "survey"
         },
         {
+            "route": "Competencias/reports",
+            "controller": "Competencias",
+            "action": "reports"
+        },
+        {
+            "route": "Competencias/reporteAsesores",
+            "controller": "Competencias",
+            "action": "reporteAsesores"
+        },
+        {
+            "route": "Competencias/reporteGerentes",
+            "controller": "Competencias",
+            "action": "reporteGerentes"
+        },
+        {
             "route": "Competencias/action/verificarEntidades",
             "controller": "Competencias",
             "action": "verificarEntidades",
@@ -53,6 +68,12 @@
             "route": "Competencias/action/guardarEncuesta",
             "controller": "Competencias",
             "action": "guardarEncuesta",
+            "method": "POST"
+        },
+        {
+            "route": "Competencias/action/verificarReportesDisponibles",
+            "controller": "Competencias",
+            "action": "verificarReportesDisponibles",
             "method": "POST"
         }
     ]

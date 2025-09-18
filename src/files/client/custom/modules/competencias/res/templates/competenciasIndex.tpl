@@ -1,23 +1,10 @@
 <!-- Actualiza: src/files/client/custom/modules/competencias/res/templates/competenciasIndex.tpl -->
-<div class="page-header">
-    <div class="row">
-        <div class="col-sm-7">
-            <h3>
-                <span style="color: #D4AF37; font-weight: bold;">CENTURY 21</span>
-                <small>Sistema de Competencias</small>
-            </h3>
-        </div>
-        {{#if esAdmin}}
-        <div class="col-sm-5 text-right">
-            {{#unless mostrarBotonCrear}}
-            <small class="text-muted">
-                <i class="fas fa-check-circle text-success"></i> 
-                Sistema inicializado ({{totalPreguntas}} preguntas)
-            </small>
-            {{/unless}}
-        </div>
-        {{/if}}
-    </div>
+<div class="page-header text-center">
+    <h2>
+        Encuestas de análisis de competencias
+        <br>
+        <small style="font-weight: bold; color: #D4AF37;">CENTURY 21</small>
+    </h2>
 </div>
 
 <div class="record-container">
@@ -42,6 +29,7 @@
             </div>
             {{else}}
             <!-- Confirmación cuando el sistema está listo -->
+            {{#if preguntasRecienCreadas}}
             <div class="alert alert-success" style="margin-bottom: 20px;">
                 <div class="row">
                     <div class="col-md-12 text-center">
@@ -50,6 +38,7 @@
                     </div>
                 </div>
             </div>
+            {{/if}}
             {{/if}}
             {{else}}
             <!-- Mensaje para usuarios no admin cuando no hay preguntas -->
@@ -74,13 +63,13 @@
                     <div class="row">
                         <div class="col-md-6 col-md-offset-3 text-center">
                             <div style="margin: 30px 0 40px 0;">
-                                <button class="btn btn-lg btn-block {{#if sinPreguntas}}btn-disabled{{/if}}" 
+                                <button class="btn btn-primary btn-lg btn-block {{#if sinPreguntas}}btn-disabled{{/if}}" 
                                         data-action="startSurvey" 
                                         style="margin-bottom: 20px;">
                                     <i class="fas fa-clipboard-list"></i> Iniciar Evaluación
                                     {{#if sinPreguntas}}<small style="display: block; font-size: 0.8em; margin-top: 5px;">⚠️ Requiere preguntas configuradas</small>{{/if}}
                                 </button>
-                                <button class="btn btn-lg btn-block {{#if sinPreguntas}}btn-disabled{{/if}}" 
+                                <button class="btn btn-primary btn-lg btn-block {{#if sinPreguntas}}btn-disabled{{/if}}" 
                                         data-action="viewReports">
                                     <i class="fas fa-chart-bar"></i> Reportes
                                     {{#if sinPreguntas}}<small style="display: block; font-size: 0.8em; margin-top: 5px;">⚠️ Requiere datos de evaluaciones</small>{{/if}}
@@ -95,21 +84,6 @@
 </div>
 
 <style>
-/* Botones normales habilitados */
-.panel-body .btn[data-action="startSurvey"]:not(.btn-disabled),
-.panel-body .btn[data-action="viewReports"]:not(.btn-disabled) {
-    background-color: #666;
-    border-color: #555;
-    color: #fff;
-}
-
-.panel-body .btn[data-action="startSurvey"]:not(.btn-disabled):hover,
-.panel-body .btn[data-action="viewReports"]:not(.btn-disabled):hover {
-    background-color: #555;
-    border-color: #444;
-    color: #fff;
-}
-
 /* Botones deshabilitados */
 .panel-body .btn.btn-disabled {
     background-color: #f5f5f5 !important;

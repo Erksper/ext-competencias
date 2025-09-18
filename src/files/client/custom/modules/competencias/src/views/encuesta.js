@@ -36,8 +36,11 @@ define(['view'], function (View) {
             });
             
             this.respuestas = {};
+            this.encuestaId = null; // ID de la encuesta existente, si la hay
+            this.guardandoEncuesta = false; // Flag para evitar múltiples envíos
+            this.totalPreguntasDisponibles = 0; // Total de preguntas para la encuesta actual
             this.wait(true);
-            this.cargarPreguntas();
+            this.cargarPreguntas(); // Inicia la cadena de carga
         },
 
         parseURLParams: function () {
@@ -86,9 +89,11 @@ define(['view'], function (View) {
                     $firstSubcategoriaHeader.addClass('active');
                     $firstSubcategoriaHeader.next('.subcategoria-content').show();
                 }
-                // REFACTOR: Actualizar indicadores al inicio
-                this.actualizarIndicadoresDeProgreso(); 
             }
+            
+            // Aplicar respuestas cargadas a la UI y actualizar indicadores
+            this.renderRespuestasEnUI();
+            this.actualizarIndicadoresDeProgreso();
         },
         
         cargarPreguntas: function () {
@@ -106,8 +111,10 @@ define(['view'], function (View) {
                     
                     if (response.list && response.list.length > 0) {
                         var preguntasFiltradas = this.filtrarPreguntasPorRol(response.list);
+                        this.totalPreguntasDisponibles = preguntasFiltradas.length;
                         this.procesarPreguntasAPI(preguntasFiltradas);
-                        this.wait(false);
+                        // Una vez que las preguntas están listas, buscar una encuesta incompleta
+                        this.buscarEncuestaIncompleta();
                     } else {
                         console.warn('⚠️ No se encontraron preguntas en la base de datos para este rol.');
                         this.preguntas = {}; // Dejar vacío para que el template muestre el mensaje
@@ -120,6 +127,88 @@ define(['view'], function (View) {
                     this.wait(false);
                 }.bind(this)
             });
+        },
+
+        buscarEncuestaIncompleta: function() {
+            console.log('🔍 Buscando encuesta incompleta para el usuario:', this.userId);
+            this.getCollectionFactory().create('Encuesta', function (collection) {
+                collection.fetch({
+                    data: {
+                        where: [
+                            {
+                                type: 'equals',
+                                attribute: 'usuarioEvaluadoId',
+                                value: this.userId
+                            },
+                            {
+                                type: 'equals',
+                                attribute: 'estado',
+                                value: 'incompleta'
+                            }
+                        ],
+                        maxSize: 1,
+                        sortBy: 'fechaEncuesta',
+                        order: 'desc'
+                    },
+                    success: function(collection) {
+                        if (collection.total > 0) {
+                            var encuesta = collection.at(0);
+                            this.encuestaId = encuesta.id;
+                            console.log('📝 Encuesta incompleta encontrada:', this.encuestaId);
+                            this.cargarRespuestasGuardadas();
+                        } else {
+                            console.log('✨ No hay encuestas incompletas. Se creará una nueva.');
+                            this.wait(false); // Termina la carga, es una encuesta nueva
+                        }
+                    }.bind(this),
+                    error: function() {
+                        console.error('❌ Error buscando encuesta incompleta.');
+                        this.wait(false);
+                    }.bind(this)
+                });
+            }.bind(this));
+        },
+
+        cargarRespuestasGuardadas: function() {
+            console.log('🔄 Cargando respuestas para la encuesta:', this.encuestaId);
+            
+            // Obtener todas las IDs de preguntas activas para validar
+            var preguntasActivasIds = new Set();
+            Object.values(this.preguntas).forEach(subcategorias => {
+                Object.values(subcategorias).forEach(preguntas => {
+                    preguntas.forEach(pregunta => preguntasActivasIds.add(pregunta.id));
+                });
+            });
+
+            this.getCollectionFactory().create('RespuestaEncuesta', function (respuestasCollection) {
+                respuestasCollection.fetch({
+                    data: {
+                        where: [
+                            { type: 'equals', attribute: 'encuestaId', value: this.encuestaId }
+                        ],
+                        maxSize: 200 // Un número grande para traer todas
+                    },
+                    success: function(collection) {
+                        console.log('✅ Respuestas guardadas recuperadas:', collection.length);
+                        collection.forEach(function(respuesta) {
+                            var preguntaId = respuesta.get('preguntaId');
+                            // Solo cargar respuestas de preguntas que siguen activas
+                            if (preguntasActivasIds.has(preguntaId)) {
+                                this.respuestas[preguntaId] = respuesta.get('respuesta');
+                            } else {
+                                console.warn('🗑️ Respuesta ignorada para pregunta inactiva o eliminada:', preguntaId);
+                            }
+                        }.bind(this));
+                        
+                        console.log('📊 Total de respuestas cargadas y validadas:', Object.keys(this.respuestas).length);
+                        this.wait(false); // Termina la carga, la vista se renderizará
+                    }.bind(this),
+                    error: function() {
+                        console.error('❌ Error cargando las respuestas guardadas.');
+                        this.wait(false);
+                    }.bind(this)
+                });
+            }.bind(this));
         },
 
         filtrarPreguntasPorRol: function (todasLasPreguntas) {
@@ -222,12 +311,24 @@ define(['view'], function (View) {
             this.$el.find('[data-pregunta-id="' + preguntaId + '"][data-color="' + color + '"]').addClass('selected');
             
             console.log('✅ Respuesta guardada. Total respuestas:', Object.keys(this.respuestas).length);
-            
-            // REFACTOR: Actualizar indicadores de progreso en lugar de verificar completitud total
             this.actualizarIndicadoresDeProgreso();
         },
 
-        // REFACTOR: Nueva función para mostrar el estado de completitud por categoría/subcategoría
+        renderRespuestasEnUI: function() {
+            if (Object.keys(this.respuestas).length === 0) {
+                return; // No hay nada que renderizar
+            }
+            console.log('🎨 Aplicando respuestas guardadas a la interfaz...');
+            Object.keys(this.respuestas).forEach(function(preguntaId) {
+                var color = this.respuestas[preguntaId];
+                this.$el.find('[data-pregunta-id="' + preguntaId + '"]').removeClass('selected');
+                this.$el.find('[data-pregunta-id="' + preguntaId + '"][data-color="' + color + '"]').addClass('selected');
+            }.bind(this));
+        },
+
+        // REFACTOR: Nueva función para mostrar el estado de completitud por categoría/subcategoría (ya estaba)
+        // FIX: Corregir selectores para que coincidan con el atributo 'data-categoria' y 'data-subcategoria' de la plantilla.
+        // (ya estaba)
         actualizarIndicadoresDeProgreso: function () {
             var respuestas = this.respuestas;
             var preguntasAgrupadas = this.preguntas;
@@ -314,40 +415,285 @@ define(['view'], function (View) {
             }
         },
 
-        // REFACTOR: Permitir guardado parcial eliminando la validación de completitud.
+        // FIX: Eliminar dependencia de disableButton/enableButton y usar control manual
         guardarEncuesta: function () {
-            var preguntasRespondidas = Object.keys(this.respuestas).length;
-            
-            if (preguntasRespondidas === 0) {
+            if (this.encuestaId) {
+                this.actualizarEncuestaExistente();
+            } else {
+                this.crearNuevaEncuesta();
+            }
+        },
+
+        crearNuevaEncuesta: function() {
+            var preguntasRespondidasCount = Object.keys(this.respuestas).length;
+
+            if (preguntasRespondidasCount === 0 && !this.encuestaId) { // Solo para nuevas encuestas
                 Espo.Ui.warning('Debes responder al menos una pregunta para guardar.');
                 return;
             }
 
-            this.disableButton('saveSurvey');
-            Espo.Ui.notify('Guardando encuesta...', 'info');
-            
-            // REFACTOR: Usar this.ajax.post para una llamada más limpia y segura.
-            this.ajax.post('Competencias/action/guardarEncuesta', {
-                evaluado: this.userName,
-                evaluador: this.getUser().get('name'), 
-                rol: this.role,
-                equipo: this.teamName,
-                respuestas: this.convertirRespuestasParaAPI()
-            }).then(function (response) {
-                console.log('✅ Encuesta guardada exitosamente:', response);
-                
-                if (response.success) {
-                    Espo.Ui.success('✅ Encuesta guardada exitosamente');
-                    this.getRouter().navigate('#Competencias', {trigger: true});
-                } else {
-                    throw new Error(response.error || 'Error desconocido al guardar.');
-                }
-            }.bind(this)).fail(function (xhr) {
-                console.error('❌ Error guardando encuesta:', xhr);
-                var message = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'Error desconocido.';
-                Espo.Ui.error('❌ Error al guardar la encuesta: ' + message);
-                this.enableButton('saveSurvey');
+            if (this.guardandoEncuesta) {
+                return;
+            }
+            this.guardandoEncuesta = true;
+
+            var $saveButton = this.$el.find('[data-action="saveSurvey"]');
+            $saveButton.prop('disabled', true).text('Guardando...');
+
+            Espo.Ui.notify('Iniciando guardado de encuesta...', 'info');
+
+            var totalPreguntasDisponibles = this.totalPreguntasDisponibles || 0;
+            var estaCompleta = (totalPreguntasDisponibles > 0) && (preguntasRespondidasCount === totalPreguntasDisponibles);
+            var estadoEncuesta = estaCompleta ? 'completada' : 'incompleta';
+            var porcentajeCompletado = totalPreguntasDisponibles > 0 ? Math.round((preguntasRespondidasCount / totalPreguntasDisponibles) * 100) : 0;
+
+            // 1. Crear y guardar la entidad principal 'Encuesta'
+            this.getModelFactory().create('Encuesta', function(encuestaModel) {
+                encuestaModel.set({
+                    name: 'Evaluación ' + this.userName + ' - ' + new Date().toLocaleString(),
+                    rolUsuario: this.role,
+                    fechaModificacion: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                    fechaCreacion: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                    fechaEncuesta: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                    estado: estadoEncuesta,
+                    totalPreguntas: totalPreguntasDisponibles,
+                    preguntasRespondidas: preguntasRespondidasCount,
+                    porcentajeCompletado: porcentajeCompletado,
+                    observaciones: 'Encuesta completada desde el módulo web',
+                    equipoId: this.teamId,
+                    usuarioEvaluadoId: this.userId,
+                    usuarioEvaluadorId: this.getUser().id,
+                });
+
+                encuestaModel.save({}, {
+                    success: function(model) {
+                        var encuestaId = model.get('id');
+                        console.log('✅ Encuesta principal creada con ID:', encuestaId);
+                        // 2. Una vez creada la encuesta, guardar las respuestas individuales
+                        this.guardarRespuestas(encuestaId, encuestaModel);
+                    }.bind(this),
+                    error: function(model, xhr) {
+                        console.error('❌ Error al crear la encuesta principal:', xhr);
+                        Espo.Ui.error('Error crítico: No se pudo crear el registro de la encuesta.');
+                        this.guardandoEncuesta = false;
+                        $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
+                    }.bind(this)
+                });
             }.bind(this));
+        },
+
+        actualizarEncuestaExistente: function() {
+            var preguntasRespondidasCount = Object.keys(this.respuestas).length;
+            if (this.guardandoEncuesta) {
+                return;
+            }
+            this.guardandoEncuesta = true;
+
+            var $saveButton = this.$el.find('[data-action="saveSurvey"]');
+            $saveButton.prop('disabled', true).text('Actualizando...');
+            Espo.Ui.notify('Actualizando encuesta...', 'info');
+
+            // FIX: Corregir la forma de obtener un modelo existente.
+            // Se crea una instancia vacía, se le asigna el ID y luego se hace fetch.
+            this.getModelFactory().create('Encuesta', function(encuestaModel) {
+                encuestaModel.id = this.encuestaId;
+                encuestaModel.fetch({
+                    success: function(model) { // 'model' es el modelo ya cargado con datos del servidor
+                        // Recalcular estado y porcentaje
+                        var totalPreguntasDisponibles = this.totalPreguntasDisponibles || 0;
+                        var estaCompleta = (totalPreguntasDisponibles > 0) && (preguntasRespondidasCount === totalPreguntasDisponibles);
+                        var estadoEncuesta = estaCompleta ? 'completada' : 'incompleta';
+                        var porcentajeCompletado = totalPreguntasDisponibles > 0 ? Math.round((preguntasRespondidasCount / totalPreguntasDisponibles) * 100) : 0;
+
+                        model.set({
+                            totalPreguntas: totalPreguntasDisponibles, // Actualizar por si cambiaron las preguntas
+                            preguntasRespondidas: preguntasRespondidasCount,
+                            porcentajeCompletado: porcentajeCompletado,
+                            estado: estadoEncuesta,
+                            fechaModificacion: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                        });
+
+                        model.save({}, {
+                            success: function(savedModel) {
+                                console.log('✅ Encuesta principal actualizada. ID:', savedModel.id);
+                                this.sincronizarRespuestas(savedModel.id, savedModel);
+                            }.bind(this),
+                            error: function() {
+                                console.error('❌ Error al actualizar la encuesta principal.');
+                                Espo.Ui.error('Error crítico: No se pudo actualizar el registro de la encuesta.');
+                                this.guardandoEncuesta = false;
+                                $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
+                            }.bind(this)
+                        });
+                    }.bind(this),
+                    error: function() {
+                        console.error('❌ Error fatal: No se pudo recuperar la encuesta existente para actualizarla.');
+                        Espo.Ui.error('No se pudo cargar la encuesta guardada. Intente de nuevo.');
+                        this.guardandoEncuesta = false;
+                        $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
+                    }.bind(this)
+                });
+            }.bind(this));
+        },
+
+        sincronizarRespuestas: function(encuestaId, encuestaModel) {
+            console.log('🔄 Sincronizando respuestas (Upsert) para la encuesta:', encuestaId);
+            
+            var respuestasNuevas = this.convertirRespuestasParaAPI();
+            
+            this.getCollectionFactory().create('RespuestaEncuesta', function (respuestasAntiguasCollection) {
+                respuestasAntiguasCollection.fetch({
+                    data: { where: [{ type: 'equals', attribute: 'encuestaId', value: encuestaId }], maxSize: 200 },
+                    success: function(collection) {
+                        var mapaRespuestasAntiguas = {};
+                        collection.forEach(function(model) {
+                            mapaRespuestasAntiguas[model.get('preguntaId')] = model;
+                        });
+
+                        console.log('🗺️ Mapa de respuestas antiguas creado:', Object.keys(mapaRespuestasAntiguas).length, 'respuestas.');
+
+                        var procesadas = 0;
+                        var errores = [];
+                        var totalAProcesar = respuestasNuevas.length;
+
+                        var procesarSincronizacion = function(index) {
+                            if (index >= totalAProcesar) {
+                                this.finalizarGuardado(procesadas, errores, totalAProcesar, encuestaModel);
+                                return;
+                            }
+
+                            var nuevaRespuesta = respuestasNuevas[index];
+                            var preguntaId = nuevaRespuesta.pregunta;
+                            var modeloExistente = mapaRespuestasAntiguas[preguntaId];
+
+                            var next = function(exito) {
+                                if (exito) {
+                                    procesadas++;
+                                } else {
+                                    errores.push(preguntaId);
+                                }
+                                setTimeout(function() { procesarSincronizacion.call(this, index + 1); }.bind(this), 10);
+                            }.bind(this);
+
+                            if (modeloExistente) {
+                                if (modeloExistente.get('respuesta') !== nuevaRespuesta.color || (nuevaRespuesta.comentario && modeloExistente.get('comentario') !== nuevaRespuesta.comentario)) {
+                                    modeloExistente.set({ respuesta: nuevaRespuesta.color, comentario: nuevaRespuesta.comentario });
+                                    modeloExistente.save({}, {
+                                        success: function() { console.log('✅ Respuesta actualizada:', preguntaId); next(true); },
+                                        error: function() { console.warn('⚠️ Error actualizando:', preguntaId); next(false); }
+                                    });
+                                } else {
+                                    next(true);
+                                }
+                            } else {
+                                this.getModelFactory().create('RespuestaEncuesta', function(respuestaModel) {
+                                    respuestaModel.set({
+                                        name: 'Respuesta - ' + nuevaRespuesta.pregunta,
+                                        respuesta: nuevaRespuesta.color,
+                                        comentario: nuevaRespuesta.comentario,
+                                        encuestaId: encuestaId,
+                                        preguntaId: nuevaRespuesta.pregunta
+                                    });
+                                    respuestaModel.save({}, {
+                                        success: function() { console.log('✅ Nueva respuesta creada:', preguntaId); next(true); },
+                                        error: function() { console.warn('⚠️ Error creando:', preguntaId); next(false); }
+                                    });
+                                }.bind(this));
+                            }
+                        }.bind(this);
+
+                        if (totalAProcesar > 0) {
+                            procesarSincronizacion(0);
+                        } else {
+                            this.finalizarGuardado(0, [], 0, encuestaModel);
+                        }
+
+                    }.bind(this),
+                    error: function() {
+                        console.error('❌ Error fatal: No se pudieron recuperar las respuestas antiguas. Abortando actualización.');
+                        Espo.Ui.error('No se pudo sincronizar con las respuestas guardadas. Intente de nuevo.');
+                        var $saveButton = this.$el.find('[data-action="saveSurvey"]');
+                        this.guardandoEncuesta = false;
+                        $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
+                    }.bind(this)
+                });
+            }.bind(this));
+        },
+
+        guardarRespuestas: function(encuestaId, encuestaModel) {
+            var respuestasArray = this.convertirRespuestasParaAPI();
+            var creadas = 0;
+            var errores = [];
+            var total = respuestasArray.length;
+
+            console.log('🔄 Iniciando guardado de', total, 'respuestas para la encuesta ID:', encuestaId);
+
+            var procesarRespuestas = function(index) {
+                // Cuando se hayan procesado todas, finalizar
+                if (index >= respuestasArray.length) {
+                    this.finalizarGuardado(creadas, errores, total, encuestaModel);
+                    return;
+                }
+
+                var datoRespuesta = respuestasArray[index];
+
+                // Crear un modelo para cada respuesta y guardarlo
+                this.getModelFactory().create('RespuestaEncuesta', function(respuestaModel) {
+                    respuestaModel.set({
+                        name: 'Respuesta - ' + datoRespuesta.pregunta, // El 'name' se puede autogenerar en el backend
+                        respuesta: datoRespuesta.color,
+                        comentario: datoRespuesta.comentario,
+                        encuestaId: encuestaId, // Vincular con la encuesta principal
+                        preguntaId: datoRespuesta.pregunta
+                    });
+
+                    respuestaModel.save({}, {
+                        success: function() {
+                            creadas++;
+                            console.log('✅ Respuesta guardada:', creadas + '/' + total);
+                            // Procesar la siguiente respuesta con una pequeña pausa
+                            setTimeout(function() { procesarRespuestas.call(this, index + 1); }.bind(this), 50);
+                        }.bind(this),
+                        error: function(model, xhr) {
+                            errores.push('Error guardando respuesta para pregunta ' + datoRespuesta.pregunta);
+                            console.warn('⚠️ Error guardando respuesta:', xhr);
+                            setTimeout(function() { procesarRespuestas.call(this, index + 1); }.bind(this), 50);
+                        }.bind(this)
+                    });
+                }.bind(this));
+
+            }.bind(this);
+
+            // Iniciar el proceso con la primera respuesta
+            procesarRespuestas(0);
+        },
+
+        finalizarGuardado: function(creadas, errores, total, encuestaModel) {
+            console.log('🏁 Proceso de guardado finalizado.');
+
+            var totalPreguntasDisponibles = this.totalPreguntasDisponibles || 0;
+            var estaCompleta = (totalPreguntasDisponibles > 0) && (creadas === totalPreguntasDisponibles);
+            var estadoEncuesta = estaCompleta ? 'completada' : 'incompleta';
+            var porcentajeCompletado = totalPreguntasDisponibles > 0 ? Math.round((creadas / totalPreguntasDisponibles) * 100) : 0;
+            
+            // Actualizar el modelo con los datos finales, por si hubo fallos en el guardado de respuestas
+            encuestaModel.set({
+                preguntasRespondidas: creadas,
+                porcentajeCompletado: porcentajeCompletado,
+                estado: estadoEncuesta
+            });
+            encuestaModel.save();
+
+            if (errores.length === 0) {
+                Espo.Ui.success(`✅ Encuesta guardada exitosamente. ${creadas}/${total} respuestas procesadas.`);
+            } else {
+                Espo.Ui.warning(`⚠️ Encuesta guardada con ${errores.length} errores. ${creadas}/${total} respuestas procesadas.`);
+            }
+
+            // Redirigir al usuario después de mostrar el mensaje
+            setTimeout(function() {
+                this.getRouter().navigate('#Competencias', {trigger: true});
+            }.bind(this), 2000);
         },
 
         convertirRespuestasParaAPI: function () {
@@ -361,6 +707,7 @@ define(['view'], function (View) {
                 });
             }.bind(this));
             
+            console.log('🔄 Respuestas convertidas para API:', respuestasArray);
             return respuestasArray;
         },
 

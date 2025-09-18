@@ -126,14 +126,89 @@ define(['view'], function (View) {
                     console.log('🔢 Total filtrados:', usuarios.length);
                     console.log('===== FIN DEBUG =====');
                     
-                    this.usuarios = usuarios;
-                    this.wait(false);
+                    // Aplicar filtro de historial de encuestas
+                    this.filtrarUsuariosPorHistorial(usuarios);
+
                 }.bind(this),
                 error: function (xhr, status, error) {
                     console.error('❌ Error obteniendo usuarios del equipo:', error);
                     this.cargarUsuariosFallback();
                 }.bind(this)
             });
+        },
+
+        filtrarUsuariosPorHistorial: function(usuariosPorRol) {
+            if (!usuariosPorRol || usuariosPorRol.length === 0) {
+                console.log('No hay usuarios por rol para filtrar por historial.');
+                this.usuarios = [];
+                this.wait(false);
+                return;
+            }
+
+            console.log('🔍 Filtrando', usuariosPorRol.length, 'usuarios por historial de encuestas...');
+            var userIds = usuariosPorRol.map(u => u.id);
+
+            this.getCollectionFactory().create('Encuesta', function(collection) {
+                collection.fetch({
+                    data: {
+                        where: [
+                            { type: 'in', attribute: 'usuarioEvaluadoId', value: userIds }
+                        ],
+                        maxSize: 2000 // Un número grande para obtener todas las encuestas de los usuarios
+                    },
+                    success: function(encuestasCollection) {
+                        var ultimasEncuestas = {};
+                        encuestasCollection.forEach(function(encuesta) {
+                            var userId = encuesta.get('usuarioEvaluadoId');
+                            var fechaMod = new Date(encuesta.get('fechaModificacion'));
+
+                            if (!ultimasEncuestas[userId] || fechaMod > new Date(ultimasEncuestas[userId].get('fechaModificacion'))) {
+                                ultimasEncuestas[userId] = encuesta;
+                            }
+                        });
+
+                        console.log('🗺️ Mapa de últimas encuestas creado:', ultimasEncuestas);
+
+                        var fechaLimite = new Date();
+                        fechaLimite.setMonth(fechaLimite.getMonth() - 6);
+                        console.log('🗓️ Fecha límite (6 meses atrás):', fechaLimite.toISOString());
+
+                        var usuariosFinales = usuariosPorRol.filter(function(user) {
+                            var ultimaEncuesta = ultimasEncuestas[user.id];
+
+                            if (!ultimaEncuesta) {
+                                console.log('✅ INCLUIR (sin encuesta):', user.name);
+                                return true; // No tiene encuestas, se incluye
+                            }
+
+                            if (ultimaEncuesta.get('estado') === 'incompleta') {
+                                console.log('✅ INCLUIR (incompleta):', user.name);
+                                return true; // Tiene encuesta incompleta, se incluye
+                            }
+
+                            // Si está completada, verificar la fecha
+                            var fechaModEncuesta = new Date(ultimaEncuesta.get('fechaModificacion'));
+                            if (fechaModEncuesta < fechaLimite) {
+                                console.log('✅ INCLUIR (completada > 6 meses):', user.name);
+                                return true; // Completada hace más de 6 meses, se incluye
+                            }
+
+                            console.log('❌ EXCLUIR (completada < 6 meses):', user.name, ' - Fecha:', fechaModEncuesta.toISOString());
+                            return false; // Completada hace menos de 6 meses, se excluye
+                        });
+
+                        console.log('👥 Usuarios finales tras filtro de historial:', usuariosFinales);
+                        this.usuarios = usuariosFinales;
+                        this.wait(false);
+
+                    }.bind(this),
+                    error: function() {
+                        console.error('❌ Error al obtener el historial de encuestas. Mostrando todos los usuarios del rol como fallback.');
+                        this.usuarios = usuariosPorRol;
+                        this.wait(false);
+                    }.bind(this)
+                });
+            }.bind(this));
         },
         
         cargarUsuariosFallback: function () {
@@ -191,8 +266,8 @@ define(['view'], function (View) {
                         ];
                     }
                     
-                    this.usuarios = usuarios;
-                    this.wait(false);
+                    // Aplicar filtro de historial también en el fallback
+                    this.filtrarUsuariosPorHistorial(usuarios);
                 }.bind(this),
                 error: function (xhr, status, error) {
                     console.error('❌ Error en fallback:', error);

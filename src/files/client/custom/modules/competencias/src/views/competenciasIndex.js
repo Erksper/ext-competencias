@@ -30,6 +30,7 @@ define(['view'], function (View) {
             this.mostrarBotonCrear = false;
             this.totalPreguntas = 0;
             this.entidadExiste = false;
+            this.preguntasRecienCreadas = false; // Flag para mensaje post-creación
             
             // Verificar preguntas siempre (admin y usuarios normales)
             this.wait(true);
@@ -207,6 +208,7 @@ define(['view'], function (View) {
                 
                 this.mostrarBotonCrear = false;
                 this.totalPreguntas = creadas;
+                this.preguntasRecienCreadas = true;
                 this.reRender();
                 
             } else {
@@ -286,6 +288,7 @@ define(['view'], function (View) {
                 totalPreguntas: this.totalPreguntas,
                 sinPreguntas: (this.totalPreguntas === 0),
                 errorEntidad: (this.totalPreguntas === -1),
+                preguntasRecienCreadas: this.preguntasRecienCreadas,
                 entidadExiste: this.entidadExiste
             };
         }
