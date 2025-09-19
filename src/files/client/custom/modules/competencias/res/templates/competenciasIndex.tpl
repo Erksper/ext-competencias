@@ -2,8 +2,6 @@
 <div class="page-header text-center">
     <h2>
         Encuestas de análisis de competencias
-        <br>
-        <small style="font-weight: bold; color: #D4AF37;">CENTURY 21</small>
     </h2>
 </div>
 
@@ -56,9 +54,6 @@
 
             <!-- Panel Principal -->
             <div class="panel panel-default">
-                <div class="panel-heading">
-                    <h4 class="panel-title">Análisis de Competencias</h4>
-                </div>
                 <div class="panel-body">
                     <div class="row">
                         <div class="col-md-6 col-md-offset-3 text-center">

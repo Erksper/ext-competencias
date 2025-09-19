@@ -1,16 +1,15 @@
 <div class="century21-header text-center" style="margin-bottom: 30px;">
-    <h1 style="color: #D4AF37; font-size: 2.5em; font-weight: bold;">CENTURY 21</h1>
-    <h2 style="color: #666; font-size: 1.5em;">Venezuela - Reportes de Competencias</h2>
+    <h1 style="color: #666; font-size: 1.5em;">Reportes de Competencias</h1>
 </div>
 
 <div class="reports-info panel panel-default" style="margin-bottom: 20px;">
     <div class="panel-body">
         <div class="row">
             <div class="col-md-6">
-                <strong>Usuario:</strong> {{usuario.name}}
+                <h4><strong>Usuario:</strong> {{usuario.name}}</h4>
             </div>
             <div class="col-md-6">
-                <strong>Tipo:</strong> {{usuario.type}}
+                <h4><strong>Tipo:</strong> {{usuario.type}}</h4>
             </div>
         </div>
         {{#if estadisticas}}

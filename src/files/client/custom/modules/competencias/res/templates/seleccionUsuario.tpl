@@ -1,9 +1,9 @@
 <div class="page-header">
     <h3>
         {{#if isGerente}}
-            Gerentes - {{teamName}}
+            {{teamName}} - Gerentes  
         {{else}}
-            Asesores - {{teamName}}
+            {{teamName}} - Asesores  
         {{/if}}
     </h3>
 </div>
@@ -26,8 +26,8 @@
                     {{/each}}
                 {{else}}
                     <div class="text-center" style="padding: 20px;">
-                        <p class="text-muted">No hay usuarios disponibles para este rol.</p>
-                        <small>Verifica que existan usuarios asignados al equipo con el rol correspondiente.</small>
+                        <p class="text-muted">No hay usuarios disponibles para esta oficina.</p>
+                        <small>Verifica que existan usuarios asignados a la oficina con el rol correspondiente.</small>
                     </div>
                 {{/if}}
                 

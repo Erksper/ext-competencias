@@ -1,5 +1,5 @@
 <div class="page-header">
-    <h3>Equipo: {{teamName}}</h3>
+    <h3>Oficina: {{teamName}}</h3>
     <h4>Seleccionar tipo de evaluación</h4>
 </div>
 

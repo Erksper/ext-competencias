@@ -1,5 +1,5 @@
 <div class="page-header">
-    <h3>Seleccionar Equipo</h3>
+    <h3>Seleccionar oficina</h3>
 </div>
 
 <div class="row">
@@ -8,7 +8,7 @@
             <div class="panel-body">
                 {{#if equipos.length}}
                 <div class="form-group" style="margin-bottom: 20px;">
-                    <input type="text" class="form-control" data-action="filterTeams" placeholder="Buscar equipo...">
+                    <input type="text" class="form-control" data-action="filterTeams" placeholder="Buscar oficina...">
                 </div>
                 {{/if}}
                 {{#each equipos}}

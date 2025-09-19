@@ -1,76 +1,74 @@
-<div class="century21-header text-center" style="margin-bottom: 30px;">
-    <h1 style="color: #D4AF37; font-size: 2.5em; font-weight: bold;">CENTURY 21</h1>
-    <h2 style="color: #666; font-size: 1.5em;">Venezuela</h2>
+<div class="century21-header text-center">
 </div>
 
-<div class="survey-info panel panel-default" style="margin-bottom: 20px;">
+<div class="survey-info panel panel-default">
     <div class="panel-body">
         <div class="row">
             <div class="col-md-6">
-                <strong>Oficina:</strong> {{teamName}}
+                <h3><strong>Oficina:</strong> {{teamName}}</h3>
             </div>
             <div class="col-md-6">
-                <strong>Usuario evaluado:</strong> {{userName}}
+                <h3><strong>Usuario evaluado:</strong> {{userName}}</h3>
             </div>
         </div>
     </div>
 </div>
 
-<div class="survey-title text-center" style="margin-bottom: 20px;">
-    <h3 style="background: #333; color: white; padding: 15px; margin: 0; border-radius: 8px;">
-        ANÁLISIS DE COMPETENCIAS DEL EQUIPO
+<div class="survey-title text-center">
+    <h3>
+        ANÁLISIS DE COMPETENCIAS
     </h3>
 </div>
 
 {{#each preguntas}}
-<div class="categoria-principal" style="margin-bottom: 15px;">
+<div class="categoria-principal">
     <h3 class="categoria-header" data-action="toggleCategoria" data-categoria="{{@key}}">
         <span>{{@key}}</span>
         <span class="estado-completitud"></span>
         <i class="fas fa-chevron-down categoria-chevron"></i>
     </h3>
     
-    <div class="categoria-content" data-categoria="{{@key}}" style="display: none;">
+    <div class="categoria-content" data-categoria="{{@key}}">
         {{#each this}}
-        <div class="subcategoria-section" style="margin-bottom: 15px;">
-            <h5 class="subcategoria-header" data-action="toggleSubcategoria" data-subcategoria="{{@key}}">
+        <div class="subcategoria-section">
+            <h3 class="subcategoria-header" data-action="toggleSubcategoria" data-subcategoria="{{@key}}">
                 <span><i class="fas fa-folder-open"></i> {{@key}}</span>
                 <span class="estado-completitud"></span>
                 <i class="fas fa-chevron-down subcategoria-chevron"></i>
-            </h5>
+            </h3>
             
-            <div class="subcategoria-content" data-subcategoria="{{@key}}" style="display: none;">
+            <div class="subcategoria-content" data-subcategoria="{{@key}}">
                 <div class="table-responsive">
-                    <table class="table table-bordered" style="border: 2px solid #000; margin-top: 5px;">
+                    <table class="table table-bordered">
                         <thead>
-                            <tr style="background: #f5f5f5;">
-                                <th style="border: 1px solid #000; width: 70%;">Competencia</th>
-                                <th style="border: 1px solid #000; width: 10%; text-align: center;"><i class="fas fa-circle" style="color: #4CAF50; margin-right: 5px;"></i>Verde</th>
-                                <th style="border: 1px solid #000; width: 10%; text-align: center;"><i class="fas fa-circle" style="color: #FFC107; margin-right: 5px;"></i>Amarillo</th>
-                                <th style="border: 1px solid #000; width: 10%; text-align: center;"><i class="fas fa-circle" style="color: #F44336; margin-right: 5px;"></i>Rojo</th>
+                            <tr>
+                                <th>Competencia</th>
+                                <th><i class="fas fa-circle icon-verde"></i>Verde</th>
+                                <th><i class="fas fa-circle icon-amarillo"></i>Amarillo</th>
+                                <th><i class="fas fa-circle icon-rojo"></i>Rojo</th>
                             </tr>
                         </thead>
                         <tbody>
                             {{#each this}}
-                            <tr>
-                                <td style="border: 1px solid #000; padding: 15px; font-weight: 500;">
-                                    {{orden}}. {{texto}}
+                            <tr class="pregunta-row">
+                                <td>
+                                    <h4>{{orden}}. {{texto}}</h4>
                                 </td>
-                                <td style="border: 1px solid #000; text-align: center; padding: 10px;">
+                                <td>
                                     <div class="color-option color-verde"
                                          data-action="selectColor" 
                                          data-pregunta-id="{{id}}" 
                                          data-color="verde">
                                     </div>
                                 </td>
-                                <td style="border: 1px solid #000; text-align: center; padding: 10px;">
+                                <td>
                                     <div class="color-option color-amarillo"
                                          data-action="selectColor" 
                                          data-pregunta-id="{{id}}" 
                                          data-color="amarillo">
                                     </div>
                                 </td>
-                                <td style="border: 1px solid #000; text-align: center; padding: 10px;">
+                                <td>
                                     <div class="color-option color-rojo"
                                          data-action="selectColor" 
                                          data-pregunta-id="{{id}}" 
@@ -89,7 +87,7 @@
 </div>
 {{/each}}
 
-<div class="survey-actions" style="margin-top: 30px;">
+<div class="survey-actions">
     <div class="row">
         <div class="col-md-6">
             <button class="btn btn-default" data-action="back">
@@ -105,6 +103,94 @@
 </div>
 
 <style>
+/* Estilos refactorizados desde inline */
+.century21-header {
+    margin-bottom: 30px;
+}
+
+.survey-info {
+    margin-bottom: 20px;
+}
+
+.survey-title {
+    margin-bottom: 20px;
+}
+
+.survey-title h3 {
+    background: #333;
+    color: white;
+    padding: 15px;
+    margin: 0;
+    border-radius: 8px;
+}
+
+.categoria-principal {
+    margin-bottom: 15px;
+}
+
+.subcategoria-section {
+    margin-bottom: 15px;
+}
+
+.subcategoria-content .table {
+    border: 2px solid #000;
+    margin-top: 5px;
+}
+
+.subcategoria-content table thead tr {
+    background: #f5f5f5;
+}
+
+.subcategoria-content table thead th {
+    border: 1px solid #000;
+    color: black; /* Texto en negro como solicitado */
+    text-align: center;
+    font-size: 15px; /* Aumentado para mejor visibilidad */
+    width: 10%;
+}
+
+.subcategoria-content table thead th:first-child {
+    width: 70%;
+    text-align: left;
+}
+
+.subcategoria-content table thead th .fa-circle {
+    margin-right: 5px;
+}
+
+.subcategoria-content table thead th .icon-verde {
+    color: #4CAF50;
+}
+
+.subcategoria-content table thead th .icon-amarillo {
+    color: #FFC107;
+}
+
+.subcategoria-content table thead th .icon-rojo {
+    color: #F44336;
+}
+
+.subcategoria-content table tbody td {
+    border: 1px solid #000;
+    padding: 10px;
+    text-align: center;
+}
+
+.subcategoria-content table tbody .pregunta-row td:first-child {
+    padding: 15px;
+    font-weight: 500;
+    text-align: left;
+}
+
+.pregunta-row h4 {
+    font-size: 16px; /* Aumentado para mejor visibilidad */
+    margin: 0;
+}
+
+.survey-actions {
+    margin-top: 30px;
+}
+
 /* Estilos para los indicadores de progreso */
 .estado-completitud {
     font-size: 11px;
@@ -172,7 +258,7 @@
     border: 1px solid #ddd;
     border-radius: 4px;
     transition: background-color 0.2s ease-in-out;
-    font-size: 1em;
+    font-size: 1.1em; /* Aumentado para mejor visibilidad */
     font-weight: 600;
 }
 
@@ -265,6 +351,7 @@
 
 /* Espaciado entre elementos */
 .categoria-content {
+    display: none; /* Oculto por defecto, JS lo muestra */
     padding: 15px;
     background: #fafafa;
     border: 1px solid #ddd;
@@ -273,6 +360,7 @@
 }
 
 .subcategoria-content {
+    display: none; /* Oculto por defecto, JS lo muestra */
     margin: 5px 0 10px 0;
 }
 </style>

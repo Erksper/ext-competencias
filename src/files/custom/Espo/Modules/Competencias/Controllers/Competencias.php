@@ -399,15 +399,40 @@ class Competencias extends Base
         return $encuestasAccesibles > 0;
     }
 
-        public function actionReports($params, $data, $request)
+    public function actionReports($params, $data, $request)
     {
         if (!$this->checkAccess()) {
             throw new \Espo\Core\Exceptions\Forbidden();
         }
 
-        // Solo necesitamos retornar un view básico, el JavaScript manejará el resto
+        // Retorna la vista principal de reportes, que mostrará los enlaces
+        // a los reportes de gerentes y asesores.
         return [
             'view' => 'competencias:reportes'
+        ];
+    }
+
+    public function actionReporteGerentes($params, $data, $request)
+    {
+        if (!$this->checkAccess()) {
+            throw new \Espo\Core\Exceptions\Forbidden();
+        }
+
+        // Retorna la vista específica para el reporte de gerentes.
+        return [
+            'view' => 'competencias:reporteGerentes'
+        ];
+    }
+
+    public function actionReporteAsesores($params, $data, $request)
+    {
+        if (!$this->checkAccess()) {
+            throw new \Espo\Core\Exceptions\Forbidden();
+        }
+
+        // Retorna la vista específica para el reporte de asesores.
+        return [
+            'view' => 'competencias:reporteAsesores'
         ];
     }
 

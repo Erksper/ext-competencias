@@ -76,24 +76,24 @@ define(['view'], function (View) {
                 };
 
                 var reportes = [];
-                if (encuestasAsesor > 0) {
-                    reportes.push({
-                        tipo: 'asesores', 
-                        titulo: 'Reporte de Asesores', 
-                        descripcion: 'Matriz de competencias evaluadas para todos los asesores', 
-                        icono: 'fa-users', 
-                        disponible: true,
-                        cantidadEncuestas: encuestasAsesor
-                    });
-                }
                 if (encuestasGerente > 0) {
                     reportes.push({
                         tipo: 'gerentes', 
                         titulo: 'Reporte de Gerentes', 
-                        descripcion: 'Matriz de competencias evaluadas para gerentes y directores', 
+                        descripcion: 'Matriz de competencias evaluadas de gerentes y directores', 
                         icono: 'fa-user-tie', 
                         disponible: true,
                         cantidadEncuestas: encuestasGerente
+                    });
+                }
+                if (encuestasAsesor > 0) {
+                    reportes.push({
+                        tipo: 'asesores', 
+                        titulo: 'Reporte de Asesores', 
+                        descripcion: 'Matriz de competencias evaluadas de asesores', 
+                        icono: 'fa-users', 
+                        disponible: true,
+                        cantidadEncuestas: encuestasAsesor
                     });
                 }
                 
