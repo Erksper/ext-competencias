@@ -22,81 +22,124 @@ define(['view'], function (View) {
             },
             'click [data-action="crearPreguntas"]': function () {
                 this.crearPreguntas();
+            },
+            'click [data-action="activarEncuestas"]': function () {
+                this.activarEncuestas();
+            },
+            'change #fecha-cierre-input': function (e) {
+                this.handleFechaCierreChange(e);
             }
         },
 
         setup: function () {
+            var user = this.getUser();
+
             this.esAdmin = this.getUser().isAdmin();
+            this.esCasaNacional = false;
+            this.puedeIniciarEncuesta = false;
+            this.tieneAccesoAlModulo = false;
+
+            this.encuestaActiva = false;
+            this.fechaInicio = null;
+            this.fechaCierre = null;
+
+            this.mostrarBotonActivar = false;
+            this.mostrarBotonIniciar = false;
+
             this.mostrarBotonCrear = false;
             this.totalPreguntas = 0;
             this.entidadExiste = false;
             this.preguntasRecienCreadas = false; // Flag para mensaje post-creación
             
-            // Verificar preguntas siempre (admin y usuarios normales)
             this.wait(true);
-            this.verificarPreguntas();
+
+            // 1. Obtener roles del usuario
+            this.getModelFactory().create('User', function (userModel) {
+                userModel.id = user.id;
+                userModel.fetch({ relations: { roles: true } }).then(function() {
+                    // Convertimos los nombres de los roles a minúsculas para una comparación segura y robusta.
+                    var roles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
+                    
+                    this.esCasaNacional = roles.includes('casa nacional');
+                    this.puedeIniciarEncuesta = this.esCasaNacional || roles.includes('gerente') || roles.includes('director');
+                    this.tieneAccesoAlModulo = this.puedeIniciarEncuesta || roles.includes('asesor');
+
+                    // 2. Verificar el estado de la competencia y las preguntas
+                    this.verificarEstadoGeneral();
+                }.bind(this));
+            }.bind(this));
+        },
+
+        verificarEstadoGeneral: function() {
+            // Verificar si la entidad 'Competencias' existe y tiene fechas
+            this.getCollectionFactory().create('Competencias', function(competenciaCollection) {
+                competenciaCollection.fetch({ data: { maxSize: 1 } }).then(function() {
+                    if (competenciaCollection.total > 0) {
+                        var competencia = competenciaCollection.at(0);
+                        var fechaInicio = competencia.get('fechaInicio');
+                        var fechaCierre = competencia.get('fechaCierre');
+
+                        if (fechaInicio && fechaCierre) {
+                            var hoy = new Date().toISOString().split('T')[0];
+                            this.encuestaActiva = (hoy >= fechaInicio && hoy <= fechaCierre);
+                            this.fechaInicio = fechaInicio;
+                            this.fechaCierre = this.getDateTime().toDisplayDate(fechaCierre);
+                        }
+                    }
+                    // Después de verificar las fechas, verificar las preguntas
+                    this.verificarPreguntas();
+                }.bind(this));
+            }.bind(this));
         },
 
         verificarPreguntas: function () {
-            console.log('🔍 Verificando preguntas existentes...');
-            
             this.getModelFactory().create('Pregunta', function(model) {
-                console.log('✅ Modelo Pregunta creado exitosamente');
                 this.entidadExiste = true;
                 
-                // Crear una colección para contar
                 this.getCollectionFactory().create('Pregunta', function(collection) {
-                    console.log('✅ Colección Pregunta creada');
-                    
-                    // Intentar fetch sin filtros complicados
                     collection.fetch({
                         data: {
-                            maxSize: 1
+                            maxSize: 1,
+                            where: [
+                                {
+                                    type: 'equals',
+                                    attribute: 'estaActiva',
+                                    value: 1
+                                }
+                            ]
                         },
                         success: function() {
-                            console.log('✅ Fetch exitoso, total:', collection.total);
                             this.totalPreguntas = collection.total || 0;
                             this.mostrarBotonCrear = (this.totalPreguntas === 0 && this.esAdmin);
-                            
-                            console.log('📊 Preguntas encontradas:', this.totalPreguntas);
-                            console.log('👁️ Mostrar botón crear:', this.mostrarBotonCrear);
-                            
+                            this.actualizarVisibilidadBotones();
                             this.wait(false);
                         }.bind(this),
                         error: function(collection, response) {
-                            console.warn('⚠️ Error en fetch collection:', response);
-                            
-                            // Si falla el fetch, asumir entidad vacía pero existente
                             this.totalPreguntas = 0;
                             this.mostrarBotonCrear = this.esAdmin;
-                            
-                            console.log('📊 Asumiendo entidad vacía');
+                            this.actualizarVisibilidadBotones();
                             this.wait(false);
                         }.bind(this)
                     });
                 }.bind(this), function(error) {
-                    console.error('❌ Error creando colección:', error);
                     this.entidadExiste = false;
                     this.totalPreguntas = -1;
                     this.mostrarBotonCrear = false;
-                    
                     if (this.esAdmin) {
                         Espo.Ui.error('❌ Error accediendo a la entidad Pregunta. Verifica los permisos.');
                     }
-                    
+                    this.actualizarVisibilidadBotones();
                     this.wait(false);
                 }.bind(this));
                 
             }.bind(this), function(error) {
-                console.error('❌ Error creando modelo Pregunta:', error);
                 this.entidadExiste = false;
                 this.totalPreguntas = -1;
                 this.mostrarBotonCrear = false;
-                
                 if (this.esAdmin) {
                     Espo.Ui.error('❌ La entidad Pregunta no está disponible. Ejecuta un Rebuild.');
                 }
-                
+                this.actualizarVisibilidadBotones();
                 this.wait(false);
             }.bind(this));
         },
@@ -105,18 +148,19 @@ define(['view'], function (View) {
             this.actualizarEstadoBotones();
         },
 
+        actualizarVisibilidadBotones: function() {
+            this.mostrarBotonActivar = this.esCasaNacional && !this.encuestaActiva && this.totalPreguntas > 0;
+            this.mostrarBotonIniciar = this.puedeIniciarEncuesta && this.encuestaActiva && this.totalPreguntas > 0;
+        },
+
         actualizarEstadoBotones: function () {
             var $startButton = this.$el.find('[data-action="startSurvey"]');
             var $reportsButton = this.$el.find('[data-action="viewReports"]');
             
-            if (this.totalPreguntas === 0 || !this.entidadExiste) {
+            if (this.totalPreguntas === 0 || !this.entidadExiste || !this.encuestaActiva) {
                 $startButton.addClass('btn-disabled disabled').prop('disabled', true);
-                $reportsButton.addClass('btn-disabled disabled').prop('disabled', true);
-                console.log('🔒 Botones deshabilitados - Sin preguntas');
             } else {
                 $startButton.removeClass('btn-disabled disabled').prop('disabled', false);
-                $reportsButton.removeClass('btn-disabled disabled').prop('disabled', false);
-                console.log('✅ Botones habilitados - Preguntas disponibles:', this.totalPreguntas);
             }
         },
 
@@ -143,14 +187,64 @@ define(['view'], function (View) {
             
             this.crearPreguntasDirectamente();
         },
+        
+        handleFechaCierreChange: function(e) {
+            var fechaCierre = $(e.currentTarget).val();
+            var $button = this.$el.find('[data-action="activarEncuestas"]');
+            var hoy = new Date().toISOString().split('T')[0];
+
+            if (fechaCierre && fechaCierre > hoy) {
+                $button.prop('disabled', false).removeClass('disabled');
+            } else {
+                $button.prop('disabled', true).addClass('disabled');
+                if (fechaCierre && fechaCierre <= hoy) {
+                    Espo.Ui.warning('La fecha de cierre debe ser posterior a la fecha actual.');
+                }
+            }
+        },
+
+        activarEncuestas: function() {
+            var fechaCierre = this.$el.find('#fecha-cierre-input').val();
+            var hoy = new Date().toISOString().split('T')[0];
+
+            if (!confirm('¿Estás seguro de que deseas activar el período de encuestas hasta el ' + this.getDateTime().toDisplayDate(fechaCierre) + '?')) {
+                return;
+            }
+
+            this.wait(true);
+
+            this.getCollectionFactory().create('Competencias', function(competenciaCollection) {
+                competenciaCollection.fetch({ data: { maxSize: 1 } }).then(function() {
+                    var saveCompetencia = function(competencia) {
+                        competencia.set({
+                            name: 'Configuración General', // Nombre por defecto
+                            fechaInicio: hoy,
+                            fechaCierre: fechaCierre
+                        });
+                        competencia.save().then(function() {
+                            Espo.Ui.success('Período de encuestas activado correctamente.');
+                            this.reRender();
+                        }.bind(this));
+                    }.bind(this);
+
+                    if (competenciaCollection.total > 0) {
+                        // Si existe, lo actualizamos.
+                        saveCompetencia(competenciaCollection.at(0));
+                    } else {
+                        // Si no existe, lo creamos.
+                        this.getModelFactory().create('Competencias', function (newCompetencia) {
+                            saveCompetencia(newCompetencia);
+                        }.bind(this));
+                    }
+                }.bind(this));
+            }.bind(this));
+        },
 
         crearPreguntasDirectamente: function () {
             var preguntas = this.obtenerPreguntasPorDefecto();
             var creadas = 0;
             var errores = [];
             var total = preguntas.length;
-            
-            console.log('🔄 Iniciando creación de', total, 'preguntas...');
             
             var procesarPreguntas = function(index) {
                 if (index >= preguntas.length) {
@@ -174,14 +268,12 @@ define(['view'], function (View) {
                     model.save({}, {
                         success: function() {
                             creadas++;
-                            console.log('✅ Pregunta creada:', creadas + '/' + total);
                             setTimeout(function() {
                                 procesarPreguntas.call(this, index + 1);
                             }.bind(this), 50); // Pequeña pausa entre creaciones
                         }.bind(this),
                         error: function(model, xhr) {
                             errores.push('Error creando pregunta ' + (index + 1));
-                            console.warn('⚠️ Error creando pregunta:', datoPregunta.texto);
                             setTimeout(function() {
                                 procesarPreguntas.call(this, index + 1);
                             }.bind(this), 50);
@@ -289,7 +381,14 @@ define(['view'], function (View) {
                 sinPreguntas: (this.totalPreguntas === 0),
                 errorEntidad: (this.totalPreguntas === -1),
                 preguntasRecienCreadas: this.preguntasRecienCreadas,
-                entidadExiste: this.entidadExiste
+                entidadExiste: this.entidadExiste,
+                esCasaNacional: this.esCasaNacional,
+                puedeIniciarEncuesta: this.puedeIniciarEncuesta,
+                encuestaActiva: this.encuestaActiva,
+                mostrarBotonActivar: this.mostrarBotonActivar,
+                mostrarBotonIniciar: this.mostrarBotonIniciar,
+                fechaCierre: this.fechaCierre,
+                tieneAccesoAlModulo: this.tieneAccesoAlModulo
             };
         }
     });

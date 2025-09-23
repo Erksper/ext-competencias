@@ -9,6 +9,7 @@
     <div class="row">
         <div class="col-md-8 col-md-offset-2">
             
+            {{#if tieneAccesoAlModulo}}
             {{#if esAdmin}}
             {{#if mostrarBotonCrear}}
             <!-- Alerta para admin cuando no hay preguntas -->
@@ -49,30 +50,58 @@
                     </div>
                 </div>
             </div>
+            {{else}}
+            {{#if encuestaActiva}}
+            <!-- Mensaje para usuarios cuando la encuesta está activa -->
+            <div class="alert alert-info" style="margin-bottom: 20px;">
+                <p class="text-center">El período de evaluación de competencias está activo. Fecha de cierre: <strong>{{fechaCierre}}</strong>.</p>
+            </div>
+            {{/if}}
             {{/if}}
             {{/if}}
 
             <!-- Panel Principal -->
             <div class="panel panel-default">
                 <div class="panel-body">
-                    <div class="row">
-                        <div class="col-md-6 col-md-offset-3 text-center">
-                            <div style="margin: 30px 0 40px 0;">
+                    <div class="text-center">
+                        <div class="col-md-8 col-md-offset-2" style="padding: 30px 0;">
+                            {{#if mostrarBotonActivar}}
+                            <div class="row" style="margin-bottom: 20px;">
+                                <div class="col-sm-7" style="padding-right: 5px;">
+                                    <button class="btn btn-primary btn-lg btn-block" data-action="activarEncuestas" disabled>
+                                        <i class="fas fa-play-circle"></i> Activar Encuestas
+                                    </button>
+                                </div>
+                                <div class="col-sm-5" style="padding-left: 5px;">
+                                    <label for="fecha-cierre-input" class="sr-only">Seleccionar fecha de cierre</label>
+                                    <input type="date" id="fecha-cierre-input" class="form-control" style="height: 46px; font-size: 18px; padding: 10px 16px;">
+                                </div>
+                            </div>
+                            {{/if}}
+
+                            {{#if mostrarBotonIniciar}}
                                 <button class="btn btn-primary btn-lg btn-block {{#if sinPreguntas}}btn-disabled{{/if}}" 
                                         data-action="startSurvey" 
                                         style="margin-bottom: 20px;">
                                     <i class="fas fa-clipboard-list"></i> Iniciar Evaluación
                                     {{#if sinPreguntas}}<small style="display: block; font-size: 0.8em; margin-top: 5px;">⚠️ Requiere preguntas configuradas</small>{{/if}}
                                 </button>
+                            {{/if}}
                                 <button class="btn btn-primary btn-lg btn-block {{#if sinPreguntas}}btn-disabled{{/if}}" 
                                         data-action="viewReports">
                                     <i class="fas fa-chart-bar"></i> Reportes
                                     {{#if sinPreguntas}}<small style="display: block; font-size: 0.8em; margin-top: 5px;">⚠️ Requiere datos de evaluaciones</small>{{/if}}
                                 </button>
-                            </div>
                         </div>
                     </div>
-                </div>
+            </div>
+            {{else}}
+            <!-- Mensaje de acceso denegado -->
+            <div class="alert alert-danger text-center" style="margin-top: 20px;">
+                <h4><i class="fas fa-ban"></i> Acceso Denegado</h4>
+                <p>Disculpe, no tiene los permisos para ver este módulo. Por favor, contacte con personal de la Casa Nacional.</p>
+            </div>
+            {{/if}}
             </div>
         </div>
     </div>

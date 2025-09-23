@@ -1,0 +1,8 @@
+{
+    "acl": true,
+    "aclLevelList": [
+        "all",
+        "no"
+    ],
+    "aclActionLevelList": [ "read" ]
+}

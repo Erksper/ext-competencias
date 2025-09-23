@@ -1,107 +1,124 @@
-<div class="century21-header text-center">
-</div>
-
-<div class="survey-info panel panel-default">
-    <div class="panel-body">
-        <div class="row">
-            <div class="col-md-6">
-                <h3><strong>Oficina:</strong> {{teamName}}</h3>
-            </div>
-            <div class="col-md-6">
-                <h3><strong>Usuario evaluado:</strong> {{userName}}</h3>
-            </div>
-        </div>
+{{#if accesoDenegado}}
+    <div class="alert alert-danger text-center">
+        <h4 style="margin-bottom: 15px;"><i class="fas fa-ban"></i> Acceso Denegado</h4>
+        <p>No tienes los permisos necesarios para acceder a esta página.</p>
     </div>
-</div>
+    <div class="text-center">
+        <button class="btn btn-default" data-action="backToHome"><i class="fas fa-home"></i> Volver al Inicio</button>
+    </div>
+{{else if encuestaInactiva}}
+    <div class="alert alert-warning text-center">
+        <h4 style="margin-bottom: 15px;"><i class="fas fa-calendar-times"></i> Período de Evaluación Inactivo</h4>
+        <p>Actualmente no hay un período de evaluación activo. No se pueden crear ni modificar encuestas.</p>
+    </div>
+    <div class="text-center">
+        <button class="btn btn-default" data-action="backToHome"><i class="fas fa-home"></i> Volver al Inicio</button>
+    </div>
+{{else}}
+    <div class="century21-header text-center">
+    </div>
 
-<div class="survey-title text-center">
-    <h3>
-        ANÁLISIS DE COMPETENCIAS
-    </h3>
-</div>
-
-{{#each preguntas}}
-<div class="categoria-principal">
-    <h3 class="categoria-header" data-action="toggleCategoria" data-categoria="{{@key}}">
-        <span>{{@key}}</span>
-        <span class="estado-completitud"></span>
-        <i class="fas fa-chevron-down categoria-chevron"></i>
-    </h3>
-    
-    <div class="categoria-content" data-categoria="{{@key}}">
-        {{#each this}}
-        <div class="subcategoria-section">
-            <h3 class="subcategoria-header" data-action="toggleSubcategoria" data-subcategoria="{{@key}}">
-                <span><i class="fas fa-folder-open"></i> {{@key}}</span>
-                <span class="estado-completitud"></span>
-                <i class="fas fa-chevron-down subcategoria-chevron"></i>
-            </h3>
-            
-            <div class="subcategoria-content" data-subcategoria="{{@key}}">
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Competencia</th>
-                                <th><i class="fas fa-circle icon-verde"></i>Verde</th>
-                                <th><i class="fas fa-circle icon-amarillo"></i>Amarillo</th>
-                                <th><i class="fas fa-circle icon-rojo"></i>Rojo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {{#each this}}
-                            <tr class="pregunta-row">
-                                <td>
-                                    <h4>{{orden}}. {{texto}}</h4>
-                                </td>
-                                <td>
-                                    <div class="color-option color-verde"
-                                         data-action="selectColor" 
-                                         data-pregunta-id="{{id}}" 
-                                         data-color="verde">
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="color-option color-amarillo"
-                                         data-action="selectColor" 
-                                         data-pregunta-id="{{id}}" 
-                                         data-color="amarillo">
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="color-option color-rojo"
-                                         data-action="selectColor" 
-                                         data-pregunta-id="{{id}}" 
-                                         data-color="rojo">
-                                    </div>
-                                </td>
-                            </tr>
-                            {{/each}}
-                        </tbody>
-                    </table>
+    <div class="survey-info panel panel-default">
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h3><strong>Oficina:</strong> {{teamName}}</h3>
+                </div>
+                <div class="col-md-6">
+                    <h3><strong>Usuario evaluado:</strong> {{userName}}</h3>
                 </div>
             </div>
         </div>
-        {{/each}}
     </div>
-</div>
-{{/each}}
 
-<div class="survey-actions">
-    <div class="row">
-        <div class="col-md-6">
-            <button class="btn btn-default" data-action="back">
-                <i class="fas fa-arrow-left"></i> Volver
-            </button>
-        </div>
-        <div class="col-md-6 text-right">
-            <button class="btn btn-success btn-lg" data-action="saveSurvey">
-                <i class="fas fa-save"></i> Guardar Encuesta
-            </button>
+    <div class="survey-title text-center">
+        <h3>
+            ANÁLISIS DE COMPETENCIAS
+        </h3>
+    </div>
+
+    {{#each preguntas}}
+    <div class="categoria-principal">
+        <h3 class="categoria-header" data-action="toggleCategoria" data-categoria-nombre="{{@key}}">
+            <span>{{@key}}</span>
+            <span class="estado-completitud"></span>
+            <i class="fas fa-chevron-down categoria-chevron"></i>
+        </h3>
+        
+        <div class="categoria-content" data-categoria-nombre="{{@key}}">
+            {{#each this}}
+            <div class="subcategoria-section">
+                <h3 class="subcategoria-header" data-action="toggleSubcategoria" data-subcategoria-nombre="{{@key}}">
+                    <span><i class="fas fa-folder-open"></i> {{@key}}</span>
+                    <span class="estado-completitud"></span>
+                    <i class="fas fa-chevron-down subcategoria-chevron"></i>
+                </h3>
+                
+                <div class="subcategoria-content" data-subcategoria-nombre="{{@key}}">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Competencia</th>
+                                    <th><i class="fas fa-circle icon-verde"></i>Verde</th>
+                                    <th><i class="fas fa-circle icon-amarillo"></i>Amarillo</th>
+                                    <th><i class="fas fa-circle icon-rojo"></i>Rojo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{#each this}}
+                                <tr class="pregunta-row">
+                                    <td>
+                                        <h4>{{orden}}. {{texto}}</h4>
+                                    </td>
+                                    <td>
+                                        <div class="color-option color-verde"
+                                            data-action="selectColor" 
+                                            data-pregunta-id="{{id}}" 
+                                            data-color="verde">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="color-option color-amarillo"
+                                            data-action="selectColor" 
+                                            data-pregunta-id="{{id}}" 
+                                            data-color="amarillo">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="color-option color-rojo"
+                                            data-action="selectColor" 
+                                            data-pregunta-id="{{id}}" 
+                                            data-color="rojo">
+                                        </div>
+                                    </td>
+                                </tr>
+                                {{/each}}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {{/each}}
         </div>
     </div>
-</div>
+    {{/each}}
 
+    <div class="survey-actions">
+        <div class="row">
+            <div class="col-md-6">
+                <button class="btn btn-default" data-action="back">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </button>
+            </div>
+            <div class="col-md-6 text-right">
+                <button class="btn btn-success btn-lg" data-action="saveSurvey">
+                    <i class="fas fa-save"></i> Guardar Encuesta
+                </button>
+            </div>
+        </div>
+    </div>
+{{/if}}
 <style>
 /* Estilos refactorizados desde inline */
 .century21-header {

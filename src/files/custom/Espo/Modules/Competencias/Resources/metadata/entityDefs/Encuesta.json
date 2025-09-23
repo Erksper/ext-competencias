@@ -28,7 +28,7 @@
         },
         "estado": {
             "type": "enum",
-            "options": ["incompleta", "completada"],
+            "options": ["revision", "incompleta", "completada"],
             "default": "incompleta"
         },
         "totalPreguntas": {

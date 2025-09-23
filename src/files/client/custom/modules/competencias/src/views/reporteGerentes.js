@@ -69,12 +69,22 @@ define(['view'], function (View) {
                 url: 'api/v1/Pregunta',
                 data: {
                     where: [
-                        {
-                            type: 'or',
+                        { 
+                            type: 'and',
                             value: [
-                                { type: 'equals', attribute: 'rolObjetivo', value: 'gerente' },
-                                { type: 'contains', attribute: 'rolObjetivo', value: 'gerente' }
-                            ]
+                                {
+                                    type: 'or',
+                                    value: [
+                                        { type: 'equals', attribute: 'rolObjetivo', value: 'gerente' },
+                                        { type: 'contains', attribute: 'rolObjetivo', value: 'gerente' }
+                                    ]
+                                },
+                                {
+                                    type: 'equals',
+                                    attribute: 'estaActiva',
+                                    value: 1
+                                }
+                            ] 
                         }
                     ],
                     orderBy: 'orden'

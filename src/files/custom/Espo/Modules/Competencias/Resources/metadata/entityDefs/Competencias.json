@@ -18,6 +18,12 @@
         },
         "modifiedAt": {
             "type": "datetime"
+        },
+        "fechaInicio": {
+            "type": "date"
+        },
+        "fechaCierre": {
+            "type": "date"
         }
     },
     "links": {},

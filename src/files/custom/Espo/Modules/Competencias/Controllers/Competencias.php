@@ -2,9 +2,9 @@
 
 namespace Espo\Modules\Competencias\Controllers;
 
-use Espo\Core\Controllers\Base;
+use Espo\Core\Controllers\Record;
 
-class Competencias extends Base
+class Competencias extends Record
 {
     protected function checkAccess(): bool
     {

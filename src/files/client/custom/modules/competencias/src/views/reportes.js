@@ -17,7 +17,6 @@ define(['view'], function (View) {
         },
         
         setup: function () {
-            console.log('🏗️ Configurando vista de reportes');
             this.reportesDisponibles = [];
             this.usuarioActual = this.getUser();
             this.wait(true);
@@ -25,7 +24,6 @@ define(['view'], function (View) {
         },
 
         verificarReportesDisponibles: function () {
-            console.log('🔍 Verificando reportes disponibles para usuario:', this.usuarioActual.get('name'));
 
             this.estadisticasGenerales = {
                 totalEncuestas: '(Cargando...)',
@@ -63,12 +61,6 @@ define(['view'], function (View) {
                 var encuestasAsesor = results[1].total || 0;
                 var encuestasGerente = results[2].total || 0;
 
-                console.log('✅ Estadísticas obtenidas desde API Encuesta:', {
-                    total: totalEncuestas,
-                    asesores: encuestasAsesor,
-                    gerentes: encuestasGerente
-                });
-
                 this.estadisticasGenerales = {
                     totalEncuestas: totalEncuestas,
                     encuestasAsesor: encuestasAsesor,
@@ -102,8 +94,6 @@ define(['view'], function (View) {
                 this.wait(false);
 
             }.bind(this)).catch(function(error) {
-                console.warn('⚠️ No se pudo verificar con el servidor:', error);
-                console.log('📋 Usando reportes por defecto');
                 this.reportesDisponibles = [];
                 this.estadisticasGenerales = { totalEncuestas: 'N/A', encuestasAsesor: 'N/A', encuestasGerente: 'N/A' };
                 this.reRender();
@@ -112,12 +102,10 @@ define(['view'], function (View) {
         },
 
         verReporteAsesores: function () {
-            console.log('📊 Navegando a reporte de asesores');
             this.getRouter().navigate('#Competencias/reporteAsesores', {trigger: true});
         },
 
         verReporteGerentes: function () {
-            console.log('📊 Navegando a reporte de gerentes');
             this.getRouter().navigate('#Competencias/reporteGerentes', {trigger: true});
         },
 

@@ -7,10 +7,7 @@ define('competencias:controllers/competencias', ['controllers/base'], function (
         },
 
         actionIndex: function () {
-            console.log('Custom actionIndex executed!');
-            this.main('competencias:views/competenciasIndex', {}, function (view) {
-                view.render();
-            });
+            this.main('competencias:views/competenciasIndex', {}, view => view.render());
         },
 
         actionTeamSelection: function () {
@@ -44,21 +41,18 @@ define('competencias:controllers/competencias', ['controllers/base'], function (
 
         // NUEVAS ACCIONES PARA REPORTES
         actionReports: function () {
-            console.log('Custom actionReports executed!');
             this.main('competencias:views/reportes', {}, function (view) {
                 view.render();
             });
         },
 
         actionReporteAsesores: function () {
-            console.log('Custom actionReporteAsesores executed!');
             this.main('competencias:views/reporteAsesores', {}, function (view) {
                 view.render();
             });
         },
 
         actionReporteGerentes: function () {
-            console.log('Custom actionReporteGerentes executed!');
             this.main('competencias:views/reporteGerentes', {}, function (view) {
                 view.render();
             });
