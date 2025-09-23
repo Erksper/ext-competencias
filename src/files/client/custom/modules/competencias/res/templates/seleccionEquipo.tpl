@@ -45,13 +45,19 @@
                 <div class="panel panel-default">
                     <div class="panel-body">
                         {{#if equipos.length}}
-                        <div class="form-group" style="margin-bottom: 20px;">
-                            <input type="text" class="form-control" data-action="filterTeams" placeholder="Buscar oficina...">
-                        </div>
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <input type="text" class="form-control" data-action="filterTeams" placeholder="Buscar oficina...">
+                            </div>
+                            {{#if esCasaNacional}}
+                                <div style="margin-bottom: 15px; font-size: 0.9em; text-align: center;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 3px; vertical-align: middle; margin-right: 5px;"></span> Con Evaluaciones por Revisión
+                                </div>
+                            {{/if}}
                         {{/if}}
+
                         {{#each equipos}}
                         <div class="team-item" style="margin-bottom: 10px;">
-                            <button class="btn btn-default btn-block text-left" data-action="selectTeam" data-team-id="{{id}}" data-team-name="{{name}}">
+                            <button class="btn btn-default btn-block text-left" data-action="selectTeam" data-team-id="{{id}}" data-team-name="{{name}}" style="background-color: {{color}}; border-color: #ccc;">
                                 <i class="fas fa-building"></i> {{name}}
                             </button>
                         </div>
