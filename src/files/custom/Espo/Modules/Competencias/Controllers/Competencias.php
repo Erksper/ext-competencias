@@ -13,8 +13,6 @@ class Competencias extends Record
 
     public function postActionObtenerPreguntasPorRol($params, $data, $request, $response)
     {
-        // MÉTODO DEPRECATED - Ya no se usa
-        // Las preguntas se cargan directamente desde JavaScript via api/v1/Pregunta
         error_log("MÉTODO DEPRECATED: obtenerPreguntasPorRol - Se carga desde JS ahora");
         
         return [
@@ -34,8 +32,6 @@ class Competencias extends Record
             throw new \Espo\Core\Exceptions\Forbidden();
         }
 
-        // Este método es llamado por competenciasIndex.js
-        // La lógica de creación está en el JavaScript, no aquí
         return [
             'success' => true,
             'message' => 'Las preguntas son creadas directamente por competenciasIndex.js',
@@ -55,7 +51,6 @@ class Competencias extends Record
         try {
             error_log("Datos encuesta recibidos: " . print_r($data, true));
             
-            // Validar datos obligatorios
             if (empty($data->evaluado) || empty($data->rol) || empty($data->respuestas)) {
                 throw new \Exception('Faltan datos obligatorios para guardar la encuesta');
             }
@@ -70,10 +65,8 @@ class Competencias extends Record
             
             $entityManager = $this->getEntityManager();
             
-            // Iniciar transacción
             $entityManager->getTransactionManager()->start();
             
-            // 1. Crear la encuesta principal
             $encuestaData = [
                 'name' => 'Evaluación ' . $evaluado . ' - ' . date('Y-m-d H:i:s'),
                 'rolUsuario' => $rol,
@@ -87,7 +80,6 @@ class Competencias extends Record
                 'observaciones' => 'Encuesta completada desde el módulo web'
             ];
             
-            // Buscar y enlazar equipo si existe teamId
             if (!empty($data->teamId)) {
                 $team = $entityManager->getEntity('Team', $data->teamId);
                 if ($team) {
@@ -97,7 +89,6 @@ class Competencias extends Record
                 }
             }
             
-            // Buscar y enlazar usuario evaluado si existe userId
             if (!empty($data->userId)) {
                 $userEvaluado = $entityManager->getEntity('User', $data->userId);
                 if ($userEvaluado) {
@@ -107,14 +98,12 @@ class Competencias extends Record
                 }
             }
             
-            // Enlazar usuario evaluador (actual)
             $userEvaluador = $this->getUser();
             $encuestaData['usuarioEvaluadorId'] = $userEvaluador->get('id');
             $encuestaData['usuarioEvaluadorName'] = $userEvaluador->get('name');
             
             error_log("Creando encuesta con datos: " . print_r($encuestaData, true));
             
-            // Crear entidad Encuesta
             $encuesta = $entityManager->createEntity('Encuesta', $encuestaData);
             
             if (!$encuesta) {
@@ -124,13 +113,11 @@ class Competencias extends Record
             $encuestaId = $encuesta->get('id');
             error_log("✅ Encuesta creada con ID: $encuestaId");
             
-            // 2. Guardar cada respuesta individual
             $respuestasGuardadas = 0;
             $respuestasConError = 0;
             
             foreach ($data->respuestas as $respuesta) {
                 try {
-                    // Verificar que la pregunta existe
                     $pregunta = $entityManager->getEntity('Pregunta', $respuesta->pregunta);
                     
                     if (!$pregunta) {
@@ -170,7 +157,6 @@ class Competencias extends Record
                 }
             }
             
-            // 3. Actualizar estadísticas finales de la encuesta
             if ($respuestasGuardadas !== $totalRespuestas) {
                 $encuesta->set('preguntasRespondidas', $respuestasGuardadas);
                 $porcentaje = $totalRespuestas > 0 ? ($respuestasGuardadas / $totalRespuestas) * 100 : 0;
@@ -179,7 +165,6 @@ class Competencias extends Record
                 $entityManager->saveEntity($encuesta);
             }
             
-            // Confirmar transacción
             $entityManager->getTransactionManager()->commit();
             
             error_log("=== ENCUESTA GUARDADA EXITOSAMENTE ===");
@@ -198,7 +183,6 @@ class Competencias extends Record
             ];
 
         } catch (\Exception $e) {
-            // Rollback en caso de error
             if ($entityManager->getTransactionManager()->isInTransaction()) {
                 $entityManager->getTransactionManager()->rollback();
             }
@@ -239,9 +223,6 @@ class Competencias extends Record
         }
     }
 
-    /**
-     * Verificar qué reportes están disponibles para el usuario actual
-     */
     public function postActionVerificarReportesDisponibles($params, $data, $request)
     {
         error_log("=== INICIO verificarReportesDisponibles ===");
@@ -258,7 +239,6 @@ class Competencias extends Record
             
             $entityManager = $this->getEntityManager();
             
-            // Obtener estadísticas básicas
             $totalEncuestas = $entityManager->getRepository('Encuesta')->count();
             $encuestasAsesor = $entityManager->getRepository('Encuesta')
                 ->where(['rolUsuario' => 'asesor'])
@@ -271,7 +251,6 @@ class Competencias extends Record
             
             $reportesDisponibles = [];
             
-            // Por simplicidad, mostrar ambos reportes si hay encuestas
             if ($encuestasAsesor > 0) {
                 $reportesDisponibles[] = [
                     'tipo' => 'asesores',
@@ -320,9 +299,6 @@ class Competencias extends Record
         }
     }
     
-    /**
-     * Obtener los equipos a los que el usuario tiene acceso
-     */
     private function obtenerEquiposAccesibles($userId)
     {
         $entityManager = $this->getEntityManager();
@@ -332,14 +308,12 @@ class Competencias extends Record
             return [];
         }
         
-        // Si es admin, tiene acceso a todos los equipos
         if ($currentUser->get('type') === 'admin') {
             $allTeams = $entityManager->getRepository('Team')->find()->toArray();
             error_log("Usuario admin - Acceso a todos los equipos: " . count($allTeams));
             return array_column($allTeams, 'id');
         }
         
-        // Para usuarios regulares, obtener equipos donde es miembro
         $userTeams = $currentUser->get('teams');
         $teamIds = [];
         
@@ -353,9 +327,6 @@ class Competencias extends Record
         return $teamIds;
     }
     
-    /**
-     * Verificar si el usuario tiene acceso a encuestas de asesores
-     */
     private function verificarAccesoAsesor($userId, $equiposAccesibles)
     {
         if (empty($equiposAccesibles)) {
@@ -364,7 +335,6 @@ class Competencias extends Record
         
         $entityManager = $this->getEntityManager();
         
-        // Buscar encuestas de asesores en equipos accesibles
         $encuestasAccesibles = $entityManager->getRepository('Encuesta')
             ->where([
                 'rolUsuario' => 'asesor',
@@ -376,9 +346,6 @@ class Competencias extends Record
         return $encuestasAccesibles > 0;
     }
     
-    /**
-     * Verificar si el usuario tiene acceso a encuestas de gerentes
-     */
     private function verificarAccesoGerente($userId, $equiposAccesibles)
     {
         if (empty($equiposAccesibles)) {
@@ -387,7 +354,6 @@ class Competencias extends Record
         
         $entityManager = $this->getEntityManager();
         
-        // Buscar encuestas de gerentes en equipos accesibles
         $encuestasAccesibles = $entityManager->getRepository('Encuesta')
             ->where([
                 'rolUsuario' => 'gerente',
@@ -405,8 +371,6 @@ class Competencias extends Record
             throw new \Espo\Core\Exceptions\Forbidden();
         }
 
-        // Retorna la vista principal de reportes, que mostrará los enlaces
-        // a los reportes de gerentes y asesores.
         return [
             'view' => 'competencias:reportes'
         ];
@@ -418,7 +382,6 @@ class Competencias extends Record
             throw new \Espo\Core\Exceptions\Forbidden();
         }
 
-        // Retorna la vista específica para el reporte de gerentes.
         return [
             'view' => 'competencias:reporteGerentes'
         ];
@@ -430,15 +393,11 @@ class Competencias extends Record
             throw new \Espo\Core\Exceptions\Forbidden();
         }
 
-        // Retorna la vista específica para el reporte de asesores.
         return [
             'view' => 'competencias:reporteAsesores'
         ];
     }
 
-    /**
-     * Método adicional para obtener estadísticas (futuro dashboard)
-     */
     public function getActionEstadisticas($params, $data, $request)
     {
         if (!$this->checkAccess()) {

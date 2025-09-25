@@ -22,7 +22,6 @@
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             {{#if accesoDenegado}}
-                <!-- Mensaje de acceso denegado -->
                 <div class="alert alert-danger text-center" style="margin-top: 20px;">
                     <h4><i class="fas fa-ban"></i> Acceso Denegado</h4>
                     <p>Disculpe, no tiene los permisos para realizar esta acción. Por favor, contacte con personal de la Casa Nacional.</p>
@@ -32,7 +31,6 @@
                     <i class="fas fa-arrow-left"></i> Volver al menú
                 </button>
             {{else if sinOficinaAsignada}}
-                <!-- Mensaje de sin oficina asignada -->
                 <div class="alert alert-warning text-center" style="margin-top: 20px;">
                     <h4><i class="fas fa-exclamation-triangle"></i> Sin Oficina Asignada</h4>
                     <p>No posee una oficina asignada en el sistema. Por favor, contacte con personal de la Casa Nacional para que se le asigne a un equipo.</p>

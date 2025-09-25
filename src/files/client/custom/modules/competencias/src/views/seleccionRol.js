@@ -28,7 +28,6 @@ define(['view'], function (View) {
                 userModel.fetch({ relations: { roles: true } }).then(function () {
                     this.getCollectionFactory().create('Competencias', function (competenciaCollection) {
                         competenciaCollection.fetch({ data: { maxSize: 1 } }).then(function () {
-                            // Verificación de Rol
                             const roles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
                             const puedeAcceder = roles.includes('casa nacional') || roles.includes('gerente') || roles.includes('director');
 
@@ -38,7 +37,6 @@ define(['view'], function (View) {
                                 return;
                             }
 
-                            // Verificación de Período de Encuesta
                             let encuestaActiva = false;
                             if (competenciaCollection.total > 0) {
                                 const competencia = competenciaCollection.at(0);

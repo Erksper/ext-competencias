@@ -36,7 +36,6 @@ define(['view'], function (View) {
                 userModel.fetch({ relations: { roles: true } }).then(function () {
                     this.getCollectionFactory().create('Competencias', function (competenciaCollection) {
                         competenciaCollection.fetch({ data: { maxSize: 1 } }).then(function () {
-                            // Verificación de Rol
                             const roles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
                             const puedeAcceder = roles.includes('casa nacional') || roles.includes('gerente') || roles.includes('director');
 
@@ -46,7 +45,6 @@ define(['view'], function (View) {
                                 return;
                             }
 
-                            // Verificación de Período de Encuesta
                             let fechaInicio = null;
                             let fechaCierre = null;
                             let encuestaActiva = false;
@@ -68,7 +66,6 @@ define(['view'], function (View) {
                                 return;
                             }
 
-                            // Si todo está bien, cargar los usuarios
                             this.cargarUsuariosConEstado(fechaInicio, fechaCierre);
                         }.bind(this)).catch(function () {
                             Espo.Ui.error('Error al verificar permisos y período de evaluación.');
@@ -84,7 +81,6 @@ define(['view'], function (View) {
 
         cargarUsuariosConEstado: function (fechaInicio, fechaCierre) {
             this.wait(true);
-            // 1. Obtener los IDs de los roles 'Gerente', 'Director' y 'Asesor'
             const getRoleIds = new Promise((resolve, reject) => {
                 this.getCollectionFactory().create('Role', (roleCollection) => {
                     roleCollection.fetch({
@@ -105,21 +101,18 @@ define(['view'], function (View) {
                 });
             });
 
-            // 2. Obtener todos los usuarios del equipo con sus IDs de rol
             const getTeamUsers = new Promise((resolve, reject) => {
                 $.ajax({
                     url: `api/v1/Team/${this.options.teamId}/users`,
                     data: {
-                        select: 'id,name,rolesIds,isActive' // Pedimos los campos necesarios
+                        select: 'id,name,rolesIds,isActive' 
                     }
                 }).then(response => {
-                    // Filtramos por usuarios activos aquí mismo
                     const activeUsers = (response.list || []).filter(u => u.isActive);
                     resolve(activeUsers);
                 }).catch(reject);
             });
 
-            // 3. Cuando ambos estén listos, filtrar y continuar
             Promise.all([getRoleIds, getTeamUsers]).then(([roleIdMap, teamUsers]) => {
                 const rolBuscado = this.options.role.toLowerCase();
                 const targetRoleIds = new Set();
@@ -150,7 +143,6 @@ define(['view'], function (View) {
 
                 const finalUserIds = usuariosPorRol.map(u => u.id);
 
-                // 4. Obtener las encuestas para estos usuarios en el período activo.
                 if (fechaCierre) {
                     fechaCierre += ' 23:59:59';
                 }
@@ -189,9 +181,9 @@ define(['view'], function (View) {
                                 if (encuesta) {
                                     const estado = encuesta.get('estado');
                                     if (estado === 'incompleta') {
-                                        color = '#fff3cd'; // Amarillo pastel
+                                        color = '#fff3cd'; 
                                     } else if (estado === 'revision') {
-                                        color = '#d4edda'; // Verde pastel
+                                        color = '#d4edda'; 
                                     }
                                 }
                                 
@@ -203,9 +195,9 @@ define(['view'], function (View) {
                             });
 
                         const colorOrder = {
-                            '#fff3cd': 1, // Amarillo (incompleta)
-                            '#f8d7da': 2, // Rojo (no evaluado)
-                            '#d4edda': 3  // Verde (en revisión)
+                            '#fff3cd': 1, 
+                            '#f8d7da': 2, 
+                            '#d4edda': 3  
                         };
                         this.usuarios.sort((a, b) => (colorOrder[a.color] || 99) - (colorOrder[b.color] || 99));
 

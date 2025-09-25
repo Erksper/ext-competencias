@@ -98,7 +98,6 @@ define(['view'], function (View) {
         },
 
         cargarEstadisticas: function () {
-            // Contar preguntas
             $.ajax({
                 url: 'api/v1/Pregunta',
                 type: 'GET',
@@ -109,7 +108,6 @@ define(['view'], function (View) {
                 }.bind(this)
             });
 
-            // Contar encuestas
             $.ajax({
                 url: 'api/v1/Encuesta',
                 type: 'GET',
@@ -120,7 +118,6 @@ define(['view'], function (View) {
                 }.bind(this)
             });
 
-            // Contar respuestas
             $.ajax({
                 url: 'api/v1/RespuestaEncuesta',
                 type: 'GET',

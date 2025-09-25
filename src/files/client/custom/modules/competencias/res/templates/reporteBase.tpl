@@ -23,9 +23,7 @@
 </div>
 
 <div class="report-matrix-container" style="overflow-x: auto; margin-bottom: 20px;">
-    <!-- Tabla principal de la matriz -->
     <table class="report-matrix table table-bordered" style="min-width: 1200px; font-size: 11px;">
-        <!-- Fila 1: Categorías -->
         <thead>
             <tr class="categoria-row header-row">
                 <th class="th-main-header" rowspan="3" style="vertical-align: middle; text-align: center;">
@@ -47,7 +45,6 @@
                 </th>
             </tr>
             
-            <!-- Fila 2: Subcategorías -->
             <tr class="subcategoria-row">
                 {{#each @root.preguntas}}
                 {{#each this}}
@@ -58,7 +55,6 @@
                 {{/each}}
             </tr>
             
-            <!-- Fila 3: Preguntas -->
             <tr class="preguntas-row">
                 {{#each @root.preguntas}}
                 {{#each this}}
@@ -75,31 +71,27 @@
         </thead>
         
         {{#if esReporteGeneralCasaNacional}}
-            <!-- Filas de oficinas para reporte general -->
             <tbody>
                 {{#each oficinas}}
-                    {{#with (lookup ../totalesPorOficina id)}}
-                        {{#if totalesOficina.total}}
-                        <tr class="usuario-row">
-                            <td class="td-user-name"><strong>{{name}}</strong></td>
-                            {{#each ../../preguntas}}
+                    {{#if totalesOficina.total}}
+                    <tr class="usuario-row">
+                        <td class="td-user-name"><strong>{{name}}</strong></td>
+                        {{#each @root.preguntas}}
+                            {{#each this}}
                                 {{#each this}}
-                                    {{#each this}}
-                                        <td class="celda-respuesta color-{{getCeldaColorOficina ../../../id id}}"></td>
-                                    {{/each}}
+                                    <td class="celda-respuesta color-{{lookupColor ../../../totalesPorPregunta id}}"></td>
                                 {{/each}}
                             {{/each}}
-                            <td class="celda-total color-{{totalesOficina.color}}">
-                                {{totalesOficina.verdes}}/{{totalesOficina.total}}<br>
-                                <small>{{formatPorcentaje totalesOficina.porcentaje}}%</small>
-                            </td>
-                        </tr>
-                        {{/if}}
-                    {{/with}}
+                        {{/each}}
+                        <td class="celda-total color-{{totalesOficina.color}}">
+                            {{totalesOficina.verdes}}/{{totalesOficina.total}}<br>
+                            <small>{{formatPorcentaje totalesOficina.porcentaje}}%</small>
+                        </td>
+                    </tr>
+                    {{/if}}
                 {{/each}}
             </tbody>
         {{else}}
-            <!-- Filas de usuarios para reporte detallado -->
             <tbody>
                 {{#each usuarios}}
                 <tr class="usuario-row">
@@ -116,7 +108,6 @@
             </tbody>
         {{/if}}
         
-        <!-- Fila de totales por pregunta -->
         <tfoot>
             <tr class="totales-row header-row">
                 <td>
@@ -126,12 +117,12 @@
                 {{#each @root.preguntas}}
                 {{#each this}}
                 {{#each this}}
-                {{#with (lookup @root.totalesPorPregunta id)}}
+                {{#withLookup @root.totalesPorPregunta id}}
                 <td class="celda-total color-{{color}}">
                     {{verdes}}/{{total}}<br>
                     <small>{{formatPorcentaje porcentaje}}%</small>
                 </td>
-                {{/with}}
+                {{/withLookup}}
                 {{/each}}
                 {{/each}}
                 {{/each}}
@@ -142,7 +133,6 @@
                         <small>{{formatPorcentaje totalesGenerales.porcentaje}}%</small>
                     </td>
                 {{else}}
-                    <!-- Celda vacía para la intersección -->
                     <td></td>
                 {{/if}}
             </tr>
@@ -150,7 +140,6 @@
     </table>
 </div>
 
-<!-- Leyenda -->
 <div class="report-legend" style="margin-top: 20px;">
     <div class="row">
         <div class="col-md-12">
@@ -182,13 +171,12 @@
     <div class="alert alert-warning">
         <i class="fas fa-exclamation-triangle" style="font-size: 2em; margin-bottom: 15px;"></i>
         <h4>No hay datos para mostrar.</h4>
-        <p>No se encontraron encuestas de {{#if (lookup ../this 'rolObjetivo') '==' 'asesor'}}asesores{{else}}gerentes y directores{{/if}}.</p>
+        <p>No se encontraron encuestas de {{#if (eq rolObjetivo 'asesor')}}asesores{{else}}gerentes y directores{{/if}}.</p>
     </div>
 </div>
 {{/if}}
 
 <style>
-/* Estilos para la matriz de reportes */
 .report-matrix {
     border-collapse: collapse !important;
     border: 2px solid #000;
@@ -204,7 +192,6 @@
     padding: 2px !important;
 }
 
-/* Estilos de encabezados y celdas especiales */
 .th-main-header, .th-sumatoria {
     text-align: center;
     vertical-align: middle;
@@ -244,31 +231,22 @@
     vertical-align: middle;
 }
 
-/* Colores base (usados principalmente por celdas de totales) */
 .color-verde {
     background-color: #4CAF50 !important;
 }
-
 .color-amarillo {
     background-color: #FFC107 !important;
 }
-
 .color-rojo {
     background-color: #F44336 !important;
 }
-
 .color-gris {
     background-color: #9E9E9E !important;
 }
-
-/* Los colores de las celdas de respuesta se aplican directamente a la celda TD */
-
-/* Texto rotado para preguntas */
 .preguntas-row th {
     height: 220px;
     padding: 5px 8px; /* Aumentar padding horizontal para evitar que el texto choque */
     width: auto; 
-    /* Usamos alineación de tabla clásica para no romper el layout */
     vertical-align: middle;
     text-align: center;
 }
@@ -276,16 +254,15 @@
 .preguntas-row th div {
     /* Hacemos que el div se comporte como un elemento en línea para que text-align:center funcione */
     display: inline-block;
-    writing-mode: vertical-rl;
-    transform: rotate(180deg); /* Para que el texto fluya de abajo hacia arriba */
+    writing-mode: vertical-rl; 
+    transform: rotate(180deg);
     white-space: normal;
-    line-height: 1.1; /* Espacio entre líneas más compacto */
-    color: black !important; /* Texto negro como se solicitó */
+    line-height: 1.1;
+    color: black !important;
     font-weight: 500;
     font-size: 10px;
-    text-align: center; /* Centra las líneas de texto si hay saltos de línea */
+    text-align: center;
 }
-/* Responsividad */
 @media (max-width: 768px) {
     .report-matrix-container {
         font-size: 10px;
@@ -304,7 +281,6 @@
     }
 }
 
-/* Colores de totales */
 .celda-total {
     text-align: center;
     font-weight: bold;
@@ -330,7 +306,6 @@
     color: white;
 }
 
-/* Logo container */
 .logo-container {
     display: flex;
     align-items: center;

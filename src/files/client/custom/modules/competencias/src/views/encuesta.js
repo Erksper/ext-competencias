@@ -54,7 +54,6 @@ define(['view'], function (View) {
                 userModel.fetch({ relations: { roles: true } }).then(function () {
                     this.getCollectionFactory().create('Competencias', function (competenciaCollection) {
                         competenciaCollection.fetch({ data: { maxSize: 1 } }).then(function () {
-                            // Verificación de Rol
                             this.evaluadorRoles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
                             const puedeAcceder = this.evaluadorRoles.includes('casa nacional') || this.evaluadorRoles.includes('gerente') || this.evaluadorRoles.includes('director');
 
@@ -64,7 +63,6 @@ define(['view'], function (View) {
                                 return;
                             }
 
-                            // Verificación de Período de Encuesta
                             let encuestaActiva = false;
                             if (competenciaCollection.total > 0) {
                                 const competencia = competenciaCollection.at(0);
@@ -83,7 +81,6 @@ define(['view'], function (View) {
                                 return;
                             }
 
-                            // Si todo está bien, cargar las preguntas
                             this.cargarPreguntas();
                         }.bind(this)).catch(function () {
                             Espo.Ui.error('Error al verificar permisos y período de evaluación.');
@@ -138,8 +135,6 @@ define(['view'], function (View) {
         },
         
         cargarPreguntas: function () {
-            // Ajustar la fecha de cierre para incluir todo el día en la comparación.
-            // Las encuestas se guardan con fecha y hora (datetime).
             if (this.fechaCierre) {
                 this.fechaCierre = this.fechaCierre + ' 23:59:59';
             }
@@ -148,7 +143,7 @@ define(['view'], function (View) {
                 url: 'api/v1/Pregunta',
                 type: 'GET',
                 data: {
-                    maxSize: 200, // Aumentar el límite para asegurar que se carguen todas las preguntas
+                    maxSize: 200, 
                     where: [
                         {
                             type: 'equals',
@@ -219,7 +214,6 @@ define(['view'], function (View) {
             });
 
             this.getCollectionFactory().create('RespuestaEncuesta', function (respuestasGuardadasCollection) {
-                // ¡CORRECCIÓN CLAVE! Se establece maxSize directamente en la colección.
                 respuestasGuardadasCollection.maxSize = 200;
 
                 respuestasGuardadasCollection.fetch({
@@ -229,7 +223,6 @@ define(['view'], function (View) {
                         ]
                     }
                 }).then(function () {
-                    // Es más seguro iterar sobre el array 'models' de la colección.
                     if (respuestasGuardadasCollection && Array.isArray(respuestasGuardadasCollection.models)) {
                         respuestasGuardadasCollection.models.forEach(function (respuesta) {
                             var preguntaId = respuesta.get('preguntaId');
@@ -344,7 +337,6 @@ define(['view'], function (View) {
             var respuestas = this.respuestas;
             var preguntasAgrupadas = this.preguntas;
 
-            // Función para escapar caracteres especiales para selectores CSS de forma segura.
             var escapeCss = function (str) {
                 return (str + '').replace(/([!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1');
             };
@@ -423,20 +415,17 @@ define(['view'], function (View) {
         },
 
         guardarEncuesta: function () {
-            // 1. Validaciones y configuración inicial
             const esCasaNacional = this.evaluadorRoles.includes('casa nacional');
             const esGerenteDirector = this.evaluadorRoles.includes('gerente') || this.evaluadorRoles.includes('director');
             const preguntasRespondidasCount = Object.keys(this.respuestas).length;
             const totalPreguntasDisponibles = this.totalPreguntasDisponibles || 0;
             const estaCompleta = (totalPreguntasDisponibles > 0) && (preguntasRespondidasCount === totalPreguntasDisponibles);
 
-            // Validación para 'casa nacional': no puede guardar si está incompleta.
             if (esCasaNacional && !estaCompleta) {
                 Espo.Ui.warning('Debe responder todas las preguntas para poder guardar la evaluación.');
                 return;
             }
             
-            // Validación para encuestas nuevas: debe haber al menos una respuesta.
             if (!this.encuestaId && preguntasRespondidasCount === 0) {
                 Espo.Ui.warning('Debes responder al menos una pregunta para guardar.');
                 return;
@@ -449,16 +438,13 @@ define(['view'], function (View) {
             $saveButton.prop('disabled', true).text('Guardando...');
             Espo.Ui.notify('Guardando encuesta...', 'info');
 
-            // 2. Obtener o crear el modelo de la Encuesta
             this.getModelFactory().create('Encuesta', (encuestaModel) => {
                 const isUpdate = !!this.encuestaId;
 
                 const setupAndSave = (model) => {
-                    // 3. Determinar el estado y el progreso de la encuesta
                     let estadoActual = isUpdate ? model.get('estado') : null;
                     let estadoEncuesta = estadoActual;
 
-                    // Solo se recalcula el estado si la encuesta no está ya 'completada'
                     if (estadoActual !== 'completada') {
                         if (estaCompleta) {
                             estadoEncuesta = esCasaNacional ? 'completada' : 'revision';
@@ -494,10 +480,9 @@ define(['view'], function (View) {
                     
                     model.set(dataToSet);
 
-                    // 4. Guardar la Encuesta y luego sincronizar las respuestas individuales
                     model.save().then(() => {
                         if (!this.encuestaId) {
-                            this.encuestaId = model.id; // Guardar el ID de la nueva encuesta para futuros guardados
+                            this.encuestaId = model.id; 
                         }
                         this.sincronizarRespuestas(model.id, model);
                     }).catch(() => {
@@ -508,7 +493,6 @@ define(['view'], function (View) {
                 };
 
                 if (isUpdate) {
-                    // Si es una actualización, primero cargamos el modelo existente
                     encuestaModel.id = this.encuestaId;
                     encuestaModel.fetch().then(() => setupAndSave(encuestaModel))
                         .catch(() => {
@@ -517,7 +501,6 @@ define(['view'], function (View) {
                             $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
                         });
                 } else {
-                    // Si es nueva, configuramos y guardamos directamente
                     setupAndSave(encuestaModel);
                 }
             });
@@ -527,7 +510,6 @@ define(['view'], function (View) {
             var respuestasNuevas = this.convertirRespuestasParaAPI();
             
             this.getCollectionFactory().create('RespuestaEncuesta', function (respuestasAntiguasCollection) {
-                // Usamos 200 como indicaste que funciona en tu entorno. -1 puede no ser soportado.
                 respuestasAntiguasCollection.maxSize = 200;
 
                 respuestasAntiguasCollection.fetch({
@@ -609,12 +591,10 @@ define(['view'], function (View) {
                 Espo.Ui.warning(`Encuesta guardada con ${errores.length} errores. ${creadas}/${total} respuestas procesadas.`);
             }
 
-            // Habilitar el botón y resetear el estado de guardado
             this.guardandoEncuesta = false;
             var $saveButton = this.$el.find('[data-action="saveSurvey"]');
             $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
 
-            // Redirigir después de un momento a la selección de usuario
             setTimeout(function() {
                 var backUrl = '#Competencias/userSelection?teamId=' + this.teamId + '&teamName=' + encodeURIComponent(this.teamName) + '&role=' + this.role;
                 this.getRouter().navigate(backUrl, {trigger: true});

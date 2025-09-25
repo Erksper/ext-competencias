@@ -120,7 +120,6 @@
     </div>
 {{/if}}
 <style>
-/* Estilos refactorizados desde inline */
 .century21-header {
     margin-bottom: 30px;
 }
@@ -208,7 +207,6 @@
     margin-top: 30px;
 }
 
-/* Estilos para los indicadores de progreso */
 .estado-completitud {
     font-size: 11px;
     font-weight: bold;
@@ -218,7 +216,6 @@
     color: white;
     vertical-align: middle;
 }
-/* 2. Mover indicador de completitud a la derecha */
 .categoria-header .estado-completitud,
 .subcategoria-header .estado-completitud {
     position: absolute;
@@ -234,7 +231,6 @@
     background-color: #FFC107; /* Amarillo */
     color: #333;
 }
-/* Estilos para categorías principales */
 .categoria-header {
     background: #666;
     color: white;
@@ -264,7 +260,6 @@
     transform: translateY(-50%) rotate(180deg);
 }
 
-/* Estilos para subcategorías */
 .subcategoria-header {
     background: #f8f9fa;
     color: #333;
@@ -296,7 +291,6 @@
     transform: translateY(-50%) rotate(180deg);
 }
 
-/* Estilos para el botón de guardar */
 .survey-actions .btn-success[data-action="saveSurvey"] {
     background-color: #666;
     border-color: #555;
@@ -308,7 +302,6 @@
     border-color: #444;
 }
 
-/* Estilos para las opciones de color */
 .color-option {
     position: relative;
     width: 25px;
@@ -317,7 +310,7 @@
     border-radius: 6px;
     border: 2px solid #ddd;
     cursor: pointer;
-    background-color: transparent; /* 1. Fondo transparente para botones de opción */
+    background-color: transparent;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -334,7 +327,6 @@
     animation: pulse 0.4s ease-in-out;
 }
 
-/* Cambiar el color de fondo al seleccionar */
 .table-responsive .color-option.color-verde.selected {
     background-color: #4CAF50 !important;
 }
@@ -359,16 +351,14 @@
     text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
 }
 
-/* Efecto de pulso al seleccionar */
 @keyframes pulse {
     0% { transform: scale(1.15); }
     50% { transform: scale(1.25); }
     100% { transform: scale(1.15); }
 }
 
-/* Espaciado entre elementos */
 .categoria-content {
-    display: none; /* Oculto por defecto, JS lo muestra */
+    display: none;
     padding: 15px;
     background: #fafafa;
     border: 1px solid #ddd;
@@ -377,7 +367,7 @@
 }
 
 .subcategoria-content {
-    display: none; /* Oculto por defecto, JS lo muestra */
+    display: none;
     margin: 5px 0 10px 0;
 }
 </style>

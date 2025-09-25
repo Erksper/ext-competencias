@@ -1,4 +1,3 @@
-<!-- src/files/client/custom/modules/competencias/res/templates/adminPreguntas.tpl -->
 <div class="page-header">
     <div class="row">
         <div class="col-sm-7">
@@ -13,8 +12,7 @@
 <div class="record-container">
     <div class="row">
         <div class="col-md-8 col-md-offset-2">
-            
-            <!-- Estadísticas -->
+
             <div class="panel panel-info">
                 <div class="panel-heading">
                     <h4 class="panel-title">📊 Estadísticas del Sistema</h4>
@@ -42,14 +40,12 @@
                 </div>
             </div>
 
-            <!-- Acciones -->
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h4 class="panel-title">🛠️ Acciones de Administración</h4>
                 </div>
                 <div class="panel-body">
-                    
-                    <!-- Crear Preguntas -->
+
                     <div style="margin-bottom: 20px;">
                         <h5><i class="fas fa-plus-circle text-success"></i> Crear Preguntas</h5>
                         <p class="text-muted">
@@ -68,7 +64,6 @@
 
                     <hr>
 
-                    <!-- Limpiar Datos -->
                     <div style="margin-bottom: 20px;">
                         <h5><i class="fas fa-trash-alt text-danger"></i> Limpiar Datos</h5>
                         <p class="text-muted">
@@ -88,7 +83,6 @@
                 </div>
             </div>
 
-            <!-- Información -->
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h4 class="panel-title">📋 Información</h4>

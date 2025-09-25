@@ -57,7 +57,6 @@ define(['view'], function (View) {
                             this.wait(false);
                         }
                     } else {
-                        // Asesor u otro rol no permitido para seleccionar equipo
                         this.accesoDenegado = true;
                         this.wait(false);
                     }

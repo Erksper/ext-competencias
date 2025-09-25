@@ -112,7 +112,6 @@
 </div>
 
 <style>
-/* Estilos para las tarjetas de reportes */
 .report-card:hover {
     border-color: #D4AF37 !important;
     box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
@@ -136,7 +135,6 @@
     color: #D4AF37 !important;
 }
 
-/* Animaciones */
 .report-icon {
     transition: all 0.3s ease;
 }
@@ -145,7 +143,6 @@
     transition: color 0.3s ease;
 }
 
-/* Responsive design */
 @media (max-width: 768px) {
     .col-md-6 {
         margin-bottom: 15px;

@@ -14,11 +14,9 @@ define(['view'], function (View) {
         },
         
         setup: function () {
-            // Parsear parámetros de la URL
             this.tipoReporte = this.options.tipo || 'desconocido';
-            this.oficinaId = this.options.oficinaId || null; // Solo para reportes de oficina de Casa Nacional
+            this.oficinaId = this.options.oficinaId || null; 
 
-            // Propiedades que se determinarán en la carga inicial
             this.fechaInicio = null;
             this.fechaCierre = null;
             this.usuarioId = null; 
@@ -31,7 +29,6 @@ define(['view'], function (View) {
             }
             this.tituloReporte = `Reporte de ${this.rolObjetivo === 'gerente' ? 'Gerentes y Directores' : 'Asesores'}`;
 
-            // Propiedades para el reporte general de Casa Nacional
             this.esCasaNacional = false;
             this.esGerenteODirector = false;
             this.esAsesor = false;
@@ -40,7 +37,6 @@ define(['view'], function (View) {
             this.totalesPorOficina = {};
             this.totalesGenerales = { verdes: 0, total: 0, porcentaje: 0, color: 'gris' };
 
-            // Propiedades para el reporte detallado
             this.preguntasAgrupadas = {};
             this.usuariosData = [];
             this.usuariosMap = {};
@@ -54,7 +50,6 @@ define(['view'], function (View) {
         cargarDatosIniciales: function () {
             const promesas = [];
 
-            // 1. Fetch current user roles and team
             const fetchUser = new Promise((resolve, reject) => {
                 this.getModelFactory().create('User', (userModel) => {
                     userModel.id = this.getUser().id;
@@ -63,7 +58,6 @@ define(['view'], function (View) {
             });
             promesas.push(fetchUser);
 
-            // 2. Fetch current evaluation period
             const fetchPeriodo = new Promise((resolve, reject) => {
                 this.getCollectionFactory().create('Competencias', (collection) => {
                     collection.fetch({ data: { maxSize: 1, orderBy: 'fechaCierre', order: 'desc' } })
@@ -74,13 +68,11 @@ define(['view'], function (View) {
             promesas.push(fetchPeriodo);
 
             Promise.all(promesas).then(([userModel, periodoModel]) => {
-                // Process user data
                 const roles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
                 this.esCasaNacional = roles.includes('casa nacional');
                 this.esGerenteODirector = roles.includes('gerente') || roles.includes('director');
                 this.esAsesor = roles.includes('asesor');
 
-                // Process period data
                 if (!periodoModel) {
                     Espo.Ui.error('No se encontró un período de evaluación configurado.');
                     this.wait(false);
@@ -96,7 +88,6 @@ define(['view'], function (View) {
                     return;
                 }
 
-                // Determine report scope and title
                 if (this.tipoReporte === 'asesor') {
                     this.usuarioId = this.getUser().id;
                     this.tituloReporte = `Mi Reporte de Asesor (${this.getUser().get('name')})`;
@@ -124,7 +115,6 @@ define(['view'], function (View) {
 
                 this.cargarDatosReporte();
             }).catch(error => {
-                console.error("Error loading initial data for report", error);
                 Espo.Ui.error('Error al cargar datos iniciales para el reporte.');
                 this.wait(false);
             });
@@ -146,10 +136,18 @@ define(['view'], function (View) {
                 return self.obtenerColorCelda(usuarioId, preguntaId);
             });
 
-            Handlebars.registerHelper('getCeldaColorOficina', function(oficinaId, preguntaId) {
-                return self.obtenerColorCeldaOficina(oficinaId, preguntaId);
+            Handlebars.registerHelper('lookupColor', function(obj, key) {
+                if (obj && obj[key]) {
+                    return obj[key].color;
+                }
+                return 'gris';
             });
-            
+
+            Handlebars.registerHelper('withLookup', function(obj, key, options) {
+                const item = obj && obj[key];
+                return options.fn(item || {});
+            });
+
             Handlebars.registerHelper('formatPorcentaje', function(porcentaje) {
                 return Math.round(porcentaje || 0);
             });
@@ -161,6 +159,10 @@ define(['view'], function (View) {
             
             Handlebars.registerHelper('lookup', function(obj, key) {
                 return obj && obj[key];
+            });
+
+            Handlebars.registerHelper('eq', function(a, b) {
+                return a === b;
             });
         },
 
@@ -187,62 +189,120 @@ define(['view'], function (View) {
 
             const cargarOficinas = new Promise((resolve, reject) => {
                 this.getCollectionFactory().create('Team', (collection) => {
-                    collection.fetch({ data: { maxSize: 200 } }).then(resolve).catch(reject);
+                    collection.fetch({ data: { maxSize: 200 } })
+                        .then(() => {                            
+                            resolve(collection);
+                        })
+                        .catch((error) => {
+                            reject(error);
+                        });
                 });
             });
             
-            // FIX: Use a single query expanding relations to avoid potential ACL issues
-            // with 'IN' clauses on linked entities, which can cause 403 Forbidden errors.
-            const cargarEncuestasConRespuestas = $.ajax({
+            const cargarEncuestas = $.ajax({
                 url: 'api/v1/Encuesta',
                 data: {
                     where: whereEncuestas,
-                    select: 'id,equipoId',
-                    relations: {
-                        respuestasEncuesta: {
-                            select: 'preguntaId,respuesta'
-                        }
-                    },
-                    maxSize: 50000 // High limit to get all surveys
+                    select: 'id,equipoId,equipoName' 
                 }
             });
 
-            Promise.all([cargarPreguntas, cargarOficinas, cargarEncuestasConRespuestas]).then((results) => {
+            Promise.all([cargarPreguntas, cargarOficinas, cargarEncuestas]).then((results) => {
                 const preguntas = results[0].list || [];
                 const oficinaCollection = results[1];
-                const encuestasConRespuestas = results[2].list || [];
+                const encuestas = results[2].list || [];
+
+                if (!oficinaCollection.models) {
+                    Espo.Ui.error('Error al cargar las oficinas.');
+                    this.wait(false);
+                    return;
+                }
 
                 this.procesarPreguntas(preguntas);
 
-                this.oficinas = (oficinaCollection.models || []).map(team => ({
+                const todasLasOficinas = oficinaCollection.models.map(team => ({
                     id: team.id,
                     name: team.get('name')
                 }));
-                this.oficinas.sort((a, b) => a.name.localeCompare(b.name));
 
-                const respuestas = [];
-                encuestasConRespuestas.forEach(encuesta => {
-                    const equipoId = encuesta.equipoId;
-                    if (encuesta.respuestasEncuesta && encuesta.respuestasEncuesta.list) {
-                        encuesta.respuestasEncuesta.list.forEach(respuesta => {
-                            respuestas.push({
-                                'preguntaId': respuesta.preguntaId,
-                                'respuesta': respuesta.respuesta,
-                                'encuesta.equipoId': equipoId, // Keep compatibility with procesarRespuestasGenerales
-                            });
+                if (encuestas.length === 0) {
+                    this.oficinas = [];
+                    this.procesarRespuestasGenerales([]);
+                    this.wait(false);
+                    this.reRender();
+                    return;
+                }
+
+                const oficinasConEncuestas = new Set();
+                const encuestasConOficina = [];
+                
+                encuestas.forEach(encuesta => {
+                    if (encuesta.id && encuesta.equipoId) {
+                        encuestasConOficina.push({
+                            id: encuesta.id,
+                            oficinaId: encuesta.equipoId,
+                            oficinaName: encuesta.equipoName || 'Sin nombre'
                         });
+                        oficinasConEncuestas.add(encuesta.equipoId);
                     }
                 });
 
-                this.procesarRespuestasGenerales(respuestas);
+                this.oficinas = todasLasOficinas
+                    .filter(oficina => {
+                        const tieneEncuestas = oficinasConEncuestas.has(oficina.id);
+                        return tieneEncuestas;
+                    })
+                    .sort((a, b) => a.name.localeCompare(b.name));
 
-                this.wait(false);
-                this.reRender();
+                if (encuestasConOficina.length === 0) {
+                    this.procesarRespuestasGenerales([]);
+                    this.wait(false);
+                    this.reRender();
+                    return;
+                }
+
+                this.cargarRespuestasParaEncuestasGeneral(encuestasConOficina);
+
             }).catch(error => {
-                console.error("Error loading data for general report", error);
                 Espo.Ui.error('Error al cargar los datos del reporte general.');
                 this.wait(false);
             });
+        },
+
+        cargarRespuestasParaEncuestasGeneral: function (encuestasConEquipo) {
+            var promesasRespuestas = encuestasConEquipo.map(function(encuesta) {
+                return $.ajax({
+                    url: 'api/v1/RespuestaEncuesta',
+                    data: {
+                        where: [{ type: 'equals', attribute: 'encuestaId', value: encuesta.id }],
+                        select: 'preguntaId,preguntaName,respuesta'
+                    },
+                }).then(function(respuestasData) {
+                    return (respuestasData.list || []).map(function(resp) {
+                        return {
+                            preguntaId: resp.preguntaId,
+                            respuesta: resp.respuesta,
+                            'encuesta.equipoId': encuesta.oficinaId
+                        }
+                    });
+                }).catch(function(error) {
+                    return [];
+                });
+            });
+            
+           Promise.all(promesasRespuestas).then(function(respuestasPorEncuesta) {
+                var todasLasRespuestas = [];
+                respuestasPorEncuesta.forEach(function(respuestasEncuesta) {
+                    todasLasRespuestas = todasLasRespuestas.concat(respuestasEncuesta);
+                });
+
+                this.procesarRespuestasGenerales(todasLasRespuestas);
+                this.wait(false);
+                this.reRender();
+           }.bind(this)).catch(function(error) {
+                Espo.Ui.error('Error al cargar las respuestas del reporte general.');
+                this.wait(false);
+           }.bind(this));
         },
 
         procesarRespuestasGenerales: function (respuestas) {
@@ -255,7 +315,6 @@ define(['view'], function (View) {
             const totalesGenerales = { verdes: 0, total: 0 };
             const totalesPorPregunta = {};
 
-            // Inicializar estructuras
             this.oficinas.forEach(oficina => {
                 totalesPorOficina[oficina.id] = {
                     name: oficina.name,
@@ -275,7 +334,6 @@ define(['view'], function (View) {
                 });
             });
 
-            // Agregar datos
             respuestas.forEach(resp => {
                 const equipoId = resp['encuesta.equipoId'];
                 const preguntaId = resp.preguntaId;
@@ -296,7 +354,6 @@ define(['view'], function (View) {
                 }
             });
 
-            // Calcular porcentajes y colores
             this.oficinas.forEach(oficina => {
                 const oficinaData = totalesPorOficina[oficina.id];
                 Object.keys(oficinaData.totalesPorPregunta).forEach(preguntaId => {
@@ -309,6 +366,9 @@ define(['view'], function (View) {
                 const porcentajeOficina = oficinaTotalData.total > 0 ? (oficinaTotalData.verdes / oficinaTotalData.total) * 100 : 0;
                 oficinaTotalData.porcentaje = porcentajeOficina;
                 oficinaTotalData.color = this.obtenerColorPorPorcentaje(porcentajeOficina);
+                
+                oficina.totalesPorPregunta = oficinaData.totalesPorPregunta;
+                oficina.totalesOficina = oficinaData.totalesOficina;
             });
 
             Object.keys(totalesPorPregunta).forEach(preguntaId => {
@@ -322,103 +382,56 @@ define(['view'], function (View) {
             totalesGenerales.porcentaje = porcentajeGeneral;
             totalesGenerales.color = this.obtenerColorPorPorcentaje(porcentajeGeneral);
 
-            this.totalesPorOficina = totalesPorOficina;
             this.totalesPorPregunta = totalesPorPregunta;
             this.totalesGenerales = totalesGenerales;
-            this.usuariosData = [{}]; // Para que tienedatos sea true
-        },
-
-        obtenerColorCeldaOficina: function (oficinaId, preguntaId) {
-            const oficinaData = this.totalesPorOficina[oficinaId];
-            if (oficinaData && oficinaData.totalesPorPregunta[preguntaId]) {
-                return oficinaData.totalesPorPregunta[preguntaId].color;
-            }
-            return 'gris';
+            this.usuariosData = [{}]; 
         },
 
         cargarDatosReporteDetallado: function () {
-            const cargarPreguntas = $.ajax({ //
+            const cargarPreguntas = $.ajax({
                 url: 'api/v1/Pregunta',
                 data: {
                     where: [ { type: 'and', value: [ { type: 'or', value: [ { type: 'equals', attribute: 'rolObjetivo', value: this.rolObjetivo }, { type: 'contains', attribute: 'rolObjetivo', value: this.rolObjetivo } ] }, { type: 'equals', attribute: 'estaActiva', value: 1 } ] } ],
                     orderBy: 'orden'
                 }
             });
-
+            
             let whereEncuestas = [{ type: 'equals', attribute: 'rolUsuario', value: this.rolObjetivo }];
-
+            
             if (this.oficinaIdParaFiltrar) {
                 whereEncuestas.push({ type: 'equals', attribute: 'equipoId', value: this.oficinaIdParaFiltrar });
             }
             if (this.usuarioId) {
                 whereEncuestas.push({ type: 'equals', attribute: 'usuarioEvaluadoId', value: this.usuarioId });
             }
-            
+
             if (this.fechaInicio && this.fechaCierre) {
                 const fechaCierreCompleta = this.fechaCierre + ' 23:59:59';
                 whereEncuestas.push({ type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: this.fechaInicio });
                 whereEncuestas.push({ type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: fechaCierreCompleta });
             }
 
-            const cargarEncuestasConRespuestas = $.ajax({
+            var cargarEncuestas = $.ajax({
                 url: 'api/v1/Encuesta',
                 data: {
                     where: whereEncuestas,
-                    select: 'id,name,usuarioEvaluadoId,usuarioEvaluadoName,fechaEncuesta,porcentajeCompletado,equipoName',
-                    relations: {
-                        respuestasEncuesta: {
-                            select: 'preguntaId,respuesta'
-                        }
-                    },
-                    maxSize: 50000
+                    select: 'id,name,usuarioEvaluadoId,usuarioEvaluadoName,fechaEncuesta,porcentajeCompletado,equipoName'
                 }
             });
             
-            Promise.all([cargarPreguntas, cargarEncuestasConRespuestas]).then(function(results) {
-                const preguntas = results[0].list || [];
-                const encuestasConRespuestas = results[1].list || [];
+            Promise.all([cargarPreguntas, cargarEncuestas]).then(function(results) {
+                var preguntas = results[0].list || [];
+                var encuestas = results[1].list || [];
                 
                 this.procesarPreguntas(preguntas);
-
-                if (encuestasConRespuestas.length === 0) {
-                    this.usuariosData = [];
-                    this.wait(false);
-                    this.reRender();
-                    return;
-                }
-
-                this.usuariosData = encuestasConRespuestas.map(encuesta => {
-                    const respuestas = {};
-                    if (encuesta.respuestasEncuesta && encuesta.respuestasEncuesta.list) {
-                        encuesta.respuestasEncuesta.list.forEach(resp => {
-                            respuestas[resp.preguntaId] = resp.respuesta;
-                        });
-                    }
-                    return {
-                        id: encuesta.id,
-                        userId: encuesta.usuarioEvaluadoId,
-                        userName: encuesta.usuarioEvaluadoName || 'Usuario sin nombre',
-                        fechaEncuesta: encuesta.fechaEncuesta,
-                        porcentajeCompletado: encuesta.porcentajeCompletado || 0,
-                        oficinaName: encuesta.equipoName || '',
-                        respuestas: respuestas
-                    };
-                });
-
-                this.usuariosMap = {};
-                this.usuariosData.forEach(u => { this.usuariosMap[u.userId] = u; });
-
-                this.calcularTotales();
-                this.wait(false);
-                this.reRender();
+                this.procesarEncuestas(encuestas);
                 
             }.bind(this)).catch(function(error) {
-                console.error("Error loading data for detailed report", error);
-                Espo.Ui.error('Error al cargar los datos del reporte detallado.');
+                Espo.Ui.error('Error al cargar los datos del reporte');
                 this.wait(false);
             }.bind(this));
         },
-        
+
         procesarPreguntas: function (preguntas) {
             var agrupadas = {};
             
@@ -443,6 +456,60 @@ define(['view'], function (View) {
             });
             
             this.preguntasAgrupadas = agrupadas;
+        },
+
+        procesarEncuestas: function (encuestas) {
+            if (encuestas.length === 0) {
+                this.usuariosData = [];
+                this.wait(false);
+                this.reRender();
+                return;
+            }
+
+            const encuestasUnicas = encuestas.map(encuesta => {
+                return {
+                    id: encuesta.id,
+                    userId: encuesta.usuarioEvaluadoId,
+                    userName: encuesta.usuarioEvaluadoName || 'Usuario sin nombre',
+                    fechaEncuesta: encuesta.fechaEncuesta,
+                    porcentajeCompletado: encuesta.porcentajeCompletado || 0,
+                    oficinaName: encuesta.equipoName || ''
+                };
+            });
+
+            this.cargarRespuestasParaEncuestas(encuestasUnicas);
+        },
+
+        cargarRespuestasParaEncuestas: function (encuestas) {
+            var promesasRespuestas = encuestas.map(function(encuesta) {
+                return $.ajax({
+                    url: 'api/v1/RespuestaEncuesta',
+                    data: {
+                        where: [{ type: 'equals', attribute: 'encuestaId', value: encuesta.id }],
+                        select: 'preguntaId,preguntaName,respuesta'
+                    }
+                }).then(function(respuestasData) {
+                    encuesta.respuestas = {};
+                    (respuestasData.list || []).forEach(function(resp) {
+                        encuesta.respuestas[resp.preguntaId] = resp.respuesta;
+                    });
+                    return encuesta;
+                });
+            });
+            
+            Promise.all(promesasRespuestas).then(function(encuestasConRespuestas) {
+                this.usuariosData = encuestasConRespuestas;
+                this.usuariosMap = {};
+                this.usuariosData.forEach(u => { this.usuariosMap[u.userId] = u; });
+
+                this.calcularTotales();
+                this.wait(false);
+                this.reRender();
+            }.bind(this)).catch(function(error) {
+                this.usuariosData = [];
+                this.wait(false);
+                this.reRender();
+            }.bind(this));
         },
 
         calcularTotales: function () {

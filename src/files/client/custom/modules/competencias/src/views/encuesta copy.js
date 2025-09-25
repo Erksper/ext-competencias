@@ -26,7 +26,6 @@ define(['view'], function (View) {
         },
         
         setup: function () {
-            // OBTENER PARÁMETROS DE LA URL en lugar de this.options
             this.parseURLParams();
             
             console.log('🚀 Configurando encuesta con parámetros de URL:', {
@@ -41,7 +40,6 @@ define(['view'], function (View) {
         },
 
         parseURLParams: function () {
-            // Obtener parámetros de la URL actual
             var hash = window.location.hash;
             var params = {};
             
@@ -57,7 +55,6 @@ define(['view'], function (View) {
                 });
             }
             
-            // Asignar parámetros a propiedades de la instancia
             this.teamId = params.teamId || 'unknown';
             this.teamName = params.teamName || 'Equipo Desconocido';
             this.userId = params.userId || 'unknown';
@@ -74,19 +71,16 @@ define(['view'], function (View) {
         },
 
         afterRender: function () {
-            // Abrir la primera categoría y primera subcategoría por defecto
             var $firstCategoriaHeader = this.$el.find('.categoria-header').first();
             if ($firstCategoriaHeader.length) {
                 $firstCategoriaHeader.addClass('active');
                 $firstCategoriaHeader.next('.categoria-content').show();
                 
-                // Abrir primera subcategoría dentro de la primera categoría
                 var $firstSubcategoriaHeader = $firstCategoriaHeader.next('.categoria-content').find('.subcategoria-header').first();
                 if ($firstSubcategoriaHeader.length) {
                     $firstSubcategoriaHeader.addClass('active');
                     $firstSubcategoriaHeader.next('.subcategoria-content').show();
                 }
-                // REFACTOR: Actualizar indicadores al inicio
                 this.actualizarIndicadoresDeProgreso(); 
             }
         },
@@ -94,7 +88,6 @@ define(['view'], function (View) {
         cargarPreguntas: function () {
             console.log('📝 Cargando preguntas para rol:', this.role);
             
-            // CARGAR DIRECTAMENTE DESDE LA API DE PREGUNTA (igual que usuarios)
             $.ajax({
                 url: 'api/v1/Pregunta',
                 type: 'GET',
@@ -135,15 +128,12 @@ define(['view'], function (View) {
                 console.log('Pregunta:', pregunta.pregunta || pregunta.textoPregunta, 'RolObjetivo:', rolObjetivo);
                 
                 if (Array.isArray(rolObjetivo)) {
-                    // Si tiene múltiples roles y incluye gerente+asesor = compartida
                     if (rolObjetivo.length > 1 && 
                         rolObjetivo.includes('gerente') && 
                         rolObjetivo.includes('asesor')) {
-                        incluir = true; // Pregunta compartida
+                        incluir = true; 
                         console.log('✅ Pregunta compartida incluida');
-                    }
-                    // Si es específica para este rol
-                    else if (rolObjetivo.includes(this.role)) {
+                    } else if (rolObjetivo.includes(this.role)) {
                         incluir = true;
                         console.log('✅ Pregunta específica para', this.role);
                     }
@@ -163,7 +153,6 @@ define(['view'], function (View) {
                 }
             }.bind(this));
             
-            // Ordenar por orden
             preguntasFiltradas.sort(function(a, b) {
                 return (a.orden || 0) - (b.orden || 0);
             });
@@ -175,7 +164,6 @@ define(['view'], function (View) {
         procesarPreguntasAPI: function (preguntasArray) {
             console.log('🔄 Procesando preguntas de API:', preguntasArray);
             
-            // Convertir array de preguntas a estructura anidada esperada por el template
             var preguntasAgrupadas = {};
             
             preguntasArray.forEach(function(pregunta) {
@@ -192,12 +180,11 @@ define(['view'], function (View) {
                 
                 preguntasAgrupadas[categoria][subcategoria].push({
                     id: pregunta.id,
-                    texto: pregunta.pregunta, // La API devuelve "pregunta", el template espera "texto"
+                    texto: pregunta.pregunta, 
                     orden: pregunta.orden || 0
                 });
             });
             
-            // Ordenar preguntas dentro de cada subcategoría
             Object.keys(preguntasAgrupadas).forEach(function(categoria) {
                 Object.keys(preguntasAgrupadas[categoria]).forEach(function(subcategoria) {
                     preguntasAgrupadas[categoria][subcategoria].sort(function(a, b) {
@@ -219,19 +206,15 @@ define(['view'], function (View) {
                 color: color
             });
             
-            // Remover selección previa de esta pregunta
             this.$el.find('[data-pregunta-id="' + preguntaId + '"]').removeClass('selected');
             
-            // Agregar selección al botón clickeado
             this.$el.find('[data-pregunta-id="' + preguntaId + '"][data-color="' + color + '"]').addClass('selected');
             
             console.log('✅ Respuesta guardada. Total respuestas:', Object.keys(this.respuestas).length);
             
-            // REFACTOR: Actualizar indicadores de progreso en lugar de verificar completitud total
             this.actualizarIndicadoresDeProgreso();
         },
 
-        // REFACTOR: Nueva función para mostrar el estado de completitud por categoría/subcategoría
         actualizarIndicadoresDeProgreso: function () {
             var respuestas = this.respuestas;
             var preguntasAgrupadas = this.preguntas;
@@ -282,14 +265,11 @@ define(['view'], function (View) {
             var $header = $(e.currentTarget);
             var $content = $header.next('.categoria-content');
 
-            // Comprueba si el panel clickeado ya estaba activo
             var wasActive = $header.hasClass('active');
 
-            // Cierra todas las categorías
             this.$el.find('.categoria-header').removeClass('active');
             this.$el.find('.categoria-content').slideUp('fast');
 
-            // Si no estaba activo, lo abre
             if (!wasActive) {
                 $header.addClass('active');
                 $content.slideDown('fast');
@@ -300,23 +280,19 @@ define(['view'], function (View) {
             var $header = $(e.currentTarget);
             var $content = $header.next('.subcategoria-content');
 
-            // Toggle de la subcategoría específica
             if ($header.hasClass('active')) {
                 $header.removeClass('active');
                 $content.slideUp('fast');
             } else {
-                // Cerrar otras subcategorías en la misma categoría
                 var $parentCategoria = $header.closest('.categoria-content');
                 $parentCategoria.find('.subcategoria-header').removeClass('active');
                 $parentCategoria.find('.subcategoria-content').slideUp('fast');
 
-                // Abrir la seleccionada
                 $header.addClass('active');
                 $content.slideDown('fast');
             }
         },
 
-        // REFACTOR: Permitir guardado parcial eliminando la validación de completitud.
         guardarEncuesta: function () {
             var preguntasRespondidas = Object.keys(this.respuestas).length;
             
@@ -328,7 +304,6 @@ define(['view'], function (View) {
             this.disableButton('saveSurvey');
             Espo.Ui.notify('Guardando encuesta...', 'info');
             
-            // USAR LA RUTA EXISTENTE DE TU ROUTES.JSON  
             $.ajax({
                 url: 'api/v1/Competencias/action/guardarEncuesta',
                 type: 'POST',
@@ -365,7 +340,7 @@ define(['view'], function (View) {
                 respuestasArray.push({
                     pregunta: preguntaId,
                     color: this.respuestas[preguntaId],
-                    comentario: '' // Por ahora sin comentarios
+                    comentario: '' 
                 });
             }.bind(this));
             

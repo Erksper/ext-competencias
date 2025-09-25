@@ -1,4 +1,3 @@
-// src/files/client/custom/modules/competencias/src/views/competenciasIndex.js
 define(['view'], function (View) {
     return View.extend({
         template: 'competencias:competenciasIndex',
@@ -49,29 +48,25 @@ define(['view'], function (View) {
             this.mostrarBotonCrear = false;
             this.totalPreguntas = 0;
             this.entidadExiste = false;
-            this.preguntasRecienCreadas = false; // Flag para mensaje post-creación
+            this.preguntasRecienCreadas = false; 
             
             this.wait(true);
 
-            // 1. Obtener roles del usuario
             this.getModelFactory().create('User', function (userModel) {
                 userModel.id = user.id;
                 userModel.fetch({ relations: { roles: true } }).then(function() {
-                    // Convertimos los nombres de los roles a minúsculas para una comparación segura y robusta.
                     var roles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
                     
                     this.esCasaNacional = roles.includes('casa nacional');
                     this.puedeIniciarEncuesta = this.esCasaNacional || roles.includes('gerente') || roles.includes('director');
                     this.tieneAccesoAlModulo = this.puedeIniciarEncuesta || roles.includes('asesor');
 
-                    // 2. Verificar el estado de la competencia y las preguntas
                     this.verificarEstadoGeneral();
                 }.bind(this));
             }.bind(this));
         },
 
         verificarEstadoGeneral: function() {
-            // Verificar si la entidad 'Competencias' existe y tiene fechas
             this.getCollectionFactory().create('Competencias', function(competenciaCollection) {
                 competenciaCollection.fetch({ data: { maxSize: 1 } }).then(function() {
                     if (competenciaCollection.total > 0) {
@@ -86,7 +81,6 @@ define(['view'], function (View) {
                             this.fechaCierre = this.getDateTime().toDisplayDate(fechaCierre);
                         }
                     }
-                    // Después de verificar las fechas, verificar las preguntas
                     this.verificarPreguntas();
                 }.bind(this));
             }.bind(this));
@@ -217,7 +211,7 @@ define(['view'], function (View) {
                 competenciaCollection.fetch({ data: { maxSize: 1 } }).then(function() {
                     var saveCompetencia = function(competencia) {
                         competencia.set({
-                            name: 'Configuración General', // Nombre por defecto
+                            name: 'Configuración General', 
                             fechaInicio: hoy,
                             fechaCierre: fechaCierre
                         });
@@ -228,10 +222,8 @@ define(['view'], function (View) {
                     }.bind(this);
 
                     if (competenciaCollection.total > 0) {
-                        // Si existe, lo actualizamos.
                         saveCompetencia(competenciaCollection.at(0));
                     } else {
-                        // Si no existe, lo creamos.
                         this.getModelFactory().create('Competencias', function (newCompetencia) {
                             saveCompetencia(newCompetencia);
                         }.bind(this));
@@ -270,7 +262,7 @@ define(['view'], function (View) {
                             creadas++;
                             setTimeout(function() {
                                 procesarPreguntas.call(this, index + 1);
-                            }.bind(this), 50); // Pequeña pausa entre creaciones
+                            }.bind(this), 50); 
                         }.bind(this),
                         error: function(model, xhr) {
                             errores.push('Error creando pregunta ' + (index + 1));
@@ -317,7 +309,6 @@ define(['view'], function (View) {
 
         obtenerPreguntasPorDefecto: function() {
             return [
-                // COMPARTIDAS (17)
                 { texto: 'Paso a paso de la realización de un negocio inmobiliario', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento Inmobiliario', rolObjetivo: ['gerente', 'asesor'], orden: 1 },
                 { texto: 'Manejo de las Leyes inmobiliarias básicas para atender un cliente', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento Inmobiliario', rolObjetivo: ['gerente', 'asesor'], orden: 2 },
                 { texto: 'Conocimiento básicos para la realización de un AMC', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento Inmobiliario', rolObjetivo: ['gerente', 'asesor'], orden: 3 },
@@ -336,7 +327,6 @@ define(['view'], function (View) {
                 { texto: 'Gestión de la Información', categoria: 'Competencias Funcionales', subCategoria: 'Competencias Esenciales', rolObjetivo: ['gerente', 'asesor'], orden: 16 },
                 { texto: 'Capacidad de respuesta', categoria: 'Competencias Funcionales', subCategoria: 'Competencias Esenciales', rolObjetivo: ['gerente', 'asesor'], orden: 17 },
 
-                // SOLO GERENTES (18)
                 { texto: 'Elige capacitaciones con metodología', categoria: 'Competencias Técnicas', subCategoria: 'Gestión de Aprendizaje', rolObjetivo: ['gerente'], orden: 18 },
                 { texto: 'Metodología de práctica en equipo en la oficina', categoria: 'Competencias Técnicas', subCategoria: 'Gestión de Aprendizaje', rolObjetivo: ['gerente'], orden: 19 },
                 { texto: 'Metodología de sombra con el cliente', categoria: 'Competencias Técnicas', subCategoria: 'Gestión de Aprendizaje', rolObjetivo: ['gerente'], orden: 20 },
@@ -356,7 +346,6 @@ define(['view'], function (View) {
                 { texto: 'Planificación estratégica del equipo', categoria: 'Competencias Técnicas', subCategoria: 'Planificación', rolObjetivo: ['gerente'], orden: 34 },
                 { texto: 'Gestión de métricas y KPIs del equipo', categoria: 'Competencias Técnicas', subCategoria: 'Análisis', rolObjetivo: ['gerente'], orden: 35 },
 
-                // SOLO ASESORES (13)
                 { texto: 'Competencias Intelectual', categoria: 'Personalidad', subCategoria: 'Competencias de Personalidad', rolObjetivo: ['asesor'], orden: 36 },
                 { texto: 'Competencias Emocionales', categoria: 'Personalidad', subCategoria: 'Competencias de Personalidad', rolObjetivo: ['asesor'], orden: 37 },
                 { texto: 'Competencias Éticas', categoria: 'Personalidad', subCategoria: 'Competencias de Personalidad', rolObjetivo: ['asesor'], orden: 38 },

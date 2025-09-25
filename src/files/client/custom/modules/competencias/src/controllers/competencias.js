@@ -39,7 +39,6 @@ define('competencias:controllers/competencias', ['controllers/base'], function (
             }, view => view.render());
         },
 
-        // NUEVAS ACCIONES PARA REPORTES
         actionReports: function () {
             this.main('competencias:views/reportes', {}, function (view) {
                 view.render();

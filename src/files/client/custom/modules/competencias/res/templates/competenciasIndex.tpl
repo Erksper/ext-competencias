@@ -1,4 +1,3 @@
-<!-- Actualiza: src/files/client/custom/modules/competencias/res/templates/competenciasIndex.tpl -->
 <div class="page-header text-center">
     <h2>
         Encuestas de análisis de competencias
@@ -12,7 +11,6 @@
             {{#if tieneAccesoAlModulo}}
             {{#if esAdmin}}
             {{#if mostrarBotonCrear}}
-            <!-- Alerta para admin cuando no hay preguntas -->
             <div class="alert alert-warning" style="margin-bottom: 20px;">
                 <div class="row">
                     <div class="col-md-8">
@@ -27,7 +25,6 @@
                 </div>
             </div>
             {{else}}
-            <!-- Confirmación cuando el sistema está listo -->
             {{#if preguntasRecienCreadas}}
             <div class="alert alert-success" style="margin-bottom: 20px;">
                 <div class="row">
@@ -40,7 +37,6 @@
             {{/if}}
             {{/if}}
             {{else}}
-            <!-- Mensaje para usuarios no admin cuando no hay preguntas -->
             {{#if sinPreguntas}}
             <div class="alert alert-info" style="margin-bottom: 20px;">
                 <div class="row">
@@ -52,7 +48,6 @@
             </div>
             {{else}}
             {{#if encuestaActiva}}
-            <!-- Mensaje para usuarios cuando la encuesta está activa -->
             <div class="alert alert-info" style="margin-bottom: 20px;">
                 <p class="text-center">El período de evaluación de competencias está activo. Fecha de cierre: <strong>{{fechaCierre}}</strong>.</p>
             </div>
@@ -60,7 +55,6 @@
             {{/if}}
             {{/if}}
 
-            <!-- Panel Principal -->
             <div class="panel panel-default">
                 <div class="panel-body">
                     <div class="text-center">
@@ -96,7 +90,6 @@
                     </div>
             </div>
             {{else}}
-            <!-- Mensaje de acceso denegado -->
             <div class="alert alert-danger text-center" style="margin-top: 20px;">
                 <h4><i class="fas fa-ban"></i> Acceso Denegado</h4>
                 <p>Disculpe, no tiene los permisos para ver este módulo. Por favor, contacte con personal de la Casa Nacional.</p>
@@ -108,7 +101,6 @@
 </div>
 
 <style>
-/* Botones deshabilitados */
 .panel-body .btn.btn-disabled {
     background-color: #f5f5f5 !important;
     border-color: #ddd !important;
@@ -130,7 +122,6 @@
     font-weight: normal;
 }
 
-/* Estilo para el botón de crear preguntas DEL CENTRO */
 .btn[data-action="crearPreguntas"] {
     background-color: #f0ad4e;
     border-color: #eea236;
@@ -148,7 +139,6 @@
     cursor: not-allowed;
 }
 
-/* Estilos para las alertas */
 .alert-warning {
     border-color: #f0ad4e;
     background-color: #fcf8e3;
