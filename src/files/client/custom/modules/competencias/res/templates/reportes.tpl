@@ -2,29 +2,57 @@
     <h1 style="color: #666; font-size: 1.5em;">Reportes de Competencias</h1>
 </div>
 
-<div class="reports-info panel panel-default" style="margin-bottom: 20px;">
-    <div class="panel-body">
-        <div class="row">
-            <div class="col-md-6">
-                <h4><strong>Usuario:</strong> {{usuario.name}}</h4>
-            </div>
-            <div class="col-md-6">
-                <h4><strong>Tipo:</strong> {{usuario.type}}</h4>
-            </div>
-        </div>
-        {{#if estadisticas}}
-        <div class="row" style="margin-top: 15px;">
-            <div class="col-md-12">
-                <div class="alert alert-info">
-                    <strong>Resumen:</strong> 
-                    {{estadisticas.totalEncuestas}} encuestas realizadas
-                    ({{estadisticas.encuestasAsesor}} asesores, {{estadisticas.encuestasGerente}} gerentes)
+{{#if noHayPeriodos}}
+    <div class="alert alert-warning text-center">
+        <h4 style="margin-bottom: 15px;"><i class="fas fa-calendar-times"></i> No hay Períodos de Evaluación</h4>
+        <p>No se ha configurado ningún período de evaluación en el sistema.</p>
+    </div>
+{{else}}
+
+    {{#if esCasaNacional}}
+    <div class="reports-info panel panel-default" style="margin-bottom: 20px;">
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4><strong>Usuario:</strong> {{usuario.name}}</h4>
+                </div>
+                <div class="col-md-6">
+                    <h4><strong>Rol:</strong> Casa Nacional</h4>
                 </div>
             </div>
+            {{#unless isPeriodoActivo}}
+            <div class="alert alert-secondary text-center" style="margin-top: 15px; padding: 10px;">
+                <i class="fas fa-info-circle"></i> Mostrando datos del último período cerrado: <strong>{{periodoMostrado}}</strong>.
+            </div>
+            {{/unless}}
+
+            {{#if estadisticas}}
+            <div class="row" style="margin-top: 15px;">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <strong>Resumen del Período Actual:</strong> 
+                        {{estadisticas.totalEncuestas}} encuestas en total.
+                        <span class="label label-success" style="margin-left: 10px;">Completadas: {{estadisticas.encuestasCompletas}}</span>
+                        <span class="label label-warning">En Revisión: {{estadisticas.encuestasRevision}}</span>
+                        <span class="label label-danger">Incompletas: {{estadisticas.encuestasIncompletas}}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="row" style="margin-top: 10px;">
+                <div class="col-md-12">
+                    <label for="oficina">Filtrar por Oficina</label>
+                    <select name="oficina" class="form-control">
+                        <option value=""></option>
+                        {{#each oficinas}}
+                            <option value="{{id}}">{{name}}</option>
+                        {{/each}}
+                    </select>
+                </div>
+            </div>
+            {{/if}}
         </div>
-        {{/if}}
     </div>
-</div>
+    {{/if}}
 
 <div class="reports-title text-center" style="margin-bottom: 30px;">
     <h3 style="background: #333; color: white; padding: 15px; margin: 0; border-radius: 8px;">
@@ -33,13 +61,23 @@
 </div>
 
 {{#if tieneReportes}}
+    {{#unless esAsesor}}
+        {{#if sinReporteGerente}}
+            <div class="alert alert-warning text-center" style="margin-bottom: 20px;"><i class="fas fa-info-circle"></i> No se encontraron datos para generar reportes de <strong>Gerentes</strong> en el período evaluado.</div>
+        {{/if}}
+        {{#if sinReporteAsesor}}
+            <div class="alert alert-warning text-center" style="margin-bottom: 20px;"><i class="fas fa-info-circle"></i> No se encontraron datos para generar reportes de <strong>Asesores</strong> en el período evaluado.</div>
+        {{/if}}
+    {{/unless}}
+{{/if}}
+
+{{#if tieneReportes}}
 <div class="reports-grid" style="margin-bottom: 30px;">
-    <div class="row">
+    <div class="row reports-container">
         {{#each reportes}}
-        {{#if disponible}}
-        <div class="col-md-6" style="margin-bottom: 20px;">
+        <div class="col-md-6 report-item-container" data-report-type="{{tipo}}" style="margin-bottom: 20px; {{#unless disponible}}display: none;{{/unless}}">
             <div class="report-card panel panel-default" style="height: 200px; cursor: pointer; transition: all 0.3s ease; border: 2px solid #ddd;">
-                <div class="panel-body text-center" data-action="reporte{{tipo}}" style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                <div class="panel-body text-center" data-action="{{tipo}}" style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                     <div class="report-icon" style="font-size: 3em; margin-bottom: 15px; color: #D4AF37;">
                         <i class="fas {{icono}}"></i>
                     </div>
@@ -48,7 +86,6 @@
                 </div>
             </div>
         </div>
-        {{/if}}
         {{/each}}
     </div>
 </div>
@@ -57,9 +94,11 @@
     <div class="alert alert-warning">
         <i class="fas fa-exclamation-triangle" style="font-size: 2em; margin-bottom: 15px;"></i>
         <h4>No hay reportes disponibles</h4>
-        <p>No se encontraron encuestas completadas o no tienes permisos para ver reportes.</p>
+        <p>No se encontraron evaluaciones en el último período para los roles que puedes visualizar.</p>
     </div>
 </div>
+{{/if}}
+
 {{/if}}
 
 <div class="reports-actions" style="margin-top: 30px;">

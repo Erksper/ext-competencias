@@ -46,14 +46,12 @@ define('competencias:controllers/competencias', ['controllers/base'], function (
             });
         },
 
-        actionReporteAsesores: function () {
-            this.main('competencias:views/reporteAsesores', {}, function (view) {
-                view.render();
-            });
-        },
-
-        actionReporteGerentes: function () {
-            this.main('competencias:views/reporteGerentes', {}, function (view) {
+        actionReporteBase: function (params) {
+            this.main('competencias:views/reporteBase', {
+                tipo: params.tipo,
+                oficinaId: params.oficinaId,
+                oficinaName: params.oficinaName
+            }, function (view) {
                 view.render();
             });
         }

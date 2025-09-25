@@ -31,14 +31,9 @@
             "action": "reports"
         },
         {
-            "route": "Competencias/reporteAsesores",
+            "route": "Competencias/reporteBase",
             "controller": "Competencias",
-            "action": "reporteAsesores"
-        },
-        {
-            "route": "Competencias/reporteGerentes",
-            "controller": "Competencias",
-            "action": "reporteGerentes"
+            "action": "reporteBase"
         },
         {
             "route": "Competencias/action/verificarEntidades",
