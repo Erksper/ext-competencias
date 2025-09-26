@@ -165,9 +165,9 @@ define(['view'], function (View) {
             }
 
             var mensaje = '¿Crear las preguntas por defecto del sistema?\n\n' +
-                         '✅ Se crearán 48 preguntas\n' +
+                         '✅ Se crearán 65 preguntas\n' +
                          '📝 Organizadas por categorías\n' +
-                         '👥 Para roles: Asesor y Gerente/Director\n\n' +
+                         '👥 Para roles: Asesor y Gerente\n\n' +
                          '⚠️ Esta acción solo se puede hacer una vez.';
 
             if (!confirm(mensaje)) {
@@ -217,7 +217,9 @@ define(['view'], function (View) {
                         });
                         competencia.save().then(function() {
                             Espo.Ui.success('Período de encuestas activado correctamente.');
-                            window.location.reload();
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 3000);
                         }.bind(this));
                     }.bind(this);
 
@@ -293,7 +295,10 @@ define(['view'], function (View) {
                 this.mostrarBotonCrear = false;
                 this.totalPreguntas = creadas;
                 this.preguntasRecienCreadas = true;
-                this.reRender();
+                Espo.Ui.notify('La página se recargará para reflejar los cambios.', 'info');
+                setTimeout(function() {
+                    window.location.reload();
+                }, 3000);
                 
             } else {
                 Espo.Ui.error('❌ No se pudieron crear las preguntas.');
@@ -309,73 +314,72 @@ define(['view'], function (View) {
 
         obtenerPreguntasPorDefecto: function() {
             return [
+                { texto: 'Paso a paso de la realización de un negocio inmobiliario', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliaria', rolObjetivo: ['gerente'], orden: 1 },
+                { texto: 'Manejo de las leyes inmobiliarias básicas para atender un cliente', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliaria', rolObjetivo: ['gerente'], orden: 2 },
+                { texto: 'Conocimientos básicos para la realización de un AMC', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliaria', rolObjetivo: ['gerente'], orden: 3 },
+                { texto: 'Conocimiento del manual interno de operaciones de la oficina (MIO)', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliaria', rolObjetivo: ['gerente'], orden: 4 },
+                { texto: 'Elije capacitaciones con metodología', categoria: 'Competencias Técnicas', subCategoria: 'Transformacion de Información a Aprendizaje', rolObjetivo: ['gerente'], orden: 5 },
+                { texto: 'Metodología de práctica en equipo en la oficina', categoria: 'Competencias Técnicas', subCategoria: 'Transformacion de Información a Aprendizaje', rolObjetivo: ['gerente'], orden: 6 },
+                { texto: 'Metodología de sombra con el cliente', categoria: 'Competencias Técnicas', subCategoria: 'Transformacion de Información a Aprendizaje', rolObjetivo: ['gerente'], orden: 7 },
+                { texto: 'Manejo de estructura comunicacional para las objeciones', categoria: 'Competencias Técnicas', subCategoria: 'Negociación', rolObjetivo: ['gerente'], orden: 8 },
+                { texto: 'Manejo del sistema tecnológico de la oficina (21 Online)', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente'], orden: 9 },
+                { texto: 'Control de expedientes', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente'], orden: 10 },
+                { texto: 'Metodología para evitar problemas en las negociaciones', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente'], orden: 11 },
+                { texto: 'Manejo metodológico de las reuniones 1 a 1 con el asesor', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente'], orden: 12 },
+                { texto: 'Aplicación de encuesta de calidad de servicio', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente'], orden: 13 },
+                { texto: 'Manejo metodológico del inventario', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente'], orden: 14 },
+                { texto: 'Reclutamiento y selección: Manejo metodológico - 60% del equipo hace 1 lado por mes por asesor', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente'], orden: 15 },
+                { texto: 'Tiene la planificación anual de todo el equipo de asesores', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente'], orden: 16 },
+                { texto: 'Realizó el análisis de competencias del equipo', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente'], orden: 17 },
+                { texto: 'Tiene el plan de formación anual', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente'], orden: 18 },
+                { texto: 'Tiene activo digital disponible en Meta', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente'], orden: 19 },
+                { texto: 'Utiliza lenguaje cliente en sus publicaciones', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente'], orden: 20 },
+                { texto: 'Sabe cómo utilizar las herramientas tecnológicas para crear post - videos', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente'], orden: 21 },
+                { texto: 'Sabe cómo segmentar en Meta con base de datos y con video', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente'], orden: 22 },
+                { texto: 'Sabe cómo automatizar su mercadeo en Meta', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente'], orden: 23 },
+                { texto: 'Sabe hacer publicidad en Google', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente'], orden: 24 },
+                { texto: 'Tiene un plan de mercadeo digital para la oficina', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente'], orden: 25 },
+                { texto: 'Tiene un plan de mercadeo digital para los asesores', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente'], orden: 26 },
+                { texto: 'Orientación a la mejora continua personal', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente'], orden: 27 },
+                { texto: 'Autoconfianza', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente'], orden: 28 },
+                { texto: 'Sentido del negocio', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente'], orden: 29 },
+                { texto: 'Capacidad de asumir la necesidad del cliente', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente'], orden: 30 },
+                { texto: 'Efectividad interpersonal', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente'], orden: 31 },
+                { texto: 'Gestión de la información', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente'], orden: 32 },
+                { texto: 'Capacidad de respuesta', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente'], orden: 33 },
+                { texto: 'Planificación semanal', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente'], orden: 34 },
 
-                { texto: 'Paso a paso de la realización de un negocio inmobiliairio', categoria: 'Competencias Tecnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliairia', rolObjetivo: ['gerente', 'director'], orden: 1 },
-                { texto: 'Manejo de las Leyes inmobiliarias  basicas para atender un cliente', categoria: 'Competencias Tecnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliairia', rolObjetivo: ['gerente', 'director'], orden: 2 },
-                { texto: 'Conocimiento basicos para la realización de un AMC', categoria: 'Competencias Tecnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliairia', rolObjetivo: ['gerente', 'director'], orden: 3 },
-                { texto: 'Conocimiento del Manual interno de operaciones de la Oficina (MIO)', categoria: 'Competencias Tecnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliairia', rolObjetivo: ['gerente', 'director'], orden: 4 },
-                { texto: 'Elije capacitaciones con metodologia', categoria: 'Competencias Tecnicas', subCategoria: 'Transformacion de Información a Aprendizaje', rolObjetivo: ['gerente', 'director'], orden: 5 },
-                { texto: 'Metodologia de practica en equipo en la oficina', categoria: 'Competencias Tecnicas', subCategoria: 'Transformacion de Información a Aprendizaje', rolObjetivo: ['gerente', 'director'], orden: 6 },
-                { texto: 'Metodologia de sombra con el cliente', categoria: 'Competencias Tecnicas', subCategoria: 'Transformacion de Información a Aprendizaje', rolObjetivo: ['gerente', 'director'], orden: 7 },
-                { texto: 'Manejo de estructura comunicacional para las objeciones', categoria: 'Competencias Tecnicas', subCategoria: 'Negociación', rolObjetivo: ['gerente', 'director'], orden: 8 },
-                { texto: 'Manejo del sistema Tecnologico de la Oficina( 21 Online)', categoria: 'Competencias Tecnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente', 'director'], orden: 9 },
-                { texto: 'Control de expedientes', categoria: 'Competencias Tecnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente', 'director'], orden: 10 },
-                { texto: 'Metodologia para evitar problemas en las negociaciones', categoria: 'Competencias Tecnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente', 'director'], orden: 11 },
-                { texto: 'Manejo metodologico de las reuniones 1 a 1 con el asesor', categoria: 'Competencias Tecnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente', 'director'], orden: 12 },
-                { texto: 'Aplicación de encuesta de calidad de servicio', categoria: 'Competencias Tecnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente', 'director'], orden: 13 },
-                { texto: 'Manejo metodologico del inventario', categoria: 'Competencias Tecnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente', 'director'], orden: 14 },
-                { texto: 'Reclutamiento y selección: Manejo metodologico - 60% del equipo hace 1 lado por mes por asesor', categoria: 'Competencias Tecnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente', 'director'], orden: 15 },
-                { texto: 'Tiene la Planificación Anual de todo el equipo de asesores', categoria: 'Competencias Tecnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente', 'director'], orden: 16 },
-                { texto: 'Realizo el analisis de competencias del equipo', categoria: 'Competencias Tecnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente', 'director'], orden: 17 },
-                { texto: 'Tiene el Plan de formación anual', categoria: 'Competencias Tecnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['gerente', 'director'], orden: 18 },
-                { texto: 'Tiene activo digital disponible en Meta', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente', 'director'], orden: 19 },
-                { texto: 'Utiliza lenguaje cliente en sus publicaciones', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente', 'director'], orden: 20 },
-                { texto: 'Sabe como utilizar las herramientas tecnologicas para crear Post - Videos', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente', 'director'], orden: 21 },
-                { texto: 'Sabe como segmentar en Meta con base de datos y con video', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente', 'director'], orden: 22 },
-                { texto: 'Sabe como automatizar su mercadeo en meta', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente', 'director'], orden: 23 },
-                { texto: 'Sabe hacer publicidad en Google', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente', 'director'], orden: 24 },
-                { texto: 'Tiene un Plan de mercadeo digital para la oficina', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente', 'director'], orden: 25 },
-                { texto: 'Tiene un Plan de mercadeo digital para los asesores', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['gerente', 'director'], orden: 26 },
-                { texto: 'Orientación a la Mejora continua Personal', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente', 'director'], orden: 27 },
-                { texto: 'Autoconfianza', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente', 'director'], orden: 28 },
-                { texto: 'Sentido del Negocio', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente', 'director'], orden: 29 },
-                { texto: 'Capacidad de asumir la Necesidad del cliente', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente', 'director'], orden: 30 },
-                { texto: 'Efectividad interpersonal', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente', 'director'], orden: 31 },
-                { texto: 'Gestión de la Información', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente', 'director'], orden: 32 },
-                { texto: 'Capacidad de respuesta', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente', 'director'], orden: 33 },
-                { texto: 'Planificación semanal', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['gerente', 'director'], orden: 34 },
-
-                { texto: 'Competencias Intelectual', categoria: 'Competencias Tecnicas', subCategoria: 'Personalidad', rolObjetivo: ['asesor'], orden: 35 },
-                { texto: 'Competencias Emocionales', categoria: 'Competencias Tecnicas', subCategoria: 'Personalidad', rolObjetivo: ['asesor'], orden: 36 },
-                { texto: 'Competencias Eticas', categoria: 'Competencias Tecnicas', subCategoria: 'Personalidad', rolObjetivo: ['asesor'], orden: 37 },
-                { texto: 'Competencias Sociales', categoria: 'Competencias Tecnicas', subCategoria: 'Personalidad', rolObjetivo: ['asesor'], orden: 38 },
-                { texto: 'Paso a paso de la realización de un negocio inmobiliairio', categoria: 'Competencias Tecnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliairia', rolObjetivo: ['asesor'], orden: 39 },
-                { texto: 'Manejo de las Leyes inmobiliarias  basicas para atender un cliente', categoria: 'Competencias Tecnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliairia', rolObjetivo: ['asesor'], orden: 40 },
-                { texto: 'Conocimiento basicos para la realización de un AMC', categoria: 'Competencias Tecnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliairia', rolObjetivo: ['asesor'], orden: 41 },
-                { texto: 'Conocimiento del Manual interno de operaciones de la Oficina', categoria: 'Competencias Tecnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliairia', rolObjetivo: ['asesor'], orden: 42 },
-                { texto: 'Agenda', categoria: 'Competencias Tecnicas', subCategoria: 'Planificación', rolObjetivo: ['asesor'], orden: 43 },
-                { texto: 'Planificación semanal', categoria: 'Competencias Tecnicas', subCategoria: 'Planificación', rolObjetivo: ['asesor'], orden: 44 },
-                { texto: 'Primer contacto', categoria: 'Competencias Tecnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], orden: 45 },
-                { texto: 'Primera reunión', categoria: 'Competencias Tecnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], orden: 46 },
-                { texto: 'Presentación de la propiedad', categoria: 'Competencias Tecnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], orden: 47 },
-                { texto: 'Manejo del sistema Tecnologico de la Oficina ( 21 Online)', categoria: 'Competencias Tecnicas', subCategoria: 'Negociación', rolObjetivo: ['asesor'], orden: 48 },
-                { texto: 'Fotografia', categoria: 'Competencias Tecnicas', subCategoria: 'Negociación', rolObjetivo: ['asesor'], orden: 49 },
-                { texto: 'Herramientas de Office', categoria: 'Competencias Tecnicas', subCategoria: 'Negociación', rolObjetivo: ['asesor'], orden: 50 },
-                { texto: 'Atención al Cliente: Satisfaccion de clientes mayor a 90%', categoria: 'Competencias Tecnicas', subCategoria: 'Negociación', rolObjetivo: ['asesor'], orden: 51 },
-                { texto: 'Tiene activo digital disponible en Meta', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 52 },
-                { texto: 'Utiliza lenguaje cliente en sus publicaciones', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 53 },
-                { texto: 'Sabe como utilizar las herramientas tecnologicas para crear Post - Videos', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 54 },
-                { texto: 'Sabe como segmentar en Meta con base de datos y con video', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 55 },
-                { texto: 'Sabe como automatizar su mercadeo en meta', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 56 },
-                { texto: 'Sabe hacer publicidad en Google', categoria: 'Competencias Tecnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 57 },
-                { texto: 'Orientación a la Mejora continua Personal', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 58 },
-                { texto: 'Autoconfianza', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 59 },
-                { texto: 'Sentido del Negocio', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 60 },
-                { texto: 'Capacidad de asumir la Necesidad del cliente', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 61 },
-                { texto: 'Efectividad interpersonal', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 62 },
-                { texto: 'Gestión de la Información', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 63 },
-                { texto: 'Capacidad de respuesta', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 64 },
-                { texto: 'Organización', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 65 }
+                { texto: 'Competencias intelectual', categoria: 'Personalidad', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 1 },
+                { texto: 'Competencias emocionales', categoria: 'Personalidad', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 2 },
+                { texto: 'Competencias éticas', categoria: 'Personalidad', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 3 },
+                { texto: 'Competencias sociales', categoria: 'Personalidad', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 4 },
+                { texto: 'Paso a paso de la realización de un negocio inmobiliario', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliaria', rolObjetivo: ['asesor'], orden: 5 },
+                { texto: 'Manejo de las leyes inmobiliarias básicas para atender un cliente', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliaria', rolObjetivo: ['asesor'], orden: 6 },
+                { texto: 'Conocimientos básicos para la realización de un AMC', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliaria', rolObjetivo: ['asesor'], orden: 7 },
+                { texto: 'Conocimiento del manual interno de operaciones de la oficina', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliaria', rolObjetivo: ['asesor'], orden: 8 },
+                { texto: 'Agenda', categoria: 'Competencias Técnicas', subCategoria: 'Planificación', rolObjetivo: ['asesor'], orden: 9 },
+                { texto: 'Planificación semanal', categoria: 'Competencias Técnicas', subCategoria: 'Planificación', rolObjetivo: ['asesor'], orden: 10 },
+                { texto: 'Primer contacto', categoria: 'Competencias Técnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], orden: 11 },
+                { texto: 'Primera reunión', categoria: 'Competencias Técnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], orden: 12 },
+                { texto: 'Presentación de la propiedad', categoria: 'Competencias Técnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], orden: 13 },
+                { texto: 'Manejo del sistema tecnológico de la oficina (21 Online)', categoria: 'Competencias Técnicas', subCategoria: 'Negociación', rolObjetivo: ['asesor'], orden: 14 },
+                { texto: 'Fotografía', categoria: 'Competencias Técnicas', subCategoria: 'Negociación', rolObjetivo: ['asesor'], orden: 15 },
+                { texto: 'Herramientas de Office', categoria: 'Competencias Técnicas', subCategoria: 'Negociación', rolObjetivo: ['asesor'], orden: 16 },
+                { texto: 'Atención al cliente: Satisfacción de clientes mayor a 90%', categoria: 'Competencias Técnicas', subCategoria: 'Negociación', rolObjetivo: ['asesor'], orden: 17 },
+                { texto: 'Tiene activo digital disponible en Meta', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 18 },
+                { texto: 'Utiliza lenguaje cliente en sus publicaciones', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 19 },
+                { texto: 'Sabe cómo utilizar las herramientas tecnológicas para crear post - videos', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 20 },
+                { texto: 'Sabe cómo segmentar en Meta con base de datos y con video', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 21 },
+                { texto: 'Sabe cómo automatizar su mercadeo en Meta', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 22 },
+                { texto: 'Sabe hacer publicidad en Google', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], orden: 23 },
+                { texto: 'Orientación a la mejora continua personal', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 24 },
+                { texto: 'Autoconfianza', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 25 },
+                { texto: 'Sentido del negocio', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 26 },
+                { texto: 'Capacidad de asumir la necesidad del cliente', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 27 },
+                { texto: 'Efectividad interpersonal', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 28 },
+                { texto: 'Gestión de la información', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 29 },
+                { texto: 'Capacidad de respuesta', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 30 },
+                { texto: 'Organización', categoria: 'Competencias Funcionales', subCategoria: 'General', rolObjetivo: ['asesor'], orden: 31 }
             ];
         },
 
