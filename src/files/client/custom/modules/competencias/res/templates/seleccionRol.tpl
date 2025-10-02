@@ -27,3 +27,14 @@
         </div>
     </div>
 </div>
+
+<style>
+
+.panel-body .btn.btn-primary:hover,
+.panel-body .btn.btn-primary:focus,
+.panel-body .btn.btn-primary:active {
+    background-color: #a89b78;
+    border-color: #948766;
+    color: #fff;
+}
+</style>

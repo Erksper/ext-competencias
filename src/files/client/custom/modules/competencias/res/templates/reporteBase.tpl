@@ -9,6 +9,18 @@
                 <i class="fas fa-arrow-left"></i> Volver a Reportes
             </button>
         </div>
+        <div class="col-md-6 text-right">
+            {{#if tienedatos}}
+            <div class="btn-group">
+                <button class="btn btn-success" data-action="exportarExcel">
+                    <i class="fas fa-file-excel"></i> Exportar Excel
+                </button>
+                <button class="btn btn-info" data-action="exportarCSV">
+                    <i class="fas fa-file-csv"></i> Exportar CSV
+                </button>
+            </div>
+            {{/if}}
+        </div>
     </div>
 </div>
 
@@ -27,13 +39,16 @@
         <thead>
             <tr class="categoria-row header-row">
                 <th class="th-main-header" rowspan="3" style="vertical-align: middle; text-align: center;">
-                    <strong>
-                        {{#if esReporteGeneralCasaNacional}}
-                            Oficinas
-                        {{else}}
-                            Usuario
+                    <div class="logo-container" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                        {{#if logoOficina}}
+                        <div class="logo-top" style="flex: 1; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px;">
+                            <img src="{{logoOficina}}" alt="Logo" style="max-height: 60px; max-width: 120px; object-fit: contain;">
+                        </div>
                         {{/if}}
-                    </strong>
+                        <div class="texto-bottom" style="flex: 0; padding-bottom: 10px;">
+                            <strong>{{textoEncabezado}}</strong>
+                        </div>
+                    </div>
                 </th>
                 {{#each @root.preguntas}}
                 <th colspan="{{getColumnCount this}}">
@@ -196,7 +211,10 @@
     text-align: center;
     vertical-align: middle;
 }
-.th-main-header { width: 150px; }
+.th-main-header { 
+    width: 150px; 
+    height: 120px;
+}
 .th-sumatoria { width: 100px; }
 
 .report-matrix .categoria-row th,
@@ -245,14 +263,13 @@
 }
 .preguntas-row th {
     height: 220px;
-    padding: 5px 8px; /* Aumentar padding horizontal para evitar que el texto choque */
+    padding: 5px 8px;
     width: auto; 
     vertical-align: middle;
     text-align: center;
 }
 
 .preguntas-row th div {
-    /* Hacemos que el div se comporte como un elemento en línea para que text-align:center funcione */
     display: inline-block;
     writing-mode: vertical-rl; 
     transform: rotate(180deg);

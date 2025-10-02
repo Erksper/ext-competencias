@@ -34,10 +34,19 @@
                             <input type="text" class="form-control" data-action="filterUsers" placeholder="Buscar usuario...">
                         </div>
 
-                        <div style="margin-bottom: 15px; font-size: 0.9em; text-align: center;">
-                            <span style="display: inline-block; width: 12px; height: 12px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 3px; vertical-align: middle; margin-right: 5px;"></span> No evaluado
-                            <span style="display: inline-block; width: 12px; height: 12px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 3px; vertical-align: middle; margin-left: 15px; margin-right: 5px;"></span> Incompleto
-                            <span style="display: inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 3px; vertical-align: middle; margin-left: 15px; margin-right: 5px;"></span> En Revisión
+                        <div class="legend-container">
+                            <div class="legend-item">
+                                <span class="legend-color-box" style="background-color: #f8d7da;"></span>
+                                <span>El usuario no ha sido evaluado</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color-box" style="background-color: #fff3cd;"></span>
+                                <span>El usuario tiene una evaluacion incompleta</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color-box" style="background-color: #d4edda;"></span>
+                                <span>El usuario tiene una evaluacion en revisión</span>
+                            </div>
                         </div>
 
                         {{#each usuarios}}
@@ -63,3 +72,32 @@
         </div>
     </div>
 {{/if}}
+
+<style>
+.legend-container {
+    text-align: left;
+    padding: 10px 15px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.legend-item:last-child {
+    margin-bottom: 0;
+}
+.legend-color-box {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #888;
+    border-radius: 3px;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+</style>

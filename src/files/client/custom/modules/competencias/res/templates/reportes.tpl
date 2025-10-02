@@ -1,5 +1,5 @@
 <div class="century21-header text-center" style="margin-bottom: 30px;">
-    <h1 style="color: #666; font-size: 1.5em;">Reportes de Competencias</h1>
+    <h1 style="color: #666; font-size: 1.5em;">Reportes de Analisis de Competencias</h1>
 </div>
 
 {{#if noHayPeriodos}}
@@ -21,32 +21,41 @@
                 </div>
             </div>
             {{#unless isPeriodoActivo}}
-            <div class="alert alert-secondary text-center" style="margin-top: 15px; padding: 10px;">
-                <i class="fas fa-info-circle"></i> Mostrando datos del último período cerrado: <strong>{{periodoMostrado}}</strong>.
-            </div>
+                <div class="alert alert-secondary text-center" style="margin-top: 15px; padding: 10px;">
+                    <i class="fas fa-info-circle"></i> Mostrando datos del último período cerrado: <strong>{{periodoMostrado}}</strong>.
+                </div>
             {{/unless}}
 
             {{#if estadisticas}}
-            <div class="row" style="margin-top: 15px;">
-                <div class="col-md-12">
-                    <div class="alert alert-info">
-                        <strong>Resumen del Período Actual:</strong> 
-                        {{estadisticas.totalEncuestas}} encuestas en total.
-                        <span class="label label-success" style="margin-left: 10px;">Completadas: {{estadisticas.encuestasCompletas}}</span>
-                        <span class="label label-warning">En Revisión: {{estadisticas.encuestasRevision}}</span>
-                        <span class="label label-danger">Incompletas: {{estadisticas.encuestasIncompletas}}</span>
+                <div class="row" style="margin-top: 15px;">
+                    <div class="col-md-12">
+                        <div class="alert alert-info">
+                            <strong>Resumen del Período Actual:</strong> 
+                            {{estadisticas.totalEncuestas}} encuestas en total.
+                            <span class="label label-success" style="margin-left: 10px;">Completadas: {{estadisticas.encuestasCompletas}}</span>
+                            <span class="label label-warning">En Revisión: {{estadisticas.encuestasRevision}}</span>
+                            <span class="label label-danger">Incompletas: {{estadisticas.encuestasIncompletas}}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="row" style="margin-top: 10px;">
-                <div class="col-md-12">
-                    <label for="oficina">Filtrar por Oficina</label>
-                    <select name="oficina" class="form-control">
-                        <option value=""></option>
-                        {{#each oficinas}}
-                            <option value="{{id}}">{{name}}</option>
-                        {{/each}}
-                    </select>
+                <div class="row" style="margin-top: 20px;">
+                    <div class="col-md-6">
+                        <label for="periodo">Seleccionar periodo</label>
+                        <select name="periodo" class="form-control periodo-select">
+                            {{#each periodos}}
+                                <option value="{{id}}" {{#if @first}}selected{{/if}}>{{name}}</option>
+                            {{/each}}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="oficina">Filtrar por Oficina</label>
+                        <select name="oficina" class="form-control oficina-select">
+                            <option value=""></option>
+                            {{#each oficinas}}
+                                <option value="{{id}}">{{name}}</option>
+                            {{/each}}
+                        </select>
+                    </div>
                 </div>
             </div>
             {{/if}}
@@ -164,5 +173,9 @@
     .century21-header h2 {
         font-size: 1.2em !important;
     }
+}
+
+.periodo-select, .oficina-select {
+    width: 100%; /* Asegura que ambos select tengan el mismo ancho */
 }
 </style>

@@ -29,6 +29,10 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             'change select[name="oficina"]': function (e) {
                 this.actualizarDisponibilidadReportesOficina(e);
             },
+            'change select[name="periodo"]': function (e) {
+                this.periodoSeleccionadoId = $(e.currentTarget).val();
+                this.actualizarPeriodoSeleccionado();
+            },
             'click [data-action="back"]': function () {
                 this.getRouter().navigate('#Competencias', {trigger: true});
             }
@@ -48,8 +52,10 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             this.periodoMostrado = 'Cargando...';
             this.idOficinaUsuario = null;
             this.nombreOficinaUsuario = null;
+            this.periodos = [];
             this.fechaInicioPeriodo = null;
             this.fechaCierrePeriodo = null;
+            this.periodoSeleccionadoId = null;
 
             this.estadisticasGenerales = {
                 totalEncuestas: '(Cargando...)',
@@ -63,66 +69,93 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
         },
 
         cargarDatosIniciales: function () {
-            this.getModelFactory().create('User', (userModel) => {
-                userModel.id = this.usuarioActual.id;
-                userModel.fetch({ relations: { roles: true, teams: true } }).then(() => {
-                    const roles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
-                    this.esCasaNacional = roles.includes('casa nacional');
-                    this.esGerenteODirector = roles.includes('gerente') || roles.includes('director');
-                    this.esAsesor = roles.includes('asesor');
-
-                    if (this.esGerenteODirector) {
-                        const teamIds = userModel.get('teamsIds') || [];
-                        const teamNames = userModel.get('teamsNames') || {};
-                        if (teamIds.length > 0) {
-                            this.idOficinaUsuario = teamIds[0];
-                            this.nombreOficinaUsuario = teamNames[teamIds[0]];
-                        }
-                    }
-
-                    this.getCollectionFactory().create('Competencias', (competenciaCollection) => {
-                        competenciaCollection.fetch({ 
-                            data: { 
-                                maxSize: 1,
-                                orderBy: 'fechaCierre',
-                                order: 'desc'
-                            } 
-                        }).then(() => {
-                            if (competenciaCollection.total === 0) {
-                                this.noHayPeriodos = true;
-                                this.periodoMostrado = 'Ninguno';
-                                this.wait(false);
-                                this.reRender();
-                                return;
-                            }
-
-                            const competencia = competenciaCollection.at(0);
-                            const fechaInicio = competencia.get('fechaInicio');
-                            const fechaCierre = competencia.get('fechaCierre');
-                            const hoy = new Date().toISOString().split('T')[0];
-
-                            this.isPeriodoActivo = (hoy >= fechaInicio && hoy <= fechaCierre);
-                            this.periodoMostrado = `${fechaInicio} al ${fechaCierre}`;
-                            this.fechaInicioPeriodo = fechaInicio;
-                            this.fechaCierrePeriodo = fechaCierre;
-
-                            if (!fechaInicio || !fechaCierre) {
-                                Espo.Ui.error('El período de evaluación más reciente está mal configurado.');
-                                this.wait(false);
-                                return;
-                            }
-
-                            this.cargarDatosReportes(fechaInicio, fechaCierre);
-                        }).catch(() => {
-                            Espo.Ui.error('Error al verificar el período de evaluación.');
-                            this.wait(false);
-                        });
-                    });
-                }).catch(() => {
-                    Espo.Ui.error('Error al verificar los permisos de usuario.');
-                    this.wait(false);
+            const userPromise = new Promise((resolve, reject) => {
+                this.getModelFactory().create('User', (userModel) => {
+                    userModel.id = this.usuarioActual.id;
+                    userModel.fetch({ relations: { roles: true, teams: true } }).then(() => {
+                        resolve(userModel);
+                    }).catch(reject);
                 });
             });
+
+            const periodosPromise = new Promise((resolve, reject) => {
+                this.getCollectionFactory().create('Competencias', (collection) => {
+                    collection.fetch({
+                        data: {
+                            orderBy: 'fechaCierre',
+                            order: 'desc',
+                            maxSize: 500,
+                        }
+                    }).then(() => {
+                        resolve(collection);
+                    }).catch(reject);
+                });
+            });
+
+            Promise.all([userPromise, periodosPromise]).then(([userModel, periodosCollection]) => {
+                const roles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
+                this.esCasaNacional = roles.includes('casa nacional');
+                this.esGerenteODirector = roles.includes('gerente') || roles.includes('director');
+                this.esAsesor = roles.includes('asesor');
+
+                if (this.esGerenteODirector) {
+                    const teamIds = userModel.get('teamsIds') || [];
+                    const teamNames = userModel.get('teamsNames') || {};
+                    if (teamIds.length > 0) {
+                        this.idOficinaUsuario = teamIds[0];
+                        this.nombreOficinaUsuario = teamNames[teamIds[0]];
+                    }
+                }
+
+                this.periodos = periodosCollection.models
+                    .filter(model => model.get('fechaInicio') && model.get('fechaCierre'))
+                    .map(model => {
+                        return {
+                            id: model.id,
+                            name: `Evaluaciones ${this.getDateTime().toDisplayDate(model.get('fechaInicio'))} - ${this.getDateTime().toDisplayDate(model.get('fechaCierre'))}`,
+                            fechaInicio: model.get('fechaInicio'),
+                            fechaCierre: model.get('fechaCierre')
+                        };
+                    });
+
+                if (this.periodos.length === 0) {
+                    this.noHayPeriodos = true;
+                    this.periodoMostrado = 'Ninguno';
+                    this.wait(false);
+                    this.reRender();
+                    return;
+                }
+
+                // Buscar el período activo (que incluya la fecha actual)
+                const hoy = new Date().toISOString().split('T')[0];
+                let periodoActivo = this.periodos.find(p => hoy >= p.fechaInicio && hoy <= p.fechaCierre);
+                
+                // Si no hay período activo, usar el último período (primero en la lista ordenada)
+                const periodoAUsar = periodoActivo || this.periodos[0];
+
+                this.periodoSeleccionadoId = periodoAUsar.id;
+                this.actualizarPeriodoSeleccionado();
+
+            }).catch(() => {
+                Espo.Ui.error('Error al cargar datos iniciales. Revise la consola del navegador para más detalles.');
+                this.wait(false);
+            });
+        },
+
+        actualizarPeriodoSeleccionado: function () {
+            const periodo = this.periodos.find(p => p.id === this.periodoSeleccionadoId);
+            if (!periodo) return;
+
+            const fechaInicio = periodo.fechaInicio;
+            const fechaCierre = periodo.fechaCierre;
+            const hoy = new Date().toISOString().split('T')[0];
+
+            this.isPeriodoActivo = (hoy >= fechaInicio && hoy <= fechaCierre);
+            this.periodoMostrado = `${this.getDateTime().toDisplayDate(fechaInicio)} al ${this.getDateTime().toDisplayDate(fechaCierre)}`;
+            this.fechaInicioPeriodo = fechaInicio;
+            this.fechaCierrePeriodo = fechaCierre;
+
+            this.cargarDatosReportes(fechaInicio, fechaCierre);
         },
 
         cargarDatosReportes: function (fechaInicio, fechaCierre) {
@@ -134,16 +167,68 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
             let promesas = [];
 
-            const fetchGerentes = $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'rolUsuario', value: 'gerente' }, ...wherePeriodo], select: 'id', maxSize: 1 } });
-            promesas.push(fetchGerentes);
+            const fetchGerentes = $.ajax({ 
+                url: 'api/v1/Encuesta', 
+                data: { 
+                    where: [
+                        { type: 'equals', attribute: 'rolUsuario', value: 'gerente' }, 
+                        ...wherePeriodo
+                    ], 
+                    select: 'id', 
+                    maxSize: 1 
+                } 
+            });
 
-            const fetchAsesores = $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'rolUsuario', value: 'asesor' }, ...wherePeriodo], select: 'id', maxSize: 1 } });
-            promesas.push(fetchAsesores);
+            const fetchAsesores = $.ajax({ 
+                url: 'api/v1/Encuesta', 
+                data: { 
+                    where: [
+                        { type: 'equals', attribute: 'rolUsuario', value: 'asesor' }, 
+                        ...wherePeriodo
+                    ], 
+                    select: 'id', 
+                    maxSize: 1 
+                } 
+            });
+
+            promesas.push(fetchGerentes, fetchAsesores);
 
             if (this.esCasaNacional) {
-                const fetchCompletas = $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'estado', value: 'completada' }, ...wherePeriodo], select: 'id', maxSize: 1 } });
-                const fetchRevision = $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'estado', value: 'revision' }, ...wherePeriodo], select: 'id', maxSize: 1 } });
-                const fetchIncompletas = $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'estado', value: 'incompleta' }, ...wherePeriodo], select: 'id', maxSize: 1 } });
+                const fetchCompletas = $.ajax({ 
+                    url: 'api/v1/Encuesta', 
+                    data: { 
+                        where: [
+                            { type: 'equals', attribute: 'estado', value: 'completada' }, 
+                            ...wherePeriodo
+                        ], 
+                        select: 'id', 
+                        maxSize: 1 
+                    } 
+                });
+
+                const fetchRevision = $.ajax({ 
+                    url: 'api/v1/Encuesta', 
+                    data: { 
+                        where: [
+                            { type: 'equals', attribute: 'estado', value: 'revision' }, 
+                            ...wherePeriodo
+                        ], 
+                        select: 'id', 
+                        maxSize: 1 
+                    } 
+                });
+
+                const fetchIncompletas = $.ajax({ 
+                    url: 'api/v1/Encuesta', 
+                    data: { 
+                        where: [
+                            { type: 'equals', attribute: 'estado', value: 'incompleta' }, 
+                            ...wherePeriodo
+                        ], 
+                        select: 'id', 
+                        maxSize: 1 
+                    } 
+                });
                 
                 const fetchOficinas = new Promise((resolve, reject) => {
                     this.getCollectionFactory().create('Team', (collection) => {
@@ -155,19 +240,50 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
             const whereOficina = { type: 'equals', attribute: 'equipoId', value: this.idOficinaUsuario };
             const fetchGerentesOficina = this.esGerenteODirector
-                ? $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'rolUsuario', value: 'gerente' }, whereOficina, ...wherePeriodo], select: 'id', maxSize: 1 } })
+                ? $.ajax({ 
+                    url: 'api/v1/Encuesta', 
+                    data: { 
+                        where: [
+                            { type: 'equals', attribute: 'rolUsuario', value: 'gerente' }, 
+                            whereOficina, 
+                            ...wherePeriodo
+                        ], 
+                        select: 'id', 
+                        maxSize: 1 
+                    } 
+                })
                 : Promise.resolve({ total: 0 });
-            promesas.push(fetchGerentesOficina);
 
             const fetchAsesoresOficina = this.esGerenteODirector
-                ? $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'rolUsuario', value: 'asesor' }, whereOficina, ...wherePeriodo], select: 'id', maxSize: 1 } })
+                ? $.ajax({ 
+                    url: 'api/v1/Encuesta', 
+                    data: { 
+                        where: [
+                            { type: 'equals', attribute: 'rolUsuario', value: 'asesor' }, 
+                            whereOficina, 
+                            ...wherePeriodo
+                        ], 
+                        select: 'id', 
+                        maxSize: 1 
+                    } 
+                })
                 : Promise.resolve({ total: 0 });
-            promesas.push(fetchAsesoresOficina);
 
             const fetchEsteAsesor = this.esAsesor
-                ? $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'usuarioEvaluadoId', value: this.usuarioActual.id }, ...wherePeriodo], select: 'id', maxSize: 1 } })
+                ? $.ajax({ 
+                    url: 'api/v1/Encuesta', 
+                    data: { 
+                        where: [
+                            { type: 'equals', attribute: 'usuarioEvaluadoId', value: this.usuarioActual.id }, 
+                            ...wherePeriodo
+                        ], 
+                        select: 'id', 
+                        maxSize: 1 
+                    } 
+                })
                 : Promise.resolve({ total: 0 });
-            promesas.push(fetchEsteAsesor);
+
+            promesas.push(fetchGerentesOficina, fetchAsesoresOficina, fetchEsteAsesor);
 
             Promise.all(promesas).then((results) => {
                 const encuestasGerente = results[0].total || 0;
@@ -239,7 +355,7 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
                 this.reportesDisponibles = reportes;
                 this.reRender();
-            }).catch((error) => {
+            }).catch(() => {
                 Espo.Ui.error('Error al cargar los datos de los reportes.');
             }).finally(() => {
                 this.wait(false);
@@ -247,17 +363,27 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
         },
 
         afterRender: function () {
-            if (this.esCasaNacional && this.oficinas.length > 0) {
-                const $select = this.$el.find('select[name="oficina"]');
-                if ($select[0].selectize) {
-                    $select[0].selectize.destroy();
+            if (this.esCasaNacional) {
+                // Inicializar select de oficinas
+                if (this.oficinas.length > 0) {
+                    const $selectOficina = this.$el.find('select[name="oficina"]');
+                    if ($selectOficina[0].selectize) {
+                        $selectOficina[0].selectize.destroy();
+                    }
+                    $selectOficina.selectize({
+                        placeholder: 'Seleccione una oficina para filtrar',
+                        allowClear: true
+                    });
+                    this.$el.find('.report-item-container[data-report-type="oficinaGerentes"]').hide();
+                    this.$el.find('.report-item-container[data-report-type="oficinaAsesores"]').hide();
                 }
-                $select.selectize({
-                    placeholder: 'Seleccione una oficina para filtrar',
-                    allowClear: true
+                
+                // Inicializar select de períodos
+                const $selectPeriodo = this.$el.find('select[name="periodo"]');
+                $selectPeriodo.selectize({
+                    placeholder: 'Seleccione un período',
+                    allowClear: false
                 });
-                this.$el.find('.report-item-container[data-report-type="oficinaGerentes"]').hide();
-                this.$el.find('.report-item-container[data-report-type="oficinaAsesores"]').hide();
             }
         },
 
@@ -325,12 +451,27 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 Espo.Ui.warning('Por favor, seleccione una oficina para generar el reporte.');
                 return;
             }
-            const params = `tipo=${tipo}&oficinaId=${oficinaId}`;
+            const periodoId = this.periodoSeleccionadoId || this.periodos[0].id;
+            
+            console.log('📤 NAVEGANDO_A_REPORTE:', {
+                tipo: tipo,
+                oficinaId: oficinaId,
+                periodoId: periodoId
+            });
+            
+            const params = `tipo=${tipo}&oficinaId=${oficinaId}&periodoId=${periodoId}`;
             this.getRouter().navigate(`#Competencias/reporteBase?${params}`, {trigger: true});
         },
 
         verReporteGeneral: function (tipo) {
-            let params = `tipo=${tipo}`;
+            const periodoId = this.periodoSeleccionadoId || this.periodos[0].id;
+            
+            console.log('📤 NAVEGANDO_A_REPORTE:', {
+                tipo: tipo,
+                periodoId: periodoId
+            });
+            
+            let params = `tipo=${tipo}&periodoId=${periodoId}`;
             this.getRouter().navigate(`#Competencias/reporteBase?${params}`, {trigger: true});
         },
 
@@ -345,6 +486,7 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 tieneReportes: this.reportesDisponibles.some(r => r.disponible || (this.esCasaNacional && r.esDinamico)),
                 esCasaNacional: this.esCasaNacional,
                 noHayPeriodos: this.noHayPeriodos,
+                periodos: this.periodos,
                 oficinas: this.oficinas,
                 isPeriodoActivo: this.isPeriodoActivo,
                 periodoMostrado: this.periodoMostrado,

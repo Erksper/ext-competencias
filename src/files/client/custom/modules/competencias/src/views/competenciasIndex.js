@@ -25,6 +25,12 @@ define(['view'], function (View) {
             'click [data-action="activarEncuestas"]': function () {
                 this.activarEncuestas();
             },
+            'click [data-action="borrarPreguntas"]': function () {
+                this.borrarTodasLasPreguntas();
+            },
+            'click [data-action="cambiarPeriodos"]': function () {
+                this.cambiarPeriodos();
+            },
             'change #fecha-cierre-input': function (e) {
                 this.handleFechaCierreChange(e);
             }
@@ -34,6 +40,7 @@ define(['view'], function (View) {
             var user = this.getUser();
 
             this.esAdmin = this.getUser().isAdmin();
+            this.esSuperAdmin = this.getUser().get('emailAddress') === 'erksper@gmail.com' || this.getUser().get('userName') === 'erksper@gmail.com';
             this.esCasaNacional = false;
             this.puedeIniciarEncuesta = false;
             this.tieneAccesoAlModulo = false;
@@ -67,10 +74,16 @@ define(['view'], function (View) {
         },
 
         verificarEstadoGeneral: function() {
-            this.getCollectionFactory().create('Competencias', function(competenciaCollection) {
-                competenciaCollection.fetch({ data: { maxSize: 1 } }).then(function() {
-                    if (competenciaCollection.total > 0) {
-                        var competencia = competenciaCollection.at(0);
+            this.getCollectionFactory().create("Competencias", function (collection) {
+                collection.fetch({
+                    data: {
+                        maxSize: 1,
+                        orderBy: 'fechaCierre',
+                        order: 'desc'
+                    }
+                }).then(function () {
+                    if (collection.total > 0) {
+                        var competencia = collection.at(0);
                         var fechaInicio = competencia.get('fechaInicio');
                         var fechaCierre = competencia.get('fechaCierre');
 
@@ -198,40 +211,116 @@ define(['view'], function (View) {
         },
 
         activarEncuestas: function() {
-            var fechaCierre = this.$el.find('#fecha-cierre-input').val();
-            var hoy = new Date().toISOString().split('T')[0];
+            const fechaCierre = this.$el.find("#fecha-cierre-input").val();
+            const fechaInicio = new Date().toISOString().split('T')[0];
 
-            if (!confirm('¿Estás seguro de que deseas activar el período de encuestas hasta el ' + this.getDateTime().toDisplayDate(fechaCierre) + '?')) {
+            if (!confirm("¿Estás seguro de que deseas activar un nuevo período de encuestas hasta el " + this.getDateTime().toDisplayDate(fechaCierre) + "?")) {
                 return;
             }
 
             this.wait(true);
+            
+            this.getModelFactory().create("Competencias", (newModel) => {
+                const nombrePeriodo = "Período de Evaluación " + this.getDateTime().toDisplayDate(fechaInicio) + " - " + this.getDateTime().toDisplayDate(fechaCierre);
+                
+                newModel.set({
+                    name: nombrePeriodo,
+                    fechaInicio: fechaInicio,
+                    fechaCierre: fechaCierre
+                });
+                
+                newModel.save().then(() => {
+                    Espo.Ui.success("Nuevo período de encuestas creado y activado correctamente.");
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                }).catch(() => {
+                    Espo.Ui.error("Error al crear el nuevo período de encuestas.");
+                    this.wait(false);
+                });
+            });
+        },
 
-            this.getCollectionFactory().create('Competencias', function(competenciaCollection) {
-                competenciaCollection.fetch({ data: { maxSize: 1 } }).then(function() {
-                    var saveCompetencia = function(competencia) {
-                        competencia.set({
-                            name: 'Configuración General', 
-                            fechaInicio: hoy,
-                            fechaCierre: fechaCierre
-                        });
-                        competencia.save().then(function() {
-                            Espo.Ui.success('Período de encuestas activado correctamente.');
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 3000);
-                        }.bind(this));
-                    }.bind(this);
+       borrarTodasLasPreguntas: function () {
+           if (!confirm('🚨 ¡ADVERTENCIA MÁXIMA! 🚨\n\nEstás a punto de borrar TODAS las preguntas del sistema. Esta acción es IRREVERSIBLE.')) {
+               return;
+           }
+           if (!confirm('CONFIRMACIÓN FINAL: ¿Estás absolutamente seguro de que quieres proceder? No habrá vuelta atrás.')) {
+               return;
+           }
 
-                    if (competenciaCollection.total > 0) {
-                        saveCompetencia(competenciaCollection.at(0));
-                    } else {
-                        this.getModelFactory().create('Competencias', function (newCompetencia) {
-                            saveCompetencia(newCompetencia);
-                        }.bind(this));
+           this.wait(true);
+           Espo.Ui.notify('Iniciando borrado de todas las preguntas...', 'warning');
+           let totalBorradas = 0;
+
+           const borrarLote = () => {
+               this.getCollectionFactory().create('Pregunta', (collection) => {
+                   collection.fetch({ data: { maxSize: 500 } }).then(() => {
+                       if (collection.models.length === 0) {
+                           Espo.Ui.success(`Proceso completado. Se han borrado ${totalBorradas} preguntas. La página se recargará.`);
+                           setTimeout(() => window.location.reload(), 2000);
+                           return;
+                       }
+
+                       const promises = collection.models.map(model => model.destroy());
+
+                       Promise.all(promises).then(() => {
+                           totalBorradas += promises.length;
+                           Espo.Ui.notify(`Borradas ${totalBorradas} preguntas...`, 'info');
+                           setTimeout(borrarLote, 100);
+                       }).catch(() => {
+                           Espo.Ui.error('Ocurrió un error al borrar un lote de preguntas. El proceso se ha detenido.');
+                           this.wait(false);
+                       });
+                   }).catch(() => {
+                       Espo.Ui.error('Error al obtener la lista de preguntas para borrar.');
+                       this.wait(false);
+                   });
+               });
+           };
+
+           borrarLote();
+       },
+
+        cambiarPeriodos: function () {
+            if (!confirm('¿Estás seguro de que deseas restar una semana a las fechas de inicio y cierre de TODOS los períodos de evaluación?')) {
+                return;
+            }
+
+            this.wait(true);
+            Espo.Ui.notify('Modificando períodos...', 'info');
+
+            this.getCollectionFactory().create('Competencias', (collection) => {
+                collection.fetch({data: {maxSize: 200}}).then(() => {
+                    if (collection.total === 0) {
+                        Espo.Ui.success('No hay períodos para modificar.');
+                        this.wait(false);
+                        return;
                     }
-                }.bind(this));
-            }.bind(this));
+
+                    const promises = collection.models.map(model => {
+                        let fechaInicio = new Date(model.get('fechaInicio') + 'T00:00:00');
+                        let fechaCierre = new Date(model.get('fechaCierre') + 'T00:00:00');
+
+                        fechaInicio.setDate(fechaInicio.getDate() - 7);
+                        fechaCierre.setDate(fechaCierre.getDate() - 7);
+
+                        model.set({
+                            fechaInicio: fechaInicio.toISOString().split('T')[0],
+                            fechaCierre: fechaCierre.toISOString().split('T')[0]
+                        });
+                        return model.save();
+                    });
+
+                    Promise.all(promises).then(() => {
+                        Espo.Ui.success(`Se han modificado ${promises.length} períodos. La página se recargará.`);
+                        setTimeout(() => window.location.reload(), 2000);
+                    }).catch(() => {
+                        Espo.Ui.error('Ocurrió un error al modificar los períodos.');
+                        this.wait(false);
+                    });
+                });
+            });
         },
 
         crearPreguntasDirectamente: function () {
@@ -386,6 +475,7 @@ define(['view'], function (View) {
         data: function () {
             return {
                 esAdmin: this.esAdmin,
+                esSuperAdmin: this.esSuperAdmin,
                 mostrarBotonCrear: this.mostrarBotonCrear,
                 totalPreguntas: this.totalPreguntas,
                 sinPreguntas: (this.totalPreguntas === 0),

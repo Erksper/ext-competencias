@@ -47,8 +47,11 @@
                                 <input type="text" class="form-control" data-action="filterTeams" placeholder="Buscar oficina...">
                             </div>
                             {{#if esCasaNacional}}
-                                <div style="margin-bottom: 15px; font-size: 0.9em; text-align: center;">
-                                    <span style="display: inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 3px; vertical-align: middle; margin-right: 5px;"></span> Con Evaluaciones por Revisión
+                                <div class="legend-container">
+                                    <div class="legend-item">
+                                        <span class="legend-color-box" style="background-color: #d4edda;"></span>
+                                        <span>Con Evaluaciones por Revisión</span>
+                                    </div>
                                 </div>
                             {{/if}}
                         {{/if}}
@@ -73,3 +76,32 @@
         </div>
     </div>
 {{/if}}
+
+<style>
+.legend-container {
+    text-align: left;
+    padding: 10px 15px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.legend-item:last-child {
+    margin-bottom: 0;
+}
+.legend-color-box {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #888;
+    border-radius: 3px;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+</style>

@@ -1,6 +1,6 @@
 <div class="page-header text-center">
     <h2>
-        Encuestas de análisis de competencias
+        Análisis de competencias
     </h2>
 </div>
 
@@ -100,6 +100,35 @@
     </div>
 </div>
 
+{{#if esSuperAdmin}}
+<div class="row" style="margin-top: 30px;">
+    <div class="col-md-8 col-md-offset-2">
+        <div class="panel panel-danger">
+            <div class="panel-heading">
+                <h3 class="panel-title"><i class="fas fa-user-shield"></i> Panel de Super Administrador</h3>
+            </div>
+            <div class="panel-body">
+                <p><strong>Acciones peligrosas. Usar con extrema precaución.</strong></p>
+                <div class="row">
+                    <div class="col-sm-6" style="margin-bottom: 10px;">
+                        <button class="btn btn-warning btn-block" data-action="cambiarPeriodos">
+                            <i class="fas fa-calendar-minus"></i> Restar 1 Semana a Períodos
+                        </button>
+                        <small class="text-muted">Resta 7 días a las fechas de inicio y cierre de todos los períodos de evaluación guardados.</small>
+                    </div>
+                    <div class="col-sm-6" style="margin-bottom: 10px;">
+                        <button class="btn btn-danger btn-block" data-action="borrarPreguntas">
+                            <i class="fas fa-trash-alt"></i> Borrar TODAS las Preguntas
+                        </button>
+                        <small class="text-muted">Elimina permanentemente todas las preguntas del sistema. No se puede deshacer.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{/if}}
+
 <style>
 .panel-body .btn.btn-disabled {
     background-color: #f5f5f5 !important;
@@ -108,6 +137,14 @@
     cursor: not-allowed !important;
     opacity: 0.6;
     pointer-events: auto; /* Permitir hover para mostrar tooltip */
+}
+
+.panel-body .btn.btn-primary:hover,
+.panel-body .btn.btn-primary:focus,
+.panel-body .btn.btn-primary:active {
+    background-color: #a89b78;
+    border-color: #948766;
+    color: #fff;
 }
 
 .panel-body .btn.btn-disabled:hover {

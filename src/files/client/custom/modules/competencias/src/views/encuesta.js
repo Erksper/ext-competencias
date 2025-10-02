@@ -53,7 +53,13 @@ define(['view'], function (View) {
                 userModel.id = this.getUser().id;
                 userModel.fetch({ relations: { roles: true } }).then(function () {
                     this.getCollectionFactory().create('Competencias', function (competenciaCollection) {
-                        competenciaCollection.fetch({ data: { maxSize: 1 } }).then(function () {
+                        competenciaCollection.fetch({ 
+                            data: { 
+                                maxSize: 1,
+                                orderBy: 'fechaCierre',
+                                order: 'desc'
+                            } 
+                        }).then(function () {
                             this.evaluadorRoles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
                             const puedeAcceder = this.evaluadorRoles.includes('casa nacional') || this.evaluadorRoles.includes('gerente') || this.evaluadorRoles.includes('director');
 

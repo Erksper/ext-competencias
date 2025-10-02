@@ -14,8 +14,25 @@ define(['view'], function (View) {
         },
         
         setup: function () {
-            this.tipoReporte = this.options.tipo || 'desconocido';
-            this.oficinaId = this.options.oficinaId || null; 
+            console.log('🔧 SETUP: Iniciando setup de reporteBase');
+            
+            // Obtener parámetros de la URL directamente
+            const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
+            this.tipoReporte = urlParams.get('tipo') || this.options.tipo || 'desconocido';
+            this.oficinaId = urlParams.get('oficinaId') || this.options.oficinaId || null;
+            this.periodoId = urlParams.get('periodoId') || this.options.periodoId || null;
+
+            console.log('📋 PARÁMETROS_URL:', {
+                tipo: urlParams.get('tipo'),
+                oficinaId: urlParams.get('oficinaId'),
+                periodoId: urlParams.get('periodoId')
+            });
+
+            console.log('📊 PARÁMETROS_PROCESADOS:', {
+                tipoReporte: this.tipoReporte,
+                oficinaId: this.oficinaId,
+                periodoId: this.periodoId
+            });
 
             this.fechaInicio = null;
             this.fechaCierre = null;
@@ -24,8 +41,10 @@ define(['view'], function (View) {
             
             if (this.tipoReporte.includes('gerente') || this.tipoReporte.includes('Gerente')) {
                 this.rolObjetivo = 'gerente';
+                this.textoEncabezado = 'Directores y/o Gerentes';
             } else {
                 this.rolObjetivo = 'asesor';
+                this.textoEncabezado = 'Asesores';
             }
             this.tituloReporte = `Reporte de ${this.rolObjetivo === 'gerente' ? 'Gerentes y Directores' : 'Asesores'}`;
 
@@ -41,6 +60,12 @@ define(['view'], function (View) {
             this.usuariosData = [];
             this.usuariosMap = {};
             
+            this.logoOficina = null;
+            this.nombreOficina = null;
+            // Cambiar la ruta de logos - probar diferentes ubicaciones
+            this.rutaBaseLogos = window.location.origin + '/custom/modules/competencias/res/Logos/';
+            this.logoPorDefecto = 'Casa Nacional/logoTDHD.png';
+            
             this.registrarHandlebarsHelpers();
             
             this.wait(true);
@@ -48,79 +73,248 @@ define(['view'], function (View) {
         },
 
         cargarDatosIniciales: function () {
+            console.log('📥 CARGAR_DATOS_INICIALES: Iniciando carga de datos');
+            
             const promesas = [];
 
             const fetchUser = new Promise((resolve, reject) => {
                 this.getModelFactory().create('User', (userModel) => {
                     userModel.id = this.getUser().id;
-                    userModel.fetch({ relations: { roles: true, teams: true } }).then(() => resolve(userModel)).catch(reject);
+                    userModel.fetch({ relations: { roles: true, teams: true } }).then(() => {
+                        console.log('✅ USUARIO: Datos del usuario cargados');
+                        resolve(userModel);
+                    }).catch(reject);
                 });
             });
             promesas.push(fetchUser);
 
-            const fetchPeriodo = new Promise((resolve, reject) => {
-                this.getCollectionFactory().create('Competencias', (collection) => {
-                    collection.fetch({ data: { maxSize: 1, orderBy: 'fechaCierre', order: 'desc' } })
-                        .then(() => resolve(collection.at(0)))
-                        .catch(reject);
+            // SIEMPRE necesitamos un periodoId - si no viene por URL, buscar el último período
+            let periodoPromise;
+            if (this.periodoId) {
+                console.log('📅 PERIODO: Intentando cargar período con ID:', this.periodoId);
+                periodoPromise = new Promise((resolve, reject) => {
+                    this.getModelFactory().create('Competencias', (periodoModel) => {
+                        periodoModel.id = this.periodoId;
+                        periodoModel.fetch().then(() => {
+                            if (periodoModel.id) {
+                                console.log('✅ PERIODO: Período cargado exitosamente:', {
+                                    id: periodoModel.id,
+                                    fechaInicio: periodoModel.get('fechaInicio'),
+                                    fechaCierre: periodoModel.get('fechaCierre')
+                                });
+                                resolve(periodoModel);
+                            } else {
+                                console.error('❌ PERIODO: Período no encontrado con ID:', this.periodoId);
+                                // Si no se encuentra, buscar el último período
+                                this.buscarUltimoPeriodo().then(resolve).catch(reject);
+                            }
+                        }).catch((error) => {
+                            console.error('❌ PERIODO: Error al cargar período, buscando último:', error);
+                            // Si hay error, buscar el último período
+                            this.buscarUltimoPeriodo().then(resolve).catch(reject);
+                        });
+                    });
                 });
-            });
-            promesas.push(fetchPeriodo);
+            } else {
+                console.log('📅 PERIODO: No se proporcionó ID, buscando último período');
+                periodoPromise = this.buscarUltimoPeriodo();
+            }
+            promesas.push(periodoPromise);
 
             Promise.all(promesas).then(([userModel, periodoModel]) => {
+                console.log('✅ CARGAR_DATOS_INICIALES: Todos los datos cargados exitosamente');
+                
                 const roles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
                 this.esCasaNacional = roles.includes('casa nacional');
                 this.esGerenteODirector = roles.includes('gerente') || roles.includes('director');
                 this.esAsesor = roles.includes('asesor');
 
-                if (!periodoModel) {
-                    Espo.Ui.error('No se encontró un período de evaluación configurado.');
-                    this.wait(false);
-                    this.reRender();
-                    return;
-                }
+                console.log('👤 ROLES_USUARIO:', {
+                    esCasaNacional: this.esCasaNacional,
+                    esGerenteODirector: this.esGerenteODirector,
+                    esAsesor: this.esAsesor
+                });
+
+                // Guardar el periodoId que finalmente se usó
+                this.periodoId = periodoModel.id;
                 this.fechaInicio = periodoModel.get('fechaInicio');
                 this.fechaCierre = periodoModel.get('fechaCierre');
+                
+                console.log('📅 FECHAS_PERIODO:', {
+                    periodoId: this.periodoId,
+                    fechaInicio: this.fechaInicio,
+                    fechaCierre: this.fechaCierre
+                });
+                
                 if (!this.fechaInicio || !this.fechaCierre) {
-                    Espo.Ui.error('El período de evaluación está mal configurado.');
+                    console.error('❌ PERIODO: El período no tiene fechas configuradas');
+                    Espo.Ui.error('El período de evaluación está mal configurado (faltan fechas).');
                     this.wait(false);
                     this.reRender();
                     return;
                 }
 
-                if (this.tipoReporte === 'asesor') {
-                    this.usuarioId = this.getUser().id;
-                    this.tituloReporte = `Mi Reporte de Asesor (${this.getUser().get('name')})`;
-                } 
-                else if (this.tipoReporte === 'gerentes' || this.tipoReporte === 'asesores') {
-                    const teamIds = userModel.get('teamsIds') || [];
-                    if (teamIds.length > 0) {
-                        this.oficinaIdParaFiltrar = teamIds[0];
-                        const oficinaName = (userModel.get('teamsNames') || {})[teamIds[0]] || 'Mi Oficina';
-                        this.tituloReporte += ` (${oficinaName})`;
-                    }
-                } 
-                else if (this.tipoReporte === 'oficinaGerentes' || this.tipoReporte === 'oficinaAsesores') {
-                    this.getModelFactory().create('Team', (teamModel) => {
-                        teamModel.id = this.oficinaId;
-                        teamModel.fetch().then(() => {
-                            this.tituloReporte += ` - Oficina: ${teamModel.get('name')}`;
-                            this.reRender();
-                        });
-                    });
-                }
-                else if (this.tipoReporte === 'generalGerentes' || this.tipoReporte === 'generalAsesores') {
-                    this.esReporteGeneralCasaNacional = true;
+                const fechaRegex = /^\d{4}-\d{2}-\d{2}$/;
+                if (!fechaRegex.test(this.fechaInicio) || !fechaRegex.test(this.fechaCierre)) {
+                    console.error('❌ PERIODO: Formato de fechas incorrecto');
+                    Espo.Ui.error('El formato de las fechas del período es incorrecto.');
+                    this.wait(false);
+                    this.reRender();
+                    return;
                 }
 
+                console.log('🎯 PERIODO_VALIDADO: Período listo para usar');
+
+                this.configurarLogoYTitulo(userModel);
+
                 this.cargarDatosReporte();
+
             }).catch(error => {
-                Espo.Ui.error('Error al cargar datos iniciales para el reporte.');
+                console.error('❌ CARGAR_DATOS_INICIALES: Error completo:', error);
+                Espo.Ui.error('Error al cargar el período de evaluación.');
                 this.wait(false);
             });
         },
 
+        buscarUltimoPeriodo: function () {
+            return new Promise((resolve, reject) => {
+                this.getCollectionFactory().create('Competencias', (collection) => {
+                    collection.fetch({ 
+                        data: { 
+                            maxSize: 1, 
+                            orderBy: 'fechaCierre', 
+                            order: 'desc' 
+                        } 
+                    }).then(() => {
+                        const ultimoPeriodo = collection.at(0);
+                        if (ultimoPeriodo) {
+                            console.log('📅 ULTIMO_PERIODO: Encontrado:', {
+                                id: ultimoPeriodo.id,
+                                fechaInicio: ultimoPeriodo.get('fechaInicio'),
+                                fechaCierre: ultimoPeriodo.get('fechaCierre')
+                            });
+                            resolve(ultimoPeriodo);
+                        } else {
+                            console.error('❌ ULTIMO_PERIODO: No hay períodos configurados');
+                            reject(new Error('No hay períodos de evaluación configurados.'));
+                        }
+                    }).catch(reject);
+                });
+            });
+        },
+
+        configurarLogoYTitulo: function (userModel) {
+            console.log('🔄 CONFIGURAR_LOGO_TITULO: Tipo de reporte:', this.tipoReporte);
+            
+            if (this.tipoReporte === 'asesor') {
+                this.usuarioId = this.getUser().id;
+                this.tituloReporte = `Mi Reporte de Asesor (${this.getUser().get('name')})`;
+                this.cargarLogoOficina('Casa Nacional');
+            } 
+            else if (this.tipoReporte === 'gerentes' || this.tipoReporte === 'asesores') {
+                const teamIds = userModel.get('teamsIds') || [];
+                if (teamIds.length > 0) {
+                    this.oficinaIdParaFiltrar = teamIds[0];
+                    this.nombreOficina = (userModel.get('teamsNames') || {})[teamIds[0]] || 'Mi Oficina';
+                    this.tituloReporte += ` (${this.nombreOficina})`;
+                    this.cargarLogoOficina(this.nombreOficina);
+                } else {
+                    this.cargarLogoOficina('Casa Nacional');
+                }
+            } 
+            else if (this.tipoReporte === 'oficinaGerentes' || this.tipoReporte === 'oficinaAsesores') {
+                console.log('🏢 OFICINA: Cargando datos de oficina con ID:', this.oficinaId);
+                this.getModelFactory().create('Team', (teamModel) => {
+                    teamModel.id = this.oficinaId;
+                    teamModel.fetch().then(() => {
+                        this.nombreOficina = teamModel.get('name');
+                        this.tituloReporte += ` - Oficina: ${this.nombreOficina}`;
+                        console.log('✅ OFICINA: Datos de oficina cargados:', this.nombreOficina);
+                        this.cargarLogoOficina(this.nombreOficina);
+                        this.reRender();
+                    }).catch((error) => {
+                        console.error('❌ OFICINA: Error al cargar datos de oficina:', error);
+                        this.cargarLogoOficina('Casa Nacional');
+                        this.reRender();
+                    });
+                });
+            }
+            else if (this.tipoReporte === 'generalGerentes' || this.tipoReporte === 'generalAsesores') {
+                this.esReporteGeneralCasaNacional = true;
+                this.cargarLogoOficina('Casa Nacional');
+            }
+            
+            console.log('📝 TITULO_FINAL:', this.tituloReporte);
+        },
+
+        cargarLogoOficina: function (nombreOficina) {
+            console.log('🖼️ CARGAR_LOGO_OFICINA:', nombreOficina);
+            
+            if (!nombreOficina) {
+                console.log('🖼️ Usando logo por defecto (nombre vacío)');
+                this.establecerLogo(this.rutaBaseLogos + this.logoPorDefecto);
+                return;
+            }
+
+            const nombreFormateado = this.formatearNombreOficina(nombreOficina);
+            
+            // Probar diferentes rutas para los logos
+            const rutasPosibles = [
+                `${this.rutaBaseLogos}${encodeURIComponent(nombreFormateado)}/logoTDHD.png`,
+                `${window.location.origin}/client/custom/modules/competencias/res/Logos/${encodeURIComponent(nombreFormateado)}/logoTDHD.png`,
+                `${window.location.origin}/custom/modules/competencias/res/Logos/${encodeURIComponent(nombreFormateado)}/logoTDHD.png`,
+                `${window.location.origin}/site/client/custom/modules/competencias/res/Logos/${encodeURIComponent(nombreFormateado)}/logoTDHD.png`
+            ];
+            
+            console.log('🖼️ RUTAS_POSIBLES_LOGO:', rutasPosibles);
+
+            const probarRuta = (index) => {
+                if (index >= rutasPosibles.length) {
+                    // Si ninguna ruta funciona, usar por defecto
+                    console.log('❌ LOGO: Ninguna ruta funcionó, usando por defecto');
+                    const rutaPorDefecto = `${window.location.origin}/client/custom/modules/competencias/res/Logos/${encodeURIComponent('Casa Nacional')}/logoTDHD.png`;
+                    this.establecerLogo(rutaPorDefecto);
+                    return;
+                }
+
+                const rutaLogo = rutasPosibles[index];
+                console.log(`🖼️ Probando ruta ${index + 1}:`, rutaLogo);
+                
+                const img = new Image();
+                img.onload = () => {
+                    console.log(`✅ LOGO: Cargado exitosamente desde ruta ${index + 1}`);
+                    this.establecerLogo(rutaLogo);
+                };
+                img.onerror = () => {
+                    console.log(`❌ LOGO: Ruta ${index + 1} falló`);
+                    probarRuta(index + 1);
+                };
+                img.src = rutaLogo;
+            };
+
+            probarRuta(0);
+        },
+
+        establecerLogo: function (rutaLogo) {
+            console.log('🎨 ESTABLECER_LOGO:', rutaLogo);
+            this.logoOficina = rutaLogo;
+            this.reRender();
+        },
+
+        formatearNombreOficina: function (nombre) {
+            if (!nombre) return 'Casa Nacional';
+            
+            return nombre
+                .split(' ')
+                .map(palabra => {
+                    if (!palabra) return '';
+                    return palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase();
+                })
+                .join(' ');
+        },
+
         registrarHandlebarsHelpers: function () {
+            console.log('🔧 REGISTRAR_HANDLEBARS_HELPERS: Registrando helpers');
             var self = this;
             
             Handlebars.registerHelper('getColumnCount', function(categoria) {
@@ -164,13 +358,21 @@ define(['view'], function (View) {
             Handlebars.registerHelper('eq', function(a, b) {
                 return a === b;
             });
+            
+            console.log('✅ HANDLEBARS_HELPERS: Todos los helpers registrados');
         },
 
         cargarDatosReporte: function () {
+            console.log('📊 CARGAR_DATOS_REPORTE: Iniciando carga de datos del reporte');
+            console.log('📊 TIPO_REPORTE:', this.tipoReporte);
+            console.log('📊 ES_REPORTE_GENERAL:', this.esReporteGeneralCasaNacional);
+            
             if (this.esReporteGeneralCasaNacional) {
                 this.tituloReporte = `Reporte General de ${this.rolObjetivo === 'gerente' ? 'Gerentes y Directores' : 'Asesores'}`;
+                console.log('📊 CARGANDO: Reporte General');
                 this.cargarDatosReporteGeneral();
             } else {
+                console.log('📊 CARGANDO: Reporte Detallado');
                 this.cargarDatosReporteDetallado();
             }
         },
@@ -181,6 +383,12 @@ define(['view'], function (View) {
                 { type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: this.fechaCierre + ' 23:59:59' }
             ];
             const whereEncuestas = [{ type: 'equals', attribute: 'rolUsuario', value: this.rolObjetivo }, ...wherePeriodo];
+
+            console.log('🔍 FILTRO_PERIODO_REPORTE_GENERAL:', {
+                fechaInicio: this.fechaInicio,
+                fechaCierre: this.fechaCierre,
+                wherePeriodo: wherePeriodo
+            });
 
             const cargarPreguntas = $.ajax({
                 url: 'api/v1/Pregunta',
@@ -264,6 +472,7 @@ define(['view'], function (View) {
                 this.cargarRespuestasParaEncuestasGeneral(encuestasConOficina);
 
             }).catch(error => {
+                console.error('Error al cargar reporte general:', error);
                 Espo.Ui.error('Error al cargar los datos del reporte general.');
                 this.wait(false);
             });
@@ -580,10 +789,11 @@ define(['view'], function (View) {
         },
 
         data: function () {
-            return {
+            const data = {
                 tituloReporte: this.tituloReporte,
                 tipoReporte: this.tipoReporte,
                 rolObjetivo: this.rolObjetivo,
+                textoEncabezado: this.textoEncabezado,
                 preguntas: this.preguntasAgrupadas,
                 usuarios: this.usuariosData,
                 totalesPorPregunta: this.totalesPorPregunta,
@@ -592,8 +802,21 @@ define(['view'], function (View) {
                 esReporteGeneralCasaNacional: this.esReporteGeneralCasaNacional,
                 oficinas: this.oficinas,
                 totalesPorOficina: this.totalesPorOficina,
-                totalesGenerales: this.totalesGenerales
+                totalesGenerales: this.totalesGenerales,
+                logoOficina: this.logoOficina,
+                nombreOficina: this.nombreOficina
             };
+
+            console.log('📋 DATA_TEMPLATE:', {
+                tituloReporte: data.tituloReporte,
+                tipoReporte: data.tipoReporte,
+                tienedatos: data.tienedatos,
+                totalUsuarios: data.totalUsuarios,
+                esReporteGeneral: data.esReporteGeneralCasaNacional,
+                logoOficina: data.logoOficina
+            });
+
+            return data;
         }
     });
 });

@@ -66,7 +66,13 @@ define(['view'], function (View) {
         
         cargarDatosPeriodo: function() {
             this.getCollectionFactory().create('Competencias', function (competenciaCollection) {
-                competenciaCollection.fetch({ data: { maxSize: 1 } }).then(function () {
+                competenciaCollection.fetch({ 
+                    data: { 
+                        maxSize: 1,
+                        orderBy: 'fechaCierre',
+                        order: 'desc'
+                    } 
+                }).then(function () {
                     let fechaInicio = null;
                     let fechaCierre = null;
                     let encuestaActiva = false;
@@ -112,7 +118,11 @@ define(['view'], function (View) {
 
             const getTeams = new Promise((resolve, reject) => {
                 this.getCollectionFactory().create('Team', (collection) => {
-                    collection.fetch().then(() => resolve(collection)).catch(reject);
+                    collection.fetch({
+                        data: {
+                            maxSize: 500 
+                        }
+                    }).then(() => resolve(collection)).catch(reject);
                 });
             });
 
