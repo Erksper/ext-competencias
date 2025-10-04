@@ -1,5 +1,10 @@
 <div class="century21-header text-center" style="margin-bottom: 20px;">
     <h1>{{tituloReporte}}</h1>
+    {{#if fechaInicio}}
+    <h2 class="periodo-subtitulo" style="color: #666; margin-top: 5px; font-size: 1.2em;">
+        Período evaluado: {{fechaInicio}} al {{fechaCierre}}
+    </h2>
+    {{/if}}
 </div>
 
 <div class="report-actions" style="margin-bottom: 15px;">
@@ -34,30 +39,22 @@
     <strong>Criterio:</strong> Verde ≥80%, Amarillo 60-80%, Rojo <60%
 </div>
 
-<!-- LOGO ENCABEZADO PRINCIPAL - NUEVA SECCIÓN -->
-{{#if logoOficina}}
-<div class="header-logo-container text-center" style="margin-bottom: 15px;">
-    <img src="{{logoOficina}}" alt="Logo {{nombreOficina}}" 
-         class="header-logo"
-         onerror="this.style.display='none'"
-         style="max-height: 80px; max-width: 200px; object-fit: contain;">
-</div>
-{{/if}}
-
 <div class="report-matrix-container" style="overflow-x: auto; margin-bottom: 20px;">
     <table class="report-matrix table table-bordered" style="min-width: 1200px; font-size: 11px;">
         <thead>
             <tr class="categoria-row header-row">
-                <th class="th-main-header" rowspan="3" style="vertical-align: middle; text-align: center;">
+                <th class="th-main-header" rowspan="3" style="vertical-align: bottom; text-align: center;">
                     <div class="header-content">
-                        <strong>{{textoEncabezado}}</strong>
                         {{#if logoOficina}}
-                        <div class="logo-inline" style="margin-top: 5px;">
+                        <div class="logo-expanded" style="margin-bottom: 100px; width: 100%;">
                             <img src="{{logoOficina}}" alt="Logo" 
-                                 style="max-height: 40px; max-width: 100px; object-fit: contain;"
+                                 style="max-height: 120px; max-width: 100%; width: auto; height: auto; object-fit: contain;"
                                  onerror="this.style.display='none'">
                         </div>
                         {{/if}}
+                        <div class="header-text" style="position: relative; top: -5%;">
+                            <strong>{{textoEncabezado}}</strong>
+                        </div>
                     </div>
                 </th>
                 {{#each @root.preguntas}}
@@ -65,8 +62,16 @@
                     <strong>{{@key}}</strong>
                 </th>
                 {{/each}}
-                <th class="th-sumatoria" rowspan="3" style="vertical-align: middle; text-align: center;">
-                    <strong>Sumatoria<br>del equipo</strong>
+                <th class="th-sumatoria" rowspan="3" style="vertical-align: bottom; text-align: center;">
+                    <div class="sumatoria-content" style="position: relative; top: -5%;">
+                        <strong>
+                            {{#if esReporteGeneralCasaNacional}}
+                            Sumatoria<br>del equipo
+                            {{else}}
+                            Sumatoria<br>del usuario
+                            {{/if}}
+                        </strong>
+                    </div>
                 </th>
             </tr>
             
@@ -219,13 +224,17 @@
 
 .th-main-header, .th-sumatoria {
     text-align: center;
-    vertical-align: middle;
+    vertical-align: bottom;
 }
 .th-main-header { 
-    width: 180px; /* Un poco más ancho para el logo */
-    height: 120px;
+    width: 250px;
+    min-width: 200px;
+    height: 180px;
 }
-.th-sumatoria { width: 100px; }
+.th-sumatoria { 
+    width: 100px;
+    vertical-align: bottom !important;
+}
 
 .report-matrix .categoria-row th,
 .report-matrix .subcategoria-row th {
@@ -246,6 +255,7 @@
     font-weight: bold;
     text-align: center;
     vertical-align: middle;
+    min-width: 200px;
 }
 .celda-respuesta {
     width: 30px;
@@ -291,35 +301,54 @@
     text-align: center;
 }
 
-/* NUEVOS ESTILOS PARA LOGOS */
-.header-logo-container {
-    border-bottom: 2px solid #ddd;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-}
-
-.header-logo {
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 5px;
-    background: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
+/* NUEVOS ESTILOS PARA LOGOS EXPANDIDOS */
 .header-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     height: 100%;
-    gap: 8px;
+    position: relative;
 }
 
-.logo-inline img {
+.logo-expanded {
+    flex-shrink: 0;
+    margin-bottom: 15px;
+}
+
+.logo-expanded img {
     border: 1px solid #ccc;
     border-radius: 3px;
-    padding: 2px;
+    padding: 5px;
     background: white;
+    max-height: 120px;
+    max-width: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.header-text {
+    position: relative;
+    top: -25%; /* 1/4 del alto desde el fondo */
+    flex-shrink: 0;
+    margin-bottom: 10px;
+}
+
+.sumatoria-content {
+    position: relative;
+    top: -25%; /* 1/4 del alto desde el fondo */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    height: 100%;
+}
+
+.periodo-subtitulo {
+    font-size: 1.2em;
+    font-weight: normal;
+    color: #666;
 }
 
 @media (max-width: 768px) {
@@ -339,14 +368,23 @@
         font-size: 1em !important;
     }
     
-    .header-logo {
-        max-height: 60px !important;
-        max-width: 150px !important;
+    .logo-expanded img {
+        max-height: 80px !important;
     }
     
-    .logo-inline img {
-        max-height: 30px !important;
-        max-width: 80px !important;
+    .th-main-header {
+        width: 180px;
+        height: 140px;
+        min-width: 150px;
+    }
+    
+    .td-user-name {
+        min-width: 150px;
+    }
+    
+    .header-text,
+    .sumatoria-content {
+        top: -20%; /* Ajuste para móviles */
     }
 }
 
@@ -373,5 +411,12 @@
 .celda-total.color-rojo {
     background-color: #F44336 !important;
     color: white;
+}
+
+/* Asegurar que la celda de nombres se expanda según el contenido */
+.td-user-name {
+    white-space: normal;
+    word-wrap: break-word;
+    max-width: 300px;
 }
 </style>

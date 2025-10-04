@@ -20,11 +20,9 @@
                     <h4><strong>Rol:</strong> Casa Nacional</h4>
                 </div>
             </div>
-            {{#unless isPeriodoActivo}}
-                <div class="alert alert-secondary text-center" style="margin-top: 15px; padding: 10px;">
-                    <i class="fas fa-info-circle"></i> Mostrando datos del último período cerrado: <strong>{{periodoMostrado}}</strong>.
-                </div>
-            {{/unless}}
+            <div class="alert alert-secondary text-center" style="margin-top: 15px; padding: 10px;">
+                <i class="fas fa-info-circle"></i> Mostrando datos del período: <strong>{{periodoMostrado}}</strong>.
+            </div>
 
             {{#if estadisticas}}
                 <div class="row" style="margin-top: 15px;">

@@ -156,7 +156,8 @@ define(['view'], function (View) {
                 if (teamIds.length > 0) {
                     this.oficinaIdParaFiltrar = teamIds[0];
                     this.nombreOficina = (userModel.get('teamsNames') || {})[teamIds[0]] || 'Mi Oficina';
-                    this.tituloReporte += ` (${this.nombreOficina})`;
+                    // MODIFICACIÓN: Quitar "Oficina:" del título
+                    this.tituloReporte = `Reporte de ${this.rolObjetivo === 'gerente' ? 'Gerentes y Directores' : 'Asesores'} (${this.nombreOficina})`;
                     this.buscarLogoPorOficina(this.oficinaIdParaFiltrar);
                 } else {
                     this.buscarLogoUsuarioCasaNacional();
@@ -167,7 +168,8 @@ define(['view'], function (View) {
                     teamModel.id = this.oficinaId;
                     teamModel.fetch().then(() => {
                         this.nombreOficina = teamModel.get('name');
-                        this.tituloReporte += ` - Oficina: ${this.nombreOficina}`;
+                        // MODIFICACIÓN: Quitar "Oficina:" del título
+                        this.tituloReporte = `Reporte de ${this.rolObjetivo === 'gerente' ? 'Gerentes y Directores' : 'Asesores'} - ${this.nombreOficina}`;
                         this.buscarLogoPorOficina(this.oficinaId);
                         this.reRender();
                     }).catch(() => {

@@ -48,7 +48,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             this.sinReporteAsesor = false;
             this.sinReporteGerente = false;
             this.noHayPeriodos = false;
-            this.isPeriodoActivo = false;
             this.periodoMostrado = 'Cargando...';
             this.idOficinaUsuario = null;
             this.nombreOficinaUsuario = null;
@@ -150,7 +149,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             const fechaCierre = periodo.fechaCierre;
             const hoy = new Date().toISOString().split('T')[0];
 
-            this.isPeriodoActivo = (hoy >= fechaInicio && hoy <= fechaCierre);
             this.periodoMostrado = `${this.getDateTime().toDisplayDate(fechaInicio)} al ${this.getDateTime().toDisplayDate(fechaCierre)}`;
             this.fechaInicioPeriodo = fechaInicio;
             this.fechaCierrePeriodo = fechaCierre;
@@ -390,26 +388,34 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
         afterRender: function () {
             if (this.esCasaNacional) {
-                // Inicializar select de oficinas
+                // Inicializar select de oficinas SOLO si no existe
                 if (this.oficinas.length > 0) {
                     const $selectOficina = this.$el.find('select[name="oficina"]');
-                    if ($selectOficina[0].selectize) {
-                        $selectOficina[0].selectize.destroy();
+                    if (!$selectOficina[0].selectize) {
+                        $selectOficina.selectize({
+                            placeholder: 'Seleccione una oficina para filtrar',
+                            allowClear: true
+                        });
                     }
-                    $selectOficina.selectize({
-                        placeholder: 'Seleccione una oficina para filtrar',
-                        allowClear: true
-                    });
                     this.$el.find('.report-item-container[data-report-type="oficinaGerentes"]').hide();
                     this.$el.find('.report-item-container[data-report-type="oficinaAsesores"]').hide();
                 }
                 
-                // Inicializar select de períodos
+                // Inicializar select de períodos SOLO si no existe
                 const $selectPeriodo = this.$el.find('select[name="periodo"]');
-                $selectPeriodo.selectize({
-                    placeholder: 'Seleccione un período',
-                    allowClear: false
-                });
+                
+                if (!$selectPeriodo[0].selectize) {
+                    // Inicializar selectize solo si no existe
+                    $selectPeriodo.selectize({
+                        placeholder: 'Seleccione un período',
+                        allowClear: false
+                    });
+                    
+                    // Establecer el valor seleccionado SOLO en la primera inicialización
+                    if (this.periodoSeleccionadoId) {
+                        $selectPeriodo[0].selectize.setValue(this.periodoSeleccionadoId, true); // true = silent (no trigger events)
+                    }
+                }
             }
         },
 
@@ -514,7 +520,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 noHayPeriodos: this.noHayPeriodos,
                 periodos: this.periodos,
                 oficinas: this.oficinas,
-                isPeriodoActivo: this.isPeriodoActivo,
                 periodoMostrado: this.periodoMostrado,
                 sinReporteAsesor: this.sinReporteAsesor,
                 sinReporteGerente: this.sinReporteGerente
