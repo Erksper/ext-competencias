@@ -1,38 +1,24 @@
 define(['view'], function (View) {
-    
     return View.extend({
-        
         template: 'competencias:reporteBase',
         
         events: {
             'click [data-action="back"]': function () {
                 this.getRouter().navigate('#Competencias/reports', {trigger: true});
             },
-            'click [data-action="exportar"]': function () {
-                this.exportarReporte();
+            'click [data-action="exportarExcel"]': function () {
+                this.exportarExcel();
+            },
+            'click [data-action="exportarCSV"]': function () {
+                this.exportarCSV();
             }
         },
         
         setup: function () {
-            console.log('🔧 SETUP: Iniciando setup de reporteBase');
-            
-            // Obtener parámetros de la URL directamente
             const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
             this.tipoReporte = urlParams.get('tipo') || this.options.tipo || 'desconocido';
             this.oficinaId = urlParams.get('oficinaId') || this.options.oficinaId || null;
             this.periodoId = urlParams.get('periodoId') || this.options.periodoId || null;
-
-            console.log('📋 PARÁMETROS_URL:', {
-                tipo: urlParams.get('tipo'),
-                oficinaId: urlParams.get('oficinaId'),
-                periodoId: urlParams.get('periodoId')
-            });
-
-            console.log('📊 PARÁMETROS_PROCESADOS:', {
-                tipoReporte: this.tipoReporte,
-                oficinaId: this.oficinaId,
-                periodoId: this.periodoId
-            });
 
             this.fechaInicio = null;
             this.fechaCierre = null;
@@ -62,9 +48,6 @@ define(['view'], function (View) {
             
             this.logoOficina = null;
             this.nombreOficina = null;
-            // Cambiar la ruta de logos - probar diferentes ubicaciones
-            this.rutaBaseLogos = window.location.origin + '/custom/modules/competencias/res/Logos/';
-            this.logoPorDefecto = 'Casa Nacional/logoTDHD.png';
             
             this.registrarHandlebarsHelpers();
             
@@ -73,81 +56,50 @@ define(['view'], function (View) {
         },
 
         cargarDatosIniciales: function () {
-            console.log('📥 CARGAR_DATOS_INICIALES: Iniciando carga de datos');
-            
             const promesas = [];
 
             const fetchUser = new Promise((resolve, reject) => {
                 this.getModelFactory().create('User', (userModel) => {
                     userModel.id = this.getUser().id;
                     userModel.fetch({ relations: { roles: true, teams: true } }).then(() => {
-                        console.log('✅ USUARIO: Datos del usuario cargados');
                         resolve(userModel);
                     }).catch(reject);
                 });
             });
             promesas.push(fetchUser);
 
-            // SIEMPRE necesitamos un periodoId - si no viene por URL, buscar el último período
             let periodoPromise;
             if (this.periodoId) {
-                console.log('📅 PERIODO: Intentando cargar período con ID:', this.periodoId);
                 periodoPromise = new Promise((resolve, reject) => {
                     this.getModelFactory().create('Competencias', (periodoModel) => {
                         periodoModel.id = this.periodoId;
                         periodoModel.fetch().then(() => {
                             if (periodoModel.id) {
-                                console.log('✅ PERIODO: Período cargado exitosamente:', {
-                                    id: periodoModel.id,
-                                    fechaInicio: periodoModel.get('fechaInicio'),
-                                    fechaCierre: periodoModel.get('fechaCierre')
-                                });
                                 resolve(periodoModel);
                             } else {
-                                console.error('❌ PERIODO: Período no encontrado con ID:', this.periodoId);
-                                // Si no se encuentra, buscar el último período
                                 this.buscarUltimoPeriodo().then(resolve).catch(reject);
                             }
                         }).catch((error) => {
-                            console.error('❌ PERIODO: Error al cargar período, buscando último:', error);
-                            // Si hay error, buscar el último período
                             this.buscarUltimoPeriodo().then(resolve).catch(reject);
                         });
                     });
                 });
             } else {
-                console.log('📅 PERIODO: No se proporcionó ID, buscando último período');
                 periodoPromise = this.buscarUltimoPeriodo();
             }
             promesas.push(periodoPromise);
 
             Promise.all(promesas).then(([userModel, periodoModel]) => {
-                console.log('✅ CARGAR_DATOS_INICIALES: Todos los datos cargados exitosamente');
-                
                 const roles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
                 this.esCasaNacional = roles.includes('casa nacional');
                 this.esGerenteODirector = roles.includes('gerente') || roles.includes('director');
                 this.esAsesor = roles.includes('asesor');
 
-                console.log('👤 ROLES_USUARIO:', {
-                    esCasaNacional: this.esCasaNacional,
-                    esGerenteODirector: this.esGerenteODirector,
-                    esAsesor: this.esAsesor
-                });
-
-                // Guardar el periodoId que finalmente se usó
                 this.periodoId = periodoModel.id;
                 this.fechaInicio = periodoModel.get('fechaInicio');
                 this.fechaCierre = periodoModel.get('fechaCierre');
                 
-                console.log('📅 FECHAS_PERIODO:', {
-                    periodoId: this.periodoId,
-                    fechaInicio: this.fechaInicio,
-                    fechaCierre: this.fechaCierre
-                });
-                
                 if (!this.fechaInicio || !this.fechaCierre) {
-                    console.error('❌ PERIODO: El período no tiene fechas configuradas');
                     Espo.Ui.error('El período de evaluación está mal configurado (faltan fechas).');
                     this.wait(false);
                     this.reRender();
@@ -156,21 +108,16 @@ define(['view'], function (View) {
 
                 const fechaRegex = /^\d{4}-\d{2}-\d{2}$/;
                 if (!fechaRegex.test(this.fechaInicio) || !fechaRegex.test(this.fechaCierre)) {
-                    console.error('❌ PERIODO: Formato de fechas incorrecto');
                     Espo.Ui.error('El formato de las fechas del período es incorrecto.');
                     this.wait(false);
                     this.reRender();
                     return;
                 }
 
-                console.log('🎯 PERIODO_VALIDADO: Período listo para usar');
-
                 this.configurarLogoYTitulo(userModel);
-
                 this.cargarDatosReporte();
 
             }).catch(error => {
-                console.error('❌ CARGAR_DATOS_INICIALES: Error completo:', error);
                 Espo.Ui.error('Error al cargar el período de evaluación.');
                 this.wait(false);
             });
@@ -188,14 +135,8 @@ define(['view'], function (View) {
                     }).then(() => {
                         const ultimoPeriodo = collection.at(0);
                         if (ultimoPeriodo) {
-                            console.log('📅 ULTIMO_PERIODO: Encontrado:', {
-                                id: ultimoPeriodo.id,
-                                fechaInicio: ultimoPeriodo.get('fechaInicio'),
-                                fechaCierre: ultimoPeriodo.get('fechaCierre')
-                            });
                             resolve(ultimoPeriodo);
                         } else {
-                            console.error('❌ ULTIMO_PERIODO: No hay períodos configurados');
                             reject(new Error('No hay períodos de evaluación configurados.'));
                         }
                     }).catch(reject);
@@ -204,117 +145,132 @@ define(['view'], function (View) {
         },
 
         configurarLogoYTitulo: function (userModel) {
-            console.log('🔄 CONFIGURAR_LOGO_TITULO: Tipo de reporte:', this.tipoReporte);
-            
             if (this.tipoReporte === 'asesor') {
                 this.usuarioId = this.getUser().id;
                 this.tituloReporte = `Mi Reporte de Asesor (${this.getUser().get('name')})`;
-                this.cargarLogoOficina('Casa Nacional');
+                this.buscarLogoUsuarioCasaNacional();
             } 
             else if (this.tipoReporte === 'gerentes' || this.tipoReporte === 'asesores') {
                 const teamIds = userModel.get('teamsIds') || [];
+                
                 if (teamIds.length > 0) {
                     this.oficinaIdParaFiltrar = teamIds[0];
                     this.nombreOficina = (userModel.get('teamsNames') || {})[teamIds[0]] || 'Mi Oficina';
                     this.tituloReporte += ` (${this.nombreOficina})`;
-                    this.cargarLogoOficina(this.nombreOficina);
+                    this.buscarLogoPorOficina(this.oficinaIdParaFiltrar);
                 } else {
-                    this.cargarLogoOficina('Casa Nacional');
+                    this.buscarLogoUsuarioCasaNacional();
                 }
             } 
             else if (this.tipoReporte === 'oficinaGerentes' || this.tipoReporte === 'oficinaAsesores') {
-                console.log('🏢 OFICINA: Cargando datos de oficina con ID:', this.oficinaId);
                 this.getModelFactory().create('Team', (teamModel) => {
                     teamModel.id = this.oficinaId;
                     teamModel.fetch().then(() => {
                         this.nombreOficina = teamModel.get('name');
                         this.tituloReporte += ` - Oficina: ${this.nombreOficina}`;
-                        console.log('✅ OFICINA: Datos de oficina cargados:', this.nombreOficina);
-                        this.cargarLogoOficina(this.nombreOficina);
+                        this.buscarLogoPorOficina(this.oficinaId);
                         this.reRender();
-                    }).catch((error) => {
-                        console.error('❌ OFICINA: Error al cargar datos de oficina:', error);
-                        this.cargarLogoOficina('Casa Nacional');
+                    }).catch(() => {
+                        this.buscarLogoUsuarioCasaNacional();
                         this.reRender();
                     });
                 });
             }
             else if (this.tipoReporte === 'generalGerentes' || this.tipoReporte === 'generalAsesores') {
                 this.esReporteGeneralCasaNacional = true;
-                this.cargarLogoOficina('Casa Nacional');
+                this.buscarLogoUsuarioCasaNacional();
             }
-            
-            console.log('📝 TITULO_FINAL:', this.tituloReporte);
         },
 
-        cargarLogoOficina: function (nombreOficina) {
-            console.log('🖼️ CARGAR_LOGO_OFICINA:', nombreOficina);
+        buscarLogoPorOficina: function(teamId) {
+            const self = this;
             
-            if (!nombreOficina) {
-                console.log('🖼️ Usando logo por defecto (nombre vacío)');
-                this.establecerLogo(this.rutaBaseLogos + this.logoPorDefecto);
-                return;
-            }
-
-            const nombreFormateado = this.formatearNombreOficina(nombreOficina);
-            
-            // Probar diferentes rutas para los logos
-            const rutasPosibles = [
-                `${this.rutaBaseLogos}${encodeURIComponent(nombreFormateado)}/logoTDHD.png`,
-                `${window.location.origin}/client/custom/modules/competencias/res/Logos/${encodeURIComponent(nombreFormateado)}/logoTDHD.png`,
-                `${window.location.origin}/custom/modules/competencias/res/Logos/${encodeURIComponent(nombreFormateado)}/logoTDHD.png`,
-                `${window.location.origin}/site/client/custom/modules/competencias/res/Logos/${encodeURIComponent(nombreFormateado)}/logoTDHD.png`
-            ];
-            
-            console.log('🖼️ RUTAS_POSIBLES_LOGO:', rutasPosibles);
-
-            const probarRuta = (index) => {
-                if (index >= rutasPosibles.length) {
-                    // Si ninguna ruta funciona, usar por defecto
-                    console.log('❌ LOGO: Ninguna ruta funcionó, usando por defecto');
-                    const rutaPorDefecto = `${window.location.origin}/client/custom/modules/competencias/res/Logos/${encodeURIComponent('Casa Nacional')}/logoTDHD.png`;
-                    this.establecerLogo(rutaPorDefecto);
-                    return;
+            $.ajax({
+                url: `api/v1/Team/${teamId}/users`,
+                type: 'GET',
+                data: {
+                    select: 'id,name,cImagenId',
+                    maxSize: 50
+                },
+                success: function(response) {
+                    const usuarios = response.list || [];
+                    const usuarioConLogo = usuarios.find(u => 
+                        u.name && u.name.toLowerCase().includes('por la casa') && u.cImagenId
+                    );
+                    
+                    if (usuarioConLogo) {
+                        const basePath = self.getBasePath();
+                        const imageUrl = basePath + '?entryPoint=attachment&id=' + usuarioConLogo.cImagenId;
+                        self.establecerLogo(imageUrl);
+                    } else {
+                        const usuarioConImagen = usuarios.find(u => u.cImagenId);
+                        if (usuarioConImagen) {
+                            const basePath = self.getBasePath();
+                            const imageUrl = basePath + '?entryPoint=attachment&id=' + usuarioConImagen.cImagenId;
+                            self.establecerLogo(imageUrl);
+                        } else {
+                            self.buscarLogoUsuarioCasaNacional();
+                        }
+                    }
+                },
+                error: function() {
+                    self.buscarLogoUsuarioCasaNacional();
                 }
-
-                const rutaLogo = rutasPosibles[index];
-                console.log(`🖼️ Probando ruta ${index + 1}:`, rutaLogo);
-                
-                const img = new Image();
-                img.onload = () => {
-                    console.log(`✅ LOGO: Cargado exitosamente desde ruta ${index + 1}`);
-                    this.establecerLogo(rutaLogo);
-                };
-                img.onerror = () => {
-                    console.log(`❌ LOGO: Ruta ${index + 1} falló`);
-                    probarRuta(index + 1);
-                };
-                img.src = rutaLogo;
-            };
-
-            probarRuta(0);
+            });
         },
 
-        establecerLogo: function (rutaLogo) {
-            console.log('🎨 ESTABLECER_LOGO:', rutaLogo);
-            this.logoOficina = rutaLogo;
-            this.reRender();
-        },
-
-        formatearNombreOficina: function (nombre) {
-            if (!nombre) return 'Casa Nacional';
+        buscarLogoUsuarioCasaNacional: function() {
+            const self = this;
             
-            return nombre
-                .split(' ')
-                .map(palabra => {
-                    if (!palabra) return '';
-                    return palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase();
-                })
-                .join(' ');
+            $.ajax({
+                url: 'api/v1/User/68e0a532c9a03099b',
+                data: {
+                    select: 'id,name,cImagenId'
+                }
+            }).then(function(response) {
+                if (response && response.cImagenId) {
+                    const basePath = self.getBasePath();
+                    const imageUrl = basePath + '?entryPoint=attachment&id=' + response.cImagenId;
+                    self.establecerLogo(imageUrl);
+                } else {
+                    self.establecerLogo(null);
+                }
+            }).catch(function() {
+                self.establecerLogo(null);
+            });
+        },
+
+        establecerLogo: function (urlLogo) {
+            this.logoOficina = urlLogo;
+            if (this.isRendered()) {
+                this.reRender();
+            }
+        },
+
+        getBasePath: function() {
+            const baseTag = document.querySelector('base');
+            if (baseTag && baseTag.href) {
+                return baseTag.href;
+            }
+            
+            const currentUrl = window.location.href;
+            const hashIndex = currentUrl.indexOf('/#');
+            
+            if (hashIndex !== -1) {
+                return currentUrl.substring(0, hashIndex + 1);
+            }
+            
+            const path = window.location.pathname;
+            const lastSlashIndex = path.lastIndexOf('/');
+            if (lastSlashIndex > 0) {
+                const basePath = path.substring(0, lastSlashIndex + 1);
+                return window.location.origin + basePath;
+            }
+            
+            return window.location.origin + '/';
         },
 
         registrarHandlebarsHelpers: function () {
-            console.log('🔧 REGISTRAR_HANDLEBARS_HELPERS: Registrando helpers');
             var self = this;
             
             Handlebars.registerHelper('getColumnCount', function(categoria) {
@@ -358,21 +314,13 @@ define(['view'], function (View) {
             Handlebars.registerHelper('eq', function(a, b) {
                 return a === b;
             });
-            
-            console.log('✅ HANDLEBARS_HELPERS: Todos los helpers registrados');
         },
 
         cargarDatosReporte: function () {
-            console.log('📊 CARGAR_DATOS_REPORTE: Iniciando carga de datos del reporte');
-            console.log('📊 TIPO_REPORTE:', this.tipoReporte);
-            console.log('📊 ES_REPORTE_GENERAL:', this.esReporteGeneralCasaNacional);
-            
             if (this.esReporteGeneralCasaNacional) {
                 this.tituloReporte = `Reporte General de ${this.rolObjetivo === 'gerente' ? 'Gerentes y Directores' : 'Asesores'}`;
-                console.log('📊 CARGANDO: Reporte General');
                 this.cargarDatosReporteGeneral();
             } else {
-                console.log('📊 CARGANDO: Reporte Detallado');
                 this.cargarDatosReporteDetallado();
             }
         },
@@ -384,28 +332,49 @@ define(['view'], function (View) {
             ];
             const whereEncuestas = [{ type: 'equals', attribute: 'rolUsuario', value: this.rolObjetivo }, ...wherePeriodo];
 
-            console.log('🔍 FILTRO_PERIODO_REPORTE_GENERAL:', {
-                fechaInicio: this.fechaInicio,
-                fechaCierre: this.fechaCierre,
-                wherePeriodo: wherePeriodo
-            });
-
             const cargarPreguntas = $.ajax({
                 url: 'api/v1/Pregunta',
-                data: { where: [ { type: 'and', value: [ { type: 'or', value: [ { type: 'equals', attribute: 'rolObjetivo', value: this.rolObjetivo }, { type: 'contains', attribute: 'rolObjetivo', value: this.rolObjetivo } ] }, { type: 'equals', attribute: 'estaActiva', value: 1 } ] } ], orderBy: 'orden' }
+                data: { 
+                    where: [ 
+                        { type: 'and', value: [ 
+                            { type: 'or', value: [ 
+                                { type: 'equals', attribute: 'rolObjetivo', value: this.rolObjetivo }, 
+                                { type: 'contains', attribute: 'rolObjetivo', value: this.rolObjetivo } 
+                            ] }, 
+                            { type: 'equals', attribute: 'estaActiva', value: 1 } 
+                        ] } 
+                    ], 
+                    orderBy: 'orden' 
+                }
             });
 
-            const cargarOficinas = new Promise((resolve, reject) => {
-                this.getCollectionFactory().create('Team', (collection) => {
-                    collection.fetch({ data: { maxSize: 200 } })
-                        .then(() => {                            
-                            resolve(collection);
-                        })
-                        .catch((error) => {
-                            reject(error);
+            const cargarOficinas = () => {
+                return new Promise((resolve, reject) => {
+                    const maxSize = 200;
+                    let allTeams = [];
+                    
+                    const fetchPage = (offset) => {
+                        this.getCollectionFactory().create('Team', (collection) => {
+                            collection.fetch({
+                                data: {
+                                    maxSize: maxSize,
+                                    offset: offset
+                                }
+                            }).then(() => {
+                                allTeams = allTeams.concat(collection.models);
+                                
+                                if (collection.models.length < maxSize) {
+                                    resolve(allTeams);
+                                } else {
+                                    fetchPage(offset + maxSize);
+                                }
+                            }).catch(reject);
                         });
+                    };
+                    
+                    fetchPage(0);
                 });
-            });
+            };
             
             const cargarEncuestas = $.ajax({
                 url: 'api/v1/Encuesta',
@@ -415,20 +384,14 @@ define(['view'], function (View) {
                 }
             });
 
-            Promise.all([cargarPreguntas, cargarOficinas, cargarEncuestas]).then((results) => {
+            Promise.all([cargarPreguntas, cargarOficinas(), cargarEncuestas]).then((results) => {
                 const preguntas = results[0].list || [];
-                const oficinaCollection = results[1];
+                const allTeamsModels = results[1];
                 const encuestas = results[2].list || [];
-
-                if (!oficinaCollection.models) {
-                    Espo.Ui.error('Error al cargar las oficinas.');
-                    this.wait(false);
-                    return;
-                }
 
                 this.procesarPreguntas(preguntas);
 
-                const todasLasOficinas = oficinaCollection.models.map(team => ({
+                const todasLasOficinas = allTeamsModels.map(team => ({
                     id: team.id,
                     name: team.get('name')
                 }));
@@ -456,10 +419,7 @@ define(['view'], function (View) {
                 });
 
                 this.oficinas = todasLasOficinas
-                    .filter(oficina => {
-                        const tieneEncuestas = oficinasConEncuestas.has(oficina.id);
-                        return tieneEncuestas;
-                    })
+                    .filter(oficina => oficinasConEncuestas.has(oficina.id))
                     .sort((a, b) => a.name.localeCompare(b.name));
 
                 if (encuestasConOficina.length === 0) {
@@ -472,7 +432,6 @@ define(['view'], function (View) {
                 this.cargarRespuestasParaEncuestasGeneral(encuestasConOficina);
 
             }).catch(error => {
-                console.error('Error al cargar reporte general:', error);
                 Espo.Ui.error('Error al cargar los datos del reporte general.');
                 this.wait(false);
             });
@@ -485,21 +444,21 @@ define(['view'], function (View) {
                     data: {
                         where: [{ type: 'equals', attribute: 'encuestaId', value: encuesta.id }],
                         select: 'preguntaId,preguntaName,respuesta'
-                    },
+                    }
                 }).then(function(respuestasData) {
                     return (respuestasData.list || []).map(function(resp) {
                         return {
                             preguntaId: resp.preguntaId,
                             respuesta: resp.respuesta,
                             'encuesta.equipoId': encuesta.oficinaId
-                        }
+                        };
                     });
-                }).catch(function(error) {
+                }).catch(function() {
                     return [];
                 });
             });
             
-           Promise.all(promesasRespuestas).then(function(respuestasPorEncuesta) {
+            Promise.all(promesasRespuestas).then(function(respuestasPorEncuesta) {
                 var todasLasRespuestas = [];
                 respuestasPorEncuesta.forEach(function(respuestasEncuesta) {
                     todasLasRespuestas = todasLasRespuestas.concat(respuestasEncuesta);
@@ -508,10 +467,10 @@ define(['view'], function (View) {
                 this.procesarRespuestasGenerales(todasLasRespuestas);
                 this.wait(false);
                 this.reRender();
-           }.bind(this)).catch(function(error) {
+            }.bind(this)).catch(function() {
                 Espo.Ui.error('Error al cargar las respuestas del reporte general.');
                 this.wait(false);
-           }.bind(this));
+            }.bind(this));
         },
 
         procesarRespuestasGenerales: function (respuestas) {
@@ -593,14 +552,22 @@ define(['view'], function (View) {
 
             this.totalesPorPregunta = totalesPorPregunta;
             this.totalesGenerales = totalesGenerales;
-            this.usuariosData = [{}]; 
+            this.usuariosData = [{}];
         },
 
         cargarDatosReporteDetallado: function () {
             const cargarPreguntas = $.ajax({
                 url: 'api/v1/Pregunta',
                 data: {
-                    where: [ { type: 'and', value: [ { type: 'or', value: [ { type: 'equals', attribute: 'rolObjetivo', value: this.rolObjetivo }, { type: 'contains', attribute: 'rolObjetivo', value: this.rolObjetivo } ] }, { type: 'equals', attribute: 'estaActiva', value: 1 } ] } ],
+                    where: [ 
+                        { type: 'and', value: [ 
+                            { type: 'or', value: [ 
+                                { type: 'equals', attribute: 'rolObjetivo', value: this.rolObjetivo }, 
+                                { type: 'contains', attribute: 'rolObjetivo', value: this.rolObjetivo } 
+                            ] }, 
+                            { type: 'equals', attribute: 'estaActiva', value: 1 } 
+                        ] } 
+                    ],
                     orderBy: 'orden'
                 }
             });
@@ -635,7 +602,7 @@ define(['view'], function (View) {
                 this.procesarPreguntas(preguntas);
                 this.procesarEncuestas(encuestas);
                 
-            }.bind(this)).catch(function(error) {
+            }.bind(this)).catch(function() {
                 Espo.Ui.error('Error al cargar los datos del reporte');
                 this.wait(false);
             }.bind(this));
@@ -714,7 +681,7 @@ define(['view'], function (View) {
                 this.calcularTotales();
                 this.wait(false);
                 this.reRender();
-            }.bind(this)).catch(function(error) {
+            }.bind(this)).catch(function() {
                 this.usuariosData = [];
                 this.wait(false);
                 this.reRender();
@@ -784,8 +751,497 @@ define(['view'], function (View) {
             return usuario.respuestas[preguntaId];
         },
 
-        exportarReporte: function () {
-            Espo.Ui.notify('Funcionalidad de exportación pendiente de implementación', 'info');
+        exportarCSV: function () {
+            try {
+                let csvContent = '\uFEFF';
+                
+                csvContent += this.tituloReporte + '\n\n';
+                csvContent += 'Criterio:,Verde >=80%,Amarillo 60-80%,Rojo <60%\n\n';
+                
+                let headers = [this.textoEncabezado];
+                let preguntasArray = [];
+                
+                Object.keys(this.preguntasAgrupadas).forEach(categoria => {
+                    Object.keys(this.preguntasAgrupadas[categoria]).forEach(subcategoria => {
+                        this.preguntasAgrupadas[categoria][subcategoria].forEach(pregunta => {
+                            preguntasArray.push({
+                                id: pregunta.id,
+                                texto: pregunta.texto,
+                                categoria: categoria,
+                                subcategoria: subcategoria
+                            });
+                        });
+                    });
+                });
+                
+                preguntasArray.forEach(p => {
+                    headers.push(`"${p.categoria} - ${p.subcategoria} - ${p.texto}"`);
+                });
+                headers.push('Sumatoria');
+                
+                csvContent += headers.join(',') + '\n';
+                
+                if (this.esReporteGeneralCasaNacional) {
+                    this.oficinas.forEach(oficina => {
+                        if (oficina.totalesOficina && oficina.totalesOficina.total > 0) {
+                            let row = [`"${oficina.name}"`];
+                            
+                            preguntasArray.forEach(p => {
+                                const datos = oficina.totalesPorPregunta[p.id];
+                                const color = datos ? datos.color : 'gris';
+                                row.push(this.traducirColor(color));
+                            });
+                            
+                            const totalColor = this.traducirColor(oficina.totalesOficina.color);
+                            row.push(`"${oficina.totalesOficina.verdes}/${oficina.totalesOficina.total} (${Math.round(oficina.totalesOficina.porcentaje)}%) - ${totalColor}"`);
+                            
+                            csvContent += row.join(',') + '\n';
+                        }
+                    });
+                } else {
+                    this.usuariosData.forEach(usuario => {
+                        let row = [`"${usuario.userName}"`];
+                        
+                        preguntasArray.forEach(p => {
+                            const respuesta = usuario.respuestas[p.id];
+                            row.push(this.traducirColor(respuesta || 'gris'));
+                        });
+                        
+                        const totalColor = this.traducirColor(usuario.totales.color);
+                        row.push(`"${usuario.totales.verdes}/${usuario.totales.total} (${Math.round(usuario.totales.porcentaje)}%) - ${totalColor}"`);
+                        
+                        csvContent += row.join(',') + '\n';
+                    });
+                }
+                
+                let totalesRow = ['Totales'];
+                preguntasArray.forEach(p => {
+                    const datos = this.totalesPorPregunta[p.id];
+                    const color = this.traducirColor(datos.color);
+                    totalesRow.push(`"${datos.verdes}/${datos.total} (${Math.round(datos.porcentaje)}%) - ${color}"`);
+                });
+                
+                if (this.esReporteGeneralCasaNacional && this.totalesGenerales) {
+                    const totalColor = this.traducirColor(this.totalesGenerales.color);
+                    totalesRow.push(`"${this.totalesGenerales.verdes}/${this.totalesGenerales.total} (${Math.round(this.totalesGenerales.porcentaje)}%) - ${totalColor}"`);
+                } else {
+                    totalesRow.push('');
+                }
+                
+                csvContent += totalesRow.join(',') + '\n';
+                
+                this.descargarArchivo(csvContent, `${this.tituloReporte}.csv`, 'text/csv;charset=utf-8;');
+                
+                Espo.Ui.success('Reporte CSV exportado exitosamente');
+                
+            } catch (error) {
+                Espo.Ui.error('Error al exportar el reporte a CSV');
+            }
+        },
+
+        exportarExcel: function () {
+            try {
+                let htmlContent = `
+                    <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                        xmlns:x="urn:schemas-microsoft-com:office:excel"
+                        xmlns="http://www.w3.org/TR/REC-html40">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>${this.tituloReporte}</title>
+                        <!--[if gte mso 9]>
+                        <xml>
+                            <x:ExcelWorkbook>
+                                <x:ExcelWorksheets>
+                                    <x:ExcelWorksheet>
+                                        <x:Name>Reporte</x:Name>
+                                        <x:WorksheetOptions>
+                                            <x:DisplayGridlines/>
+                                            <x:Selected/>
+                                            <x:FreezePanes/>
+                                            <x:FrozenNoSplit/>
+                                            <x:SplitHorizontal>6</x:SplitHorizontal>
+                                            <x:TopRowBottomPane>6</x:TopRowBottomPane>
+                                            <x:ActivePane>2</x:ActivePane>
+                                        </x:WorksheetOptions>
+                                    </x:ExcelWorksheet>
+                                </x:ExcelWorksheets>
+                            </x:ExcelWorkbook>
+                        </xml>
+                        <![endif]-->
+                        <style>
+                            table { 
+                                mso-displayed-decimal-separator:"\\.";
+                                mso-displayed-thousand-separator:"\\,";
+                                border-collapse: collapse;
+                                width: 100%;
+                                font-family: Arial, sans-serif;
+                                font-size: 9pt;
+                                table-layout: fixed;
+                            }
+                            th { 
+                                background-color: #4CAF50; 
+                                color: white; 
+                                font-weight: bold;
+                                text-align: center;
+                                vertical-align: middle;
+                                padding: 3px;
+                                border: 1px solid #2E7D32;
+                                mso-pattern: solid #4CAF50;
+                            }
+                            td { 
+                                padding: 2px;
+                                text-align: center;
+                                vertical-align: middle;
+                                border: 1px solid #BDBDBD;
+                                mso-number-format: "\\@";
+                            }
+                            .nombre-usuario { 
+                                text-align: left; 
+                                font-weight: bold;
+                                background-color: #E3F2FD;
+                                width: 200px;
+                                mso-pattern: solid #E3F2FD;
+                            }
+                            
+                            .verde { 
+                                background-color: #4CAF50 !important; 
+                                mso-pattern: solid #4CAF50;
+                                color: white !important; 
+                            }
+                            .amarillo { 
+                                background-color: #FFC107 !important; 
+                                mso-pattern: solid #FFC107;
+                                color: black !important; 
+                            }
+                            .rojo { 
+                                background-color: #F44336 !important; 
+                                mso-pattern: solid #F44336;
+                                color: white !important; 
+                            }
+                            .gris { 
+                                background-color: #9E9E9E !important; 
+                                mso-pattern: solid #9E9E9E;
+                                color: white !important; 
+                            }
+                            
+                            .total-header {
+                                background-color: #607D8B;
+                                color: white;
+                                font-weight: bold;
+                                mso-pattern: solid #607D8B;
+                            }
+                            
+                            .criterio-verde { 
+                                background-color: #4CAF50 !important; 
+                                mso-pattern: solid #4CAF50;
+                                color: black !important; 
+                                padding: 4px 8px; 
+                                font-size: 8pt;
+                                font-weight: bold;
+                                display: inline-block;
+                                border: 1px solid #2E7D32;
+                            }
+                            .criterio-amarillo { 
+                                background-color: #FFC107 !important; 
+                                mso-pattern: solid #FFC107;
+                                color: black !important; 
+                                padding: 4px 8px; 
+                                font-size: 8pt;
+                                font-weight: bold;
+                                display: inline-block;
+                                border: 1px solid #FF8F00;
+                            }
+                            .criterio-rojo { 
+                                background-color: #F44336 !important; 
+                                mso-pattern: solid #F44336;
+                                color: black !important; 
+                                padding: 4px 8px; 
+                                font-size: 8pt;
+                                font-weight: bold;
+                                display: inline-block;
+                                border: 1px solid #C62828;
+                            }
+                            .criterio-gris { 
+                                background-color: #9E9E9E !important; 
+                                mso-pattern: solid #9E9E9E;
+                                color: black !important; 
+                                padding: 4px 8px; 
+                                font-size: 8pt;
+                                font-weight: bold;
+                                display: inline-block;
+                                border: 1px solid #616161;
+                            }
+                            
+                            .titulo-principal {
+                                font-size: 14pt;
+                                font-weight: bold;
+                                color: #2E7D32;
+                                padding: 5px;
+                                background-color: #E8F5E8;
+                                border: 1px solid #4CAF50;
+                                mso-pattern: solid #E8F5E8;
+                            }
+                            .subtitulo {
+                                font-size: 10pt;
+                                color: #555;
+                                padding: 2px;
+                            }
+                            .pregunta-cell {
+                                writing-mode: vertical-rl;
+                                text-orientation: mixed;
+                                height: 80px;
+                                width: 25px;
+                                font-size: 7pt;
+                                line-height: 1.2;
+                                padding: 1px;
+                                mso-pattern: solid #ECF0F1;
+                                background-color: #ECF0F1;
+                            }
+                            .porcentaje-cell {
+                                font-weight: bold;
+                            }
+                            .fraccion-cell {
+                                font-size: 8pt;
+                                line-height: 1.1;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <table width="100%" style="margin-bottom: 10px; border: none;">
+                            <tr>
+                                <td class="titulo-principal" colspan="5" style="text-align: center;">
+                                    ${this.tituloReporte}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="subtitulo" colspan="5" style="text-align: center;">
+                                    Período: ${this.fechaInicio} al ${this.fechaCierre}
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table width="100%" style="margin-bottom: 10px; border: 1px solid #BDBDBD; font-size: 8pt;">
+                            <tr>
+                                <td style="background-color: #F5F5F5; font-weight: bold; padding: 6px; text-align: center; width: 120px; mso-pattern: solid #F5F5F5;">
+                                    Criterio de Evaluación
+                                </td>
+                                <td style="padding: 4px; text-align: center; width: 100px;">
+                                    <div class="criterio-verde">Verde ≥ 80%</div>
+                                </td>
+                                <td style="padding: 4px; text-align: center; width: 100px;">
+                                    <div class="criterio-amarillo">Amarillo 60% - 80%</div>
+                                </td>
+                                <td style="padding: 4px; text-align: center; width: 100px;">
+                                    <div class="criterio-rojo">Rojo < 60%</div>
+                                </td>
+                                <td style="padding: 4px; text-align: center; width: 100px;">
+                                    <div class="criterio-gris">Sin respuesta</div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table>
+                            <tr>
+                                <th rowspan="3" style="width: 180px;">${this.textoEncabezado}</th>
+                `;
+
+                let preguntasArray = [];
+                let categoriasMap = new Map();
+                let currentCol = 1;
+
+                Object.keys(this.preguntasAgrupadas).forEach(categoria => {
+                    if (!categoriasMap.has(categoria)) {
+                        categoriasMap.set(categoria, {
+                            startCol: currentCol,
+                            subcategorias: new Map()
+                        });
+                    }
+                    
+                    Object.keys(this.preguntasAgrupadas[categoria]).forEach(subcategoria => {
+                        const catData = categoriasMap.get(categoria);
+                        catData.subcategorias.set(subcategoria, {
+                            startCol: currentCol,
+                            preguntas: []
+                        });
+                        
+                        this.preguntasAgrupadas[categoria][subcategoria].forEach(pregunta => {
+                            preguntasArray.push({
+                                ...pregunta,
+                                categoria: categoria,
+                                subcategoria: subcategoria,
+                                colIndex: currentCol
+                            });
+                            catData.subcategorias.get(subcategoria).preguntas.push(pregunta);
+                            currentCol++;
+                        });
+                    });
+                    
+                    categoriasMap.get(categoria).endCol = currentCol - 1;
+                });
+
+                const totalPreguntas = preguntasArray.length;
+
+                htmlContent += '<!-- Categorías -->';
+                categoriasMap.forEach((catData, categoria) => {
+                    const colSpan = catData.endCol - catData.startCol + 1;
+                    htmlContent += `<th colspan="${colSpan}" style="background-color: #757575; font-size: 9pt; mso-pattern: solid #757575;">${categoria}</th>`;
+                });
+                htmlContent += `<th rowspan="3" style="background-color: #455A64; width: 80px; font-size: 9pt; mso-pattern: solid #455A64;">Sumatoria<br/>del equipo</th></tr>`;
+
+                htmlContent += '<tr><!-- Subcategorías -->';
+                categoriasMap.forEach((catData, categoria) => {
+                    catData.subcategorias.forEach((subcatData, subcategoria) => {
+                        const colSpan = subcatData.preguntas.length;
+                        htmlContent += `<th colspan="${colSpan}" style="background-color: #9E9E9E; font-size: 8pt; mso-pattern: solid #9E9E9E;">${subcategoria}</th>`;
+                    });
+                });
+                htmlContent += '</tr>';
+
+                htmlContent += '<tr><!-- Preguntas -->';
+                preguntasArray.forEach(pregunta => {
+                    const textoCompleto = pregunta.texto;
+                    const textoLimpio = textoCompleto.replace(/"/g, '""');
+                    htmlContent += `<th class="pregunta-cell" title="${textoLimpio}" style="background-color: #ECF0F1; mso-pattern: solid #ECF0F1;">${textoLimpio}</th>`;
+                });
+                htmlContent += '</tr>';
+
+                if (this.esReporteGeneralCasaNacional) {
+                    this.oficinas.forEach(oficina => {
+                        if (oficina.totalesOficina && oficina.totalesOficina.total > 0) {
+                            htmlContent += `<tr>
+                                <td class="nombre-usuario" style="font-size: 9pt;">${oficina.name}</td>`;
+                            
+                            preguntasArray.forEach(pregunta => {
+                                const datos = oficina.totalesPorPregunta[pregunta.id];
+                                const colorClass = datos ? datos.color : 'gris';
+                                const porcentaje = datos ? Math.round(datos.porcentaje) : '';
+                                const colorHex = this.obtenerColorHex(colorClass);
+                                htmlContent += `<td class="${colorClass} porcentaje-cell" style="mso-pattern: solid ${colorHex};">${porcentaje}%</td>`;
+                            });
+                            
+                            const totalPorcentaje = Math.round(oficina.totalesOficina.porcentaje);
+                            const fraccion = `${oficina.totalesOficina.verdes}/${oficina.totalesOficina.total}`;
+                            const totalColorHex = this.obtenerColorHex(oficina.totalesOficina.color);
+                            htmlContent += `<td class="${oficina.totalesOficina.color} fraccion-cell" style="font-weight: bold; mso-pattern: solid ${totalColorHex};">
+                                ${fraccion}<br/>(${totalPorcentaje}%)
+                            </td></tr>`;
+                        }
+                    });
+                } else {
+                    this.usuariosData.forEach(usuario => {
+                        htmlContent += `<tr>
+                            <td class="nombre-usuario" style="font-size: 9pt;">${usuario.userName}</td>`;
+                        
+                        preguntasArray.forEach(pregunta => {
+                            const respuesta = usuario.respuestas[pregunta.id];
+                            const colorClass = respuesta || 'gris';
+                            const simbolo = respuesta ? '●' : '';
+                            const colorHex = this.obtenerColorHex(colorClass);
+                            htmlContent += `<td class="${colorClass}" style="mso-pattern: solid ${colorHex};">${simbolo}</td>`;
+                        });
+                        
+                        const totalPorcentaje = Math.round(usuario.totales.porcentaje);
+                        const fraccion = `${usuario.totales.verdes}/${usuario.totales.total}`;
+                        const totalColorHex = this.obtenerColorHex(usuario.totales.color);
+                        htmlContent += `<td class="${usuario.totales.color} fraccion-cell" style="font-weight: bold; mso-pattern: solid ${totalColorHex};">
+                            ${fraccion}<br/>(${totalPorcentaje}%)
+                        </td></tr>`;
+                    });
+                }
+
+                htmlContent += `<tr>
+                    <td class="total-header" style="font-size: 9pt;">TOTALES</td>`;
+                
+                preguntasArray.forEach(pregunta => {
+                    const datos = this.totalesPorPregunta[pregunta.id];
+                    const porcentaje = Math.round(datos.porcentaje);
+                    const fraccion = `${datos.verdes}/${datos.total}`;
+                    const colorHex = this.obtenerColorHex(datos.color);
+                    htmlContent += `<td class="${datos.color} fraccion-cell" style="font-weight: bold; mso-pattern: solid ${colorHex};">
+                        ${fraccion}<br/>(${porcentaje}%)
+                    </td>`;
+                });
+                
+                if (this.esReporteGeneralCasaNacional && this.totalesGenerales) {
+                    const totalGeneralPorcentaje = Math.round(this.totalesGenerales.porcentaje);
+                    const fraccion = `${this.totalesGenerales.verdes}/${this.totalesGenerales.total}`;
+                    const totalColorHex = this.obtenerColorHex(this.totalesGenerales.color);
+                    htmlContent += `<td class="${this.totalesGenerales.color} fraccion-cell" style="font-weight: bold; mso-pattern: solid ${totalColorHex};">
+                        ${fraccion}<br/>(${totalGeneralPorcentaje}%)
+                    </td>`;
+                } else {
+                    let totalVerdes = 0;
+                    let totalTotal = 0;
+                    preguntasArray.forEach(pregunta => {
+                        const datos = this.totalesPorPregunta[pregunta.id];
+                        totalVerdes += datos.verdes;
+                        totalTotal += datos.total;
+                    });
+                    const porcentajeGeneral = totalTotal > 0 ? Math.round((totalVerdes / totalTotal) * 100) : 0;
+                    const colorGeneral = this.obtenerColorPorPorcentaje(porcentajeGeneral);
+                    const fraccion = `${totalVerdes}/${totalTotal}`;
+                    const totalColorHex = this.obtenerColorHex(colorGeneral);
+                    htmlContent += `<td class="${colorGeneral} fraccion-cell" style="font-weight: bold; mso-pattern: solid ${totalColorHex};">
+                        ${fraccion}<br/>(${porcentajeGeneral}%)
+                    </td>`;
+                }
+                
+                htmlContent += `</tr></table>
+                        
+                    </body></html>`;
+
+                const blob = new Blob([htmlContent], { 
+                    type: 'application/vnd.ms-excel'
+                });
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                
+                const fecha = new Date().toISOString().split('T')[0];
+                const nombreArchivo = `Reporte_${this.rolObjetivo}_${fecha}.xls`;
+                
+                link.download = nombreArchivo;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+
+                Espo.Ui.success('Reporte Excel exportado exitosamente');
+                
+            } catch (error) {
+                Espo.Ui.error('Error al exportar el reporte: ' + error.message);
+            }
+        },
+
+        obtenerColorHex: function(color) {
+            const colores = {
+                'verde': '#4CAF50',
+                'amarillo': '#FFC107', 
+                'rojo': '#F44336',
+                'gris': '#9E9E9E'
+            };
+            return colores[color] || colores['gris'];
+        },
+
+        traducirColor: function(color) {
+            const traducciones = {
+                'verde': 'Verde',
+                'amarillo': 'Amarillo', 
+                'rojo': 'Rojo',
+                'gris': 'Sin respuesta'
+            };
+            return traducciones[color] || color;
+        },
+
+        descargarArchivo: function (contenido, nombreArchivo, mimeType) {
+            const blob = new Blob([contenido], { type: mimeType });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = nombreArchivo;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
         },
 
         data: function () {
@@ -804,17 +1260,10 @@ define(['view'], function (View) {
                 totalesPorOficina: this.totalesPorOficina,
                 totalesGenerales: this.totalesGenerales,
                 logoOficina: this.logoOficina,
-                nombreOficina: this.nombreOficina
+                nombreOficina: this.nombreOficina,
+                fechaInicio: this.fechaInicio,
+                fechaCierre: this.fechaCierre
             };
-
-            console.log('📋 DATA_TEMPLATE:', {
-                tituloReporte: data.tituloReporte,
-                tipoReporte: data.tipoReporte,
-                tienedatos: data.tienedatos,
-                totalUsuarios: data.totalUsuarios,
-                esReporteGeneral: data.esReporteGeneralCasaNacional,
-                logoOficina: data.logoOficina
-            });
 
             return data;
         }

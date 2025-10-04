@@ -87,6 +87,7 @@ define(['view'], function (View) {
 
         cargarUsuariosConEstado: function (fechaInicio, fechaCierre) {
             this.wait(true);
+            
             const getRoleIds = new Promise((resolve, reject) => {
                 this.getCollectionFactory().create('Role', (roleCollection) => {
                     roleCollection.fetch({
@@ -107,19 +108,39 @@ define(['view'], function (View) {
                 });
             });
 
-            const getTeamUsers = new Promise((resolve, reject) => {
-                $.ajax({
-                    url: `api/v1/Team/${this.options.teamId}/users`,
-                    data: {
-                        select: 'id,name,rolesIds,isActive' 
-                    }
-                }).then(response => {
-                    const activeUsers = (response.list || []).filter(u => u.isActive);
-                    resolve(activeUsers);
-                }).catch(reject);
-            });
+            // Función para cargar todos los usuarios del equipo con paginación
+            const getAllTeamUsers = () => {
+                return new Promise((resolve, reject) => {
+                    const maxSize = 200;
+                    let allUsers = [];
+                    
+                    const fetchPage = (offset) => {
+                        $.ajax({
+                            url: `api/v1/Team/${this.options.teamId}/users`,
+                            data: {
+                                select: 'id,name,rolesIds,isActive',
+                                maxSize: maxSize,
+                                offset: offset
+                            }
+                        }).then(response => {
+                            const users = (response.list || []).filter(u => u.isActive);
+                            allUsers = allUsers.concat(users);
+                            
+                            // Si recibimos menos de maxSize, ya no hay más páginas
+                            if (response.list.length < maxSize) {
+                                resolve(allUsers);
+                            } else {
+                                // Continuar con la siguiente página
+                                fetchPage(offset + maxSize);
+                            }
+                        }).catch(reject);
+                    };
+                    
+                    fetchPage(0);
+                });
+            };
 
-            Promise.all([getRoleIds, getTeamUsers]).then(([roleIdMap, teamUsers]) => {
+            Promise.all([getRoleIds, getAllTeamUsers()]).then(([roleIdMap, teamUsers]) => {
                 const rolBuscado = this.options.role.toLowerCase();
                 const targetRoleIds = new Set();
 
@@ -153,62 +174,94 @@ define(['view'], function (View) {
                     fechaCierre += ' 23:59:59';
                 }
 
-                this.getCollectionFactory().create('Encuesta', (encuestaCollection) => {
-                    encuestaCollection.fetch({
-                        data: {
-                            where: [
-                                { type: 'in', attribute: 'usuarioEvaluadoId', value: finalUserIds },
-                                { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: fechaInicio },
-                                { type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: fechaCierre }
-                            ],
-                            select: 'id,usuarioEvaluadoId,estado',
-                            maxSize: finalUserIds.length * 2,
-                            orderBy: 'fechaCreacion',
-                            order: 'desc'
+                // Función para cargar todas las encuestas con paginación
+                const getAllEncuestas = () => {
+                    return new Promise((resolve, reject) => {
+                        const maxSize = 200;
+                        let allEncuestas = [];
+                        
+                        const fetchEncuestasPage = (offset) => {
+                            this.getCollectionFactory().create('Encuesta', (encuestaCollection) => {
+                                encuestaCollection.fetch({
+                                    data: {
+                                        where: [
+                                            { type: 'in', attribute: 'usuarioEvaluadoId', value: finalUserIds },
+                                            { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: fechaInicio },
+                                            { type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: fechaCierre }
+                                        ],
+                                        select: 'id,usuarioEvaluadoId,estado',
+                                        maxSize: maxSize,
+                                        offset: offset,
+                                        orderBy: 'fechaCreacion',
+                                        order: 'desc'
+                                    }
+                                }).then(() => {
+                                    allEncuestas = allEncuestas.concat(encuestaCollection.models);
+                                    
+                                    if (encuestaCollection.models.length < maxSize) {
+                                        resolve(allEncuestas);
+                                    } else {
+                                        fetchEncuestasPage(offset + maxSize);
+                                    }
+                                }).catch(reject);
+                            });
+                        };
+                        
+                        fetchEncuestasPage(0);
+                    });
+                };
+
+                getAllEncuestas().then((todasLasEncuestas) => {
+                    const ultimasEncuestas = {};
+                    todasLasEncuestas.forEach((encuesta) => {
+                        const userId = encuesta.get('usuarioEvaluadoId');
+                        if (!ultimasEncuestas[userId]) {
+                            ultimasEncuestas[userId] = encuesta;
                         }
-                    }).then(() => {                        
-                        const ultimasEncuestas = {};
-                        encuestaCollection.forEach((encuesta) => {
-                            const userId = encuesta.get('usuarioEvaluadoId');
-                            if (!ultimasEncuestas[userId]) {
-                                ultimasEncuestas[userId] = encuesta;
+                    });
+
+                    this.usuarios = usuariosPorRol
+                        .filter(user => {
+                            const encuesta = ultimasEncuestas[user.id];
+                            return !encuesta || encuesta.get('estado') !== 'completada';
+                        })
+                        .map(user => {
+                            const encuesta = ultimasEncuestas[user.id];
+                            let color = '#f8d7da'; // Rojo pastel (no evaluado)
+                            
+                            if (encuesta) {
+                                const estado = encuesta.get('estado');
+                                if (estado === 'incompleta') {
+                                    color = '#fff3cd'; 
+                                } else if (estado === 'revision') {
+                                    color = '#d4edda'; 
+                                }
                             }
+                            
+                            return {
+                                id: user.id,
+                                name: user.name,
+                                color: color
+                            };
                         });
 
-                        this.usuarios = usuariosPorRol
-                            .filter(user => {
-                                const encuesta = ultimasEncuestas[user.id];
-                                return !encuesta || encuesta.get('estado') !== 'completada';
-                            })
-                            .map(user => {
-                                const encuesta = ultimasEncuestas[user.id];
-                                let color = '#f8d7da'; // Rojo pastel (no evaluado)
-                                
-                                if (encuesta) {
-                                    const estado = encuesta.get('estado');
-                                    if (estado === 'incompleta') {
-                                        color = '#fff3cd'; 
-                                    } else if (estado === 'revision') {
-                                        color = '#d4edda'; 
-                                    }
-                                }
-                                
-                                return {
-                                    id: user.id,
-                                    name: user.name,
-                                    color: color
-                                };
-                            });
+                    const colorOrder = {
+                        '#fff3cd': 1, 
+                        '#f8d7da': 2, 
+                        '#d4edda': 3  
+                    };
+                    this.usuarios.sort((a, b) => (colorOrder[a.color] || 99) - (colorOrder[b.color] || 99));
 
-                        const colorOrder = {
-                            '#fff3cd': 1, 
-                            '#f8d7da': 2, 
-                            '#d4edda': 3  
-                        };
-                        this.usuarios.sort((a, b) => (colorOrder[a.color] || 99) - (colorOrder[b.color] || 99));
-
-                        this.wait(false);
-                    });
+                    this.wait(false);
+                }).catch(error => {
+                    let errorMessage = 'Error al cargar las encuestas.';
+                    if (error && error.responseJSON && error.responseJSON.message) {
+                        errorMessage += ' Detalle: ' + error.responseJSON.message;
+                    } else if (error && error.statusText) {
+                        errorMessage += ' Estado: ' + error.statusText;
+                    }
+                    Espo.Ui.error(errorMessage);
+                    this.wait(false);
                 });
 
             }).catch(error => {

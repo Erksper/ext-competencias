@@ -230,12 +230,38 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                     } 
                 });
                 
-                const fetchOficinas = new Promise((resolve, reject) => {
-                    this.getCollectionFactory().create('Team', (collection) => {
-                        collection.fetch({ data: { maxSize: 200 } }).then(() => resolve(collection)).catch(reject);
+                // Función para cargar todas las oficinas con paginación
+                const fetchOficinas = () => {
+                    return new Promise((resolve, reject) => {
+                        const maxSize = 200;
+                        let allTeams = [];
+                        
+                        const fetchPage = (offset) => {
+                            this.getCollectionFactory().create('Team', (collection) => {
+                                collection.fetch({
+                                    data: {
+                                        maxSize: maxSize,
+                                        offset: offset
+                                    }
+                                }).then(() => {
+                                    allTeams = allTeams.concat(collection.models);
+                                    
+                                    // Si recibimos menos de maxSize, ya no hay más páginas
+                                    if (collection.models.length < maxSize) {
+                                        resolve(allTeams);
+                                    } else {
+                                        // Continuar con la siguiente página
+                                        fetchPage(offset + maxSize);
+                                    }
+                                }).catch(reject);
+                            });
+                        };
+                        
+                        fetchPage(0);
                     });
-                });
-                promesas.push(fetchCompletas, fetchRevision, fetchIncompletas, fetchOficinas);
+                };
+                
+                promesas.push(fetchCompletas, fetchRevision, fetchIncompletas, fetchOficinas());
             }
 
             const whereOficina = { type: 'equals', attribute: 'equipoId', value: this.idOficinaUsuario };
@@ -315,7 +341,7 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                     const encuestasCompletas = results[2].total || 0;
                     const encuestasRevision = results[3].total || 0;
                     const encuestasIncompletas = results[4].total || 0;
-                    const oficinaCollection = results[5];
+                    const allTeamsModels = results[5];
 
                     this.estadisticasGenerales = {
                         totalEncuestas: encuestasCompletas + encuestasRevision + encuestasIncompletas,
@@ -324,7 +350,7 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                         encuestasIncompletas: encuestasIncompletas
                     };
 
-                    this.oficinas = (oficinaCollection.models || []).map(team => ({
+                    this.oficinas = (allTeamsModels || []).map(team => ({
                         id: team.id,
                         name: team.get('name')
                     }));

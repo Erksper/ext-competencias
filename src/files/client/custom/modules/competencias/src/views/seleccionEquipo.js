@@ -116,40 +116,83 @@ define(['view'], function (View) {
                 fechaCierre += ' 23:59:59';
             }
 
-            const getTeams = new Promise((resolve, reject) => {
-                this.getCollectionFactory().create('Team', (collection) => {
-                    collection.fetch({
-                        data: {
-                            maxSize: 500 
-                        }
-                    }).then(() => resolve(collection)).catch(reject);
+            // Función para cargar todos los equipos con paginación
+            const getAllTeams = () => {
+                return new Promise((resolve, reject) => {
+                    const maxSize = 200;
+                    let allTeams = [];
+                    
+                    const fetchPage = (offset) => {
+                        this.getCollectionFactory().create('Team', (collection) => {
+                            collection.fetch({
+                                data: {
+                                    maxSize: maxSize,
+                                    offset: offset
+                                }
+                            }).then(() => {
+                                allTeams = allTeams.concat(collection.models);
+                                
+                                // Si recibimos menos de maxSize, ya no hay más páginas
+                                if (collection.models.length < maxSize) {
+                                    resolve(allTeams);
+                                } else {
+                                    // Continuar con la siguiente página
+                                    fetchPage(offset + maxSize);
+                                }
+                            }).catch(reject);
+                        });
+                    };
+                    
+                    fetchPage(0);
                 });
-            });
+            };
 
-            const getRevisionSurveys = new Promise((resolve, reject) => {
-                this.getCollectionFactory().create('Encuesta', (collection) => {
-                    collection.fetch({
-                        data: {
-                            select: 'equipoId',
-                            where: [
-                                { attribute: 'estado', type: 'equals', value: 'revision' },
-                                { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: fechaInicio },
-                                { type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: fechaCierre }
-                            ]
-                        }
-                    }).then(() => resolve(collection)).catch(reject);
+            // Función para cargar todas las encuestas en revisión con paginación
+            const getAllRevisionSurveys = () => {
+                return new Promise((resolve, reject) => {
+                    const maxSize = 200;
+                    let allSurveys = [];
+                    
+                    const fetchPage = (offset) => {
+                        this.getCollectionFactory().create('Encuesta', (collection) => {
+                            collection.fetch({
+                                data: {
+                                    select: 'equipoId',
+                                    where: [
+                                        { attribute: 'estado', type: 'equals', value: 'revision' },
+                                        { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: fechaInicio },
+                                        { type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: fechaCierre }
+                                    ],
+                                    maxSize: maxSize,
+                                    offset: offset
+                                }
+                            }).then(() => {
+                                allSurveys = allSurveys.concat(collection.models);
+                                
+                                // Si recibimos menos de maxSize, ya no hay más páginas
+                                if (collection.models.length < maxSize) {
+                                    resolve(allSurveys);
+                                } else {
+                                    // Continuar con la siguiente página
+                                    fetchPage(offset + maxSize);
+                                }
+                            }).catch(reject);
+                        });
+                    };
+                    
+                    fetchPage(0);
                 });
-            });
+            };
 
-            Promise.all([getTeams, getRevisionSurveys]).then(([teamCollection, encuestaCollection]) => {
+            Promise.all([getAllTeams(), getAllRevisionSurveys()]).then(([allTeams, allSurveys]) => {
                 const equiposConRevision = new Set();
-                (encuestaCollection.models || []).forEach(encuesta => {
+                allSurveys.forEach(encuesta => {
                     if (encuesta.get('equipoId')) {
                         equiposConRevision.add(encuesta.get('equipoId'));
                     }
                 });
                 
-                this.equipos = (teamCollection.models || []).map(team => {
+                this.equipos = allTeams.map(team => {
                     const tieneRevision = equiposConRevision.has(team.id);
                     return {
                         id: team.id,

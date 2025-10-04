@@ -34,20 +34,30 @@
     <strong>Criterio:</strong> Verde ≥80%, Amarillo 60-80%, Rojo <60%
 </div>
 
+<!-- LOGO ENCABEZADO PRINCIPAL - NUEVA SECCIÓN -->
+{{#if logoOficina}}
+<div class="header-logo-container text-center" style="margin-bottom: 15px;">
+    <img src="{{logoOficina}}" alt="Logo {{nombreOficina}}" 
+         class="header-logo"
+         onerror="this.style.display='none'"
+         style="max-height: 80px; max-width: 200px; object-fit: contain;">
+</div>
+{{/if}}
+
 <div class="report-matrix-container" style="overflow-x: auto; margin-bottom: 20px;">
     <table class="report-matrix table table-bordered" style="min-width: 1200px; font-size: 11px;">
         <thead>
             <tr class="categoria-row header-row">
                 <th class="th-main-header" rowspan="3" style="vertical-align: middle; text-align: center;">
-                    <div class="logo-container" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div class="header-content">
+                        <strong>{{textoEncabezado}}</strong>
                         {{#if logoOficina}}
-                        <div class="logo-top" style="flex: 1; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px;">
-                            <img src="{{logoOficina}}" alt="Logo" style="max-height: 60px; max-width: 120px; object-fit: contain;">
+                        <div class="logo-inline" style="margin-top: 5px;">
+                            <img src="{{logoOficina}}" alt="Logo" 
+                                 style="max-height: 40px; max-width: 100px; object-fit: contain;"
+                                 onerror="this.style.display='none'">
                         </div>
                         {{/if}}
-                        <div class="texto-bottom" style="flex: 0; padding-bottom: 10px;">
-                            <strong>{{textoEncabezado}}</strong>
-                        </div>
                     </div>
                 </th>
                 {{#each @root.preguntas}}
@@ -212,7 +222,7 @@
     vertical-align: middle;
 }
 .th-main-header { 
-    width: 150px; 
+    width: 180px; /* Un poco más ancho para el logo */
     height: 120px;
 }
 .th-sumatoria { width: 100px; }
@@ -280,6 +290,38 @@
     font-size: 10px;
     text-align: center;
 }
+
+/* NUEVOS ESTILOS PARA LOGOS */
+.header-logo-container {
+    border-bottom: 2px solid #ddd;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.header-logo {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 5px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 8px;
+}
+
+.logo-inline img {
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 2px;
+    background: white;
+}
+
 @media (max-width: 768px) {
     .report-matrix-container {
         font-size: 10px;
@@ -295,6 +337,16 @@
     
     .century21-header h2 {
         font-size: 1em !important;
+    }
+    
+    .header-logo {
+        max-height: 60px !important;
+        max-width: 150px !important;
+    }
+    
+    .logo-inline img {
+        max-height: 30px !important;
+        max-width: 80px !important;
     }
 }
 
@@ -321,12 +373,5 @@
 .celda-total.color-rojo {
     background-color: #F44336 !important;
     color: white;
-}
-
-.logo-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
 }
 </style>
