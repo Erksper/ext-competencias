@@ -2,64 +2,42 @@
     "fields": {
         "name": {
             "type": "varchar",
-            "required": true,
-            "maxLength": 255
+            "required": true
         },
         "textoPregunta": {
             "type": "text",
             "required": true
         },
         "categoria": {
-            "type": "enum",
-            "options": ["Personalidad", "Competencias Técnicas", "Competencias Funcionales"],
+            "type": "varchar",
+            "maxLength": 150,
             "required": true
         },
         "subCategoria": {
             "type": "varchar",
-            "maxLength": 150,
-            "required": false
+            "maxLength": 150
+        },
+        "info": {
+            "type": "text",
+            "rows": 4,
+            "tooltip": true
         },
         "rolObjetivo": {
             "type": "multiEnum",
             "options": ["asesor", "gerente"],
             "required": true
         },
-        "estaActiva": {
-            "type": "bool",
-            "default": true
-        },
         "orden": {
             "type": "int",
             "default": 0
         },
-        "creadoPor": {
-            "type": "link",
-            "entity": "User"
-        },
-        "fechaCreacion": {
-            "type": "datetime"
-        },
-        "fechaModificacion": {
-            "type": "datetime"
-        },
-        "descripcion": {
-            "type": "text"
-        }
-    },
-    "links": {
-        "creadoPor": {
-            "type": "belongsTo",
-            "entity": "User"
-        },
-        "respuestasEncuesta": {
-            "type": "hasMany",
-            "entity": "RespuestaEncuesta",
-            "foreignKey": "preguntaId",
-            "foreign": "pregunta"
+        "estaActiva": {
+            "type": "bool",
+            "default": true
         }
     },
     "collection": {
-        "orderBy": "categoria",
+        "orderBy": "orden",
         "order": "asc"
     }
 }

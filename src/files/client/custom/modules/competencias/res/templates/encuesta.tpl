@@ -69,7 +69,20 @@
                                 {{#each this}}
                                 <tr class="pregunta-row">
                                     <td>
-                                        <h4>{{orden}}. {{texto}}</h4>
+                                        <div class="pregunta-texto-container">
+                                            <span class="pregunta-icon-space">
+                                                {{#if info}}
+                                                <i class="fas fa-info-circle info-icon" 
+                                                   data-action="showInfo"
+                                                   data-toggle="tooltip" 
+                                                   data-html="true"
+                                                   data-info="{{info}}"
+                                                   data-pregunta-texto="{{orden}}. {{texto}}"
+                                                   title="<small>Click para ver información completa</small>"></i>
+                                                {{/if}}
+                                            </span>
+                                            <h4>{{orden}}. {{texto}}</h4>
+                                        </div>
                                     </td>
                                     <td>
                                         <div class="color-option color-verde"
@@ -115,6 +128,11 @@
                 <button class="btn btn-success btn-lg" data-action="saveSurvey">
                     <i class="fas fa-save"></i> Guardar Encuesta
                 </button>
+                {{#if esCasaNacional}}
+                <button class="btn btn-primary btn-lg" data-action="completeSurvey" style="margin-left: 10px;">
+                    <i class="fas fa-check-circle"></i> Completar Encuesta
+                </button>
+                {{/if}}
             </div>
         </div>
     </div>
@@ -159,9 +177,9 @@
 
 .subcategoria-content table thead th {
     border: 1px solid #000;
-    color: black; /* Texto en negro como solicitado */
+    color: black;
     text-align: center;
-    font-size: 15px; /* Aumentado para mejor visibilidad */
+    font-size: 15px;
     width: 10%;
 }
 
@@ -198,13 +216,50 @@
     text-align: left;
 }
 
+.pregunta-texto-container {
+    display: flex;
+    align-items: flex-start;
+}
+
+.pregunta-icon-space {
+    display: inline-block;
+    width: 25px;
+    flex-shrink: 0;
+    text-align: left;
+}
+
+.info-icon {
+    color: #17a2b8;
+    font-size: 16px;
+    cursor: pointer;
+    margin-right: 5px;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.info-icon:hover {
+    color: #138496;
+    transform: scale(1.1);
+}
+
 .pregunta-row h4 {
-    font-size: 16px; /* Aumentado para mejor visibilidad */
+    font-size: 16px;
     margin: 0;
+    flex: 1;
 }
 
 .survey-actions {
     margin-top: 30px;
+}
+
+.survey-actions .btn-primary[data-action="completeSurvey"] {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.survey-actions .btn-primary[data-action="completeSurvey"]:hover,
+.survey-actions .btn-primary[data-action="completeSurvey"]:focus {
+    background-color: #0056b3;
+    border-color: #004085;
 }
 
 .estado-completitud {
@@ -216,21 +271,24 @@
     color: white;
     vertical-align: middle;
 }
+
 .categoria-header .estado-completitud,
 .subcategoria-header .estado-completitud {
     position: absolute;
-    right: 40px; /* Espacio a la izquierda del chevron */
+    right: 40px;
     top: 50%;
     transform: translateY(-50%);
 }
 
 .estado-completitud.completo {
-    background-color: #4CAF50; /* Verde */
+    background-color: #4CAF50;
 }
+
 .estado-completitud.incompleto {
-    background-color: #FFC107; /* Amarillo */
+    background-color: #FFC107;
     color: #333;
 }
+
 .categoria-header {
     background: #666;
     color: white;
@@ -270,7 +328,7 @@
     border: 1px solid #ddd;
     border-radius: 4px;
     transition: background-color 0.2s ease-in-out;
-    font-size: 1.1em; /* Aumentado para mejor visibilidad */
+    font-size: 1.1em;
     font-weight: 600;
 }
 
@@ -369,5 +427,143 @@
 .subcategoria-content {
     display: none;
     margin: 5px 0 10px 0;
+}
+
+/* Estilos para el tooltip */
+.tooltip-inner {
+    max-width: 350px;
+    text-align: left;
+    padding: 10px 15px;
+    background-color: #333;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.tooltip.top .tooltip-arrow {
+    border-top-color: #333;
+}
+
+.tooltip.bottom .tooltip-arrow {
+    border-bottom-color: #333;
+}
+
+.tooltip.left .tooltip-arrow {
+    border-left-color: #333;
+}
+
+.tooltip.right .tooltip-arrow {
+    border-right-color: #333;
+}
+
+/* Estilos para el modal de información */
+#infoModal .modal-dialog {
+    margin: 50px auto !important;
+}
+
+#infoModal .modal-header {
+    background-color: var(--btn-primary-bg);
+    color: white;
+    border-radius: 6px 6px 0 0;
+    position: relative;
+    padding: 15px 20px;
+}
+
+#infoModal .modal-header .close {
+    color: white;
+    opacity: 0.8;
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+}
+
+#infoModal .modal-header .close:hover {
+    opacity: 1;
+}
+
+#infoModal .modal-header .modal-title {
+    font-weight: bold;
+    padding-right: 30px;
+}
+
+#infoModal .modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+#infoModal .info-pregunta-container {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--btn-primary-bg);
+}
+
+#infoModal .info-pregunta-titulo {
+    color: var(--btn-primary-bg);
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+#infoModal .info-pregunta-texto {
+    color: #333;
+    font-size: 15px;
+    margin: 0;
+    line-height: 1.6;
+}
+
+#infoModal .info-contenido-container {
+    padding: 15px;
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+}
+
+#infoModal .info-contenido-titulo {
+    color: #495057;
+    font-weight: bold;
+    margin-bottom: 15px;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+#infoModal .info-contenido-texto {
+    color: #333;
+    font-size: 14px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+#infoModal .modal-footer {
+    border-top: 1px solid #dee2e6;
+}
+
+/* Scrollbar personalizado para el modal */
+#infoModal .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+#infoModal .modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#infoModal .modal-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+#infoModal .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 </style>

@@ -18,7 +18,15 @@ define(['view'], function (View) {
                 this.toggleSubcategoria(e);
             },
             'click [data-action="saveSurvey"]': function () {
-                this.guardarEncuesta();
+                this.guardarEncuesta(false);
+            },
+            'click [data-action="completeSurvey"]': function () {
+                this.guardarEncuesta(true);
+            },
+            'click [data-action="showInfo"]': function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.mostrarInfoModal(e);
             },
             'click [data-action="back"]': function () {
                 this.getRouter().navigate('#Competencias/userSelection?teamId=' + this.teamId + '&teamName=' + encodeURIComponent(this.teamName) + '&role=' + this.role, {trigger: true});
@@ -40,6 +48,7 @@ define(['view'], function (View) {
             this.fechaInicio = null;
             this.fechaCierre = null;
             this.evaluadorRoles = [];
+            this.esCasaNacional = false;
 
             this.accesoDenegado = false;
             this.encuestaInactiva = false;
@@ -61,7 +70,8 @@ define(['view'], function (View) {
                             } 
                         }).then(function () {
                             this.evaluadorRoles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
-                            const puedeAcceder = this.evaluadorRoles.includes('casa nacional') || this.evaluadorRoles.includes('gerente') || this.evaluadorRoles.includes('director');
+                            this.esCasaNacional = this.evaluadorRoles.includes('casa nacional');
+                            const puedeAcceder = this.esCasaNacional || this.evaluadorRoles.includes('gerente') || this.evaluadorRoles.includes('director');
 
                             if (!puedeAcceder) {
                                 this.accesoDenegado = true;
@@ -138,6 +148,67 @@ define(['view'], function (View) {
             
             this.renderRespuestasEnUI();
             this.actualizarIndicadoresDeProgreso();
+            this.inicializarTooltips();
+        },
+
+        inicializarTooltips: function() {
+            // Inicializar tooltips de Bootstrap para los iconos de info (solo hover)
+            this.$el.find('[data-toggle="tooltip"]').tooltip({
+                placement: 'top',
+                html: true,
+                container: 'body',
+                trigger: 'hover'
+            });
+        },
+
+        mostrarInfoModal: function(e) {
+            var infoTexto = $(e.currentTarget).data('info');
+            var preguntaTexto = $(e.currentTarget).data('pregunta-texto');
+            
+            if (!infoTexto) return;
+
+            // Crear el modal si no existe
+            var modalId = 'infoModal';
+            var $modal = $('#' + modalId);
+            
+            if ($modal.length === 0) {
+                var modalHtml = 
+                    '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog">' +
+                    '  <div class="modal-dialog modal-lg" role="document">' +
+                    '    <div class="modal-content">' +
+                    '      <div class="modal-header">' +
+                    '        <button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
+                    '          <span aria-hidden="true">&times;</span>' +
+                    '        </button>' +
+                    '        <h4 class="modal-title"><i class="fas fa-info-circle"></i> Información de la Pregunta</h4>' +
+                    '      </div>' +
+                    '      <div class="modal-body">' +
+                    '        <div class="info-pregunta-container">' +
+                    '          <h5 class="info-pregunta-titulo">Pregunta:</h5>' +
+                    '          <p class="info-pregunta-texto"></p>' +
+                    '        </div>' +
+                    '        <div class="info-contenido-container">' +
+                    '          <h5 class="info-contenido-titulo">Información adicional:</h5>' +
+                    '          <div class="info-contenido-texto"></div>' +
+                    '        </div>' +
+                    '      </div>' +
+                    '      <div class="modal-footer">' +
+                    '        <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>' +
+                    '      </div>' +
+                    '    </div>' +
+                    '  </div>' +
+                    '</div>';
+                
+                $('body').append(modalHtml);
+                $modal = $('#' + modalId);
+            }
+            
+            // Actualizar contenido del modal
+            $modal.find('.info-pregunta-texto').text(preguntaTexto);
+            $modal.find('.info-contenido-texto').html(infoTexto.replace(/\n/g, '<br>'));
+            
+            // Mostrar el modal
+            $modal.modal('show');
         },
         
         cargarPreguntas: function () {
@@ -274,7 +345,8 @@ define(['view'], function (View) {
                         texto: pregunta.textoPregunta || pregunta.name,
                         categoria: pregunta.categoria || 'Sin Categoría',
                         subcategoria: pregunta.subCategoria || 'General',
-                        orden: pregunta.orden || 0
+                        orden: pregunta.orden || 0,
+                        info: pregunta.info || null
                     });
                 }
             }.bind(this));
@@ -304,7 +376,8 @@ define(['view'], function (View) {
                 preguntasAgrupadas[categoria][subcategoria].push({
                     id: pregunta.id,
                     texto: pregunta.texto,
-                    orden: pregunta.orden || 0
+                    orden: pregunta.orden || 0,
+                    info: pregunta.info || null
                 });
             });
             
@@ -420,15 +493,65 @@ define(['view'], function (View) {
             }
         },
 
-        guardarEncuesta: function () {
-            const esCasaNacional = this.evaluadorRoles.includes('casa nacional');
-            const esGerenteDirector = this.evaluadorRoles.includes('gerente') || this.evaluadorRoles.includes('director');
+        mostrarInfoModal: function(e) {
+            var infoTexto = $(e.currentTarget).data('info');
+            var preguntaTexto = $(e.currentTarget).data('pregunta-texto');
+            
+            if (!infoTexto) return;
+
+            // Crear el modal si no existe
+            var modalId = 'infoModal';
+            var $modal = $('#' + modalId);
+            
+            if ($modal.length === 0) {
+                var modalHtml = 
+                    '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog">' +
+                    '  <div class="modal-dialog modal-lg" role="document">' +
+                    '    <div class="modal-content">' +
+                    '      <div class="modal-header">' +
+                    '        <button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
+                    '          <span aria-hidden="true">&times;</span>' +
+                    '        </button>' +
+                    '        <h4 class="modal-title"><i class="fas fa-info-circle"></i> Información de la Pregunta</h4>' +
+                    '      </div>' +
+                    '      <div class="modal-body">' +
+                    '        <div class="info-pregunta-container">' +
+                    '          <h5 class="info-pregunta-titulo">Pregunta:</h5>' +
+                    '          <p class="info-pregunta-texto"></p>' +
+                    '        </div>' +
+                    '        <div class="info-contenido-container">' +
+                    '          <h5 class="info-contenido-titulo">Información adicional:</h5>' +
+                    '          <div class="info-contenido-texto"></div>' +
+                    '        </div>' +
+                    '      </div>' +
+                    '      <div class="modal-footer">' +
+                    '        <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>' +
+                    '      </div>' +
+                    '    </div>' +
+                    '  </div>' +
+                    '</div>';
+                
+                $('body').append(modalHtml);
+                $modal = $('#' + modalId);
+            }
+            
+            // Actualizar contenido del modal
+            $modal.find('.info-pregunta-texto').text(preguntaTexto);
+            $modal.find('.info-contenido-texto').html(infoTexto.replace(/\n/g, '<br>'));
+            
+            // Mostrar el modal
+            $modal.modal('show');
+        },
+
+        guardarEncuesta: function (completar) {
+            completar = completar || false;
             const preguntasRespondidasCount = Object.keys(this.respuestas).length;
             const totalPreguntasDisponibles = this.totalPreguntasDisponibles || 0;
             const estaCompleta = (totalPreguntasDisponibles > 0) && (preguntasRespondidasCount === totalPreguntasDisponibles);
 
-            if (esCasaNacional && !estaCompleta) {
-                Espo.Ui.warning('Debe responder todas las preguntas para poder guardar la evaluación.');
+            // Si se presiona "Completar Encuesta" validar que esté completa
+            if (completar && !estaCompleta) {
+                Espo.Ui.warning('Debe responder todas las preguntas para completar la evaluación.');
                 return;
             }
             
@@ -441,7 +564,11 @@ define(['view'], function (View) {
             this.guardandoEncuesta = true;
             
             const $saveButton = this.$el.find('[data-action="saveSurvey"]');
+            const $completeButton = this.$el.find('[data-action="completeSurvey"]');
             $saveButton.prop('disabled', true).text('Guardando...');
+            if ($completeButton.length) {
+                $completeButton.prop('disabled', true).text('Guardando...');
+            }
             Espo.Ui.notify('Guardando encuesta...', 'info');
 
             this.getModelFactory().create('Encuesta', (encuestaModel) => {
@@ -451,10 +578,16 @@ define(['view'], function (View) {
                     let estadoActual = isUpdate ? model.get('estado') : null;
                     let estadoEncuesta = estadoActual;
 
+                    // Si no está completada previamente
                     if (estadoActual !== 'completada') {
-                        if (estaCompleta) {
-                            estadoEncuesta = esCasaNacional ? 'completada' : 'revision';
+                        if (completar && estaCompleta) {
+                            // Botón "Completar Encuesta" presionado
+                            estadoEncuesta = this.esCasaNacional ? 'completada' : 'revision';
+                        } else if (estaCompleta && !completar) {
+                            // Guardado normal pero está completa
+                            estadoEncuesta = 'revision';
                         } else {
+                            // No está completa
                             estadoEncuesta = 'incompleta';
                         }
                     }
@@ -495,6 +628,9 @@ define(['view'], function (View) {
                         Espo.Ui.error('Error crítico: No se pudo guardar el registro de la encuesta.');
                         this.guardandoEncuesta = false;
                         $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
+                        if ($completeButton.length) {
+                            $completeButton.prop('disabled', false).html('<i class="fas fa-check-circle"></i> Completar Encuesta');
+                        }
                     });
                 };
 
@@ -505,6 +641,9 @@ define(['view'], function (View) {
                             Espo.Ui.error('Error al cargar la encuesta existente para actualizar.');
                             this.guardandoEncuesta = false;
                             $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
+                            if ($completeButton.length) {
+                                $completeButton.prop('disabled', false).html('<i class="fas fa-check-circle"></i> Completar Encuesta');
+                            }
                         });
                 } else {
                     setupAndSave(encuestaModel);
@@ -584,8 +723,12 @@ define(['view'], function (View) {
                 }.bind(this)).catch(function() {
                     Espo.Ui.error('No se pudo sincronizar con las respuestas guardadas. Intente de nuevo.');
                     var $saveButton = this.$el.find('[data-action="saveSurvey"]');
+                    var $completeButton = this.$el.find('[data-action="completeSurvey"]');
                     this.guardandoEncuesta = false;
                     $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
+                    if ($completeButton.length) {
+                        $completeButton.prop('disabled', false).html('<i class="fas fa-check-circle"></i> Completar Encuesta');
+                    }
                 }.bind(this));
             }.bind(this));
         },
@@ -599,7 +742,11 @@ define(['view'], function (View) {
 
             this.guardandoEncuesta = false;
             var $saveButton = this.$el.find('[data-action="saveSurvey"]');
+            var $completeButton = this.$el.find('[data-action="completeSurvey"]');
             $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
+            if ($completeButton.length) {
+                $completeButton.prop('disabled', false).html('<i class="fas fa-check-circle"></i> Completar Encuesta');
+            }
 
             setTimeout(function() {
                 var backUrl = '#Competencias/userSelection?teamId=' + this.teamId + '&teamName=' + encodeURIComponent(this.teamName) + '&role=' + this.role;
@@ -627,7 +774,8 @@ define(['view'], function (View) {
                 role: this.role,
                 preguntas: this.preguntas || {},
                 accesoDenegado: this.accesoDenegado,
-                encuestaInactiva: this.encuestaInactiva
+                encuestaInactiva: this.encuestaInactiva,
+                esCasaNacional: this.esCasaNacional
             };
         }
     });
