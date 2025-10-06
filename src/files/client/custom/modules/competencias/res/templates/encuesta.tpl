@@ -460,10 +460,15 @@
     margin: 50px auto !important;
 }
 
+#infoModal .modal-content {
+    border-radius: 6px;
+    overflow: hidden;
+}
+
 #infoModal .modal-header {
     background-color: var(--btn-primary-bg);
     color: white;
-    border-radius: 6px 6px 0 0;
+    border-radius: 0;
     position: relative;
     padding: 15px 20px;
 }
