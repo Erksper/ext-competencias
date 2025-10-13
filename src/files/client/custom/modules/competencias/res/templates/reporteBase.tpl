@@ -9,18 +9,18 @@
 
 <div class="report-actions" style="margin-bottom: 15px;">
     <div class="row">
-        <div class="col-md-6">
-            <button class="btn btn-default" data-action="back">
+        <div class="col-md-6 col-xs-12">
+            <button class="btn btn-default btn-block-mobile" data-action="back">
                 <i class="fas fa-arrow-left"></i> Volver a Reportes
             </button>
         </div>
-        <div class="col-md-6 text-right">
+        <div class="col-md-6 col-xs-12 text-right-desktop">
             {{#if tienedatos}}
-            <div class="btn-group">
-                <button class="btn btn-success" data-action="exportarExcel">
+            <div class="action-buttons-container">
+                <button class="btn btn-success btn-lg btn-action" data-action="exportarExcel">
                     <i class="fas fa-file-excel"></i> Exportar Excel
                 </button>
-                <button class="btn btn-info" data-action="exportarCSV">
+                <button class="btn btn-success btn-lg btn-action" data-action="exportarCSV">
                     <i class="fas fa-file-csv"></i> Exportar CSV
                 </button>
             </div>
@@ -289,6 +289,20 @@
     text-align: center;
 }
 
+.report-actions .btn-success[data-action="exportarExcel"],
+.report-actions .btn-success[data-action="exportarCSV"] {
+    background-color: #666;
+    border-color: #555;
+}
+
+.report-actions .btn-success[data-action="exportarExcel"]:hover,
+.report-actions .btn-success[data-action="exportarExcel"]:focus,
+.report-actions .btn-success[data-action="exportarCSV"]:hover,
+.report-actions .btn-success[data-action="exportarCSV"]:focus {
+    background-color: #555;
+    border-color: #444;
+}
+
 .preguntas-row th div {
     display: inline-block;
     writing-mode: vertical-rl; 
@@ -300,8 +314,6 @@
     font-size: 10px;
     text-align: center;
 }
-
-/* NUEVOS ESTILOS PARA LOGOS EXPANDIDOS */
 .header-content {
     display: flex;
     flex-direction: column;
@@ -351,6 +363,25 @@
     color: #666;
 }
 
+.action-buttons-container {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn-action {
+    min-width: 180px;
+}
+
+.btn-block-mobile {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.text-right-desktop {
+    text-align: right;
+}
+
 @media (max-width: 768px) {
     .report-matrix-container {
         font-size: 10px;
@@ -386,6 +417,41 @@
     .sumatoria-content {
         top: -20%; /* Ajuste para móviles */
     }
+
+    .report-actions {
+        margin-top: 20px;
+    }
+
+    .action-buttons-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn-action {
+        width: 100%;
+        min-width: auto;
+    }
+
+    .btn-block-mobile {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .text-right-desktop {
+        text-align: left !important;
+    }
+
+    .report-actions .btn-success[data-action="exportarCSV"] {
+        margin-left: 0 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-action {
+        font-size: 14px;
+        padding: 10px 15px;
+    }
 }
 
 .celda-total {
@@ -413,7 +479,6 @@
     color: white;
 }
 
-/* Asegurar que la celda de nombres se expanda según el contenido */
 .td-user-name {
     white-space: normal;
     word-wrap: break-word;

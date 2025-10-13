@@ -152,7 +152,6 @@ define(['view'], function (View) {
         },
 
         inicializarTooltips: function() {
-            // Inicializar tooltips de Bootstrap para los iconos de info (solo hover)
             this.$el.find('[data-toggle="tooltip"]').tooltip({
                 placement: 'top',
                 html: true,
@@ -167,7 +166,6 @@ define(['view'], function (View) {
             
             if (!infoTexto) return;
 
-            // Crear el modal si no existe
             var modalId = 'infoModal';
             var $modal = $('#' + modalId);
             
@@ -203,13 +201,11 @@ define(['view'], function (View) {
                 $modal = $('#' + modalId);
             }
             
-            // Actualizar contenido del modal
             $modal.find('.info-pregunta-texto').text(preguntaTexto);
             $modal.find('.info-contenido-texto').html(infoTexto.replace(/\n/g, '<br>'));
             
-            // Mostrar el modal
             $modal.modal('show');
-        },
+         },
         
         cargarPreguntas: function () {
             if (this.fechaCierre) {
@@ -549,7 +545,6 @@ define(['view'], function (View) {
             const totalPreguntasDisponibles = this.totalPreguntasDisponibles || 0;
             const estaCompleta = (totalPreguntasDisponibles > 0) && (preguntasRespondidasCount === totalPreguntasDisponibles);
 
-            // Si se presiona "Completar Encuesta" validar que esté completa
             if (completar && !estaCompleta) {
                 Espo.Ui.warning('Debe responder todas las preguntas para completar la evaluación.');
                 return;
@@ -578,13 +573,10 @@ define(['view'], function (View) {
                     let estadoActual = isUpdate ? model.get('estado') : null;
                     let estadoEncuesta = estadoActual;
 
-                    // Si no está completada previamente
                     if (estadoActual !== 'completada') {
                         if (completar && estaCompleta) {
-                            // Botón "Completar Encuesta" presionado
                             estadoEncuesta = this.esCasaNacional ? 'completada' : 'revision';
                         } else if (estaCompleta && !completar) {
-                            // Guardado normal pero está completa
                             estadoEncuesta = 'revision';
                         } else {
                             // No está completa

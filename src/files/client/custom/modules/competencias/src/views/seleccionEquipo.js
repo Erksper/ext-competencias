@@ -116,7 +116,6 @@ define(['view'], function (View) {
                 fechaCierre += ' 23:59:59';
             }
 
-            // Función para cargar todos los equipos con paginación
             const getAllTeams = () => {
                 return new Promise((resolve, reject) => {
                     const maxSize = 200;
@@ -124,20 +123,17 @@ define(['view'], function (View) {
                     
                     const fetchPage = (offset) => {
                         this.getCollectionFactory().create('Team', (collection) => {
-                            collection.fetch({
-                                data: {
-                                    maxSize: maxSize,
-                                    offset: offset
-                                }
-                            }).then(() => {
-                                allTeams = allTeams.concat(collection.models);
-                                
-                                // Si recibimos menos de maxSize, ya no hay más páginas
-                                if (collection.models.length < maxSize) {
-                                    resolve(allTeams);
-                                } else {
-                                    // Continuar con la siguiente página
+                            collection.maxSize = maxSize;
+                            collection.offset = offset;
+                            
+                            collection.fetch().then(() => {
+                                const models = collection.models || [];
+                                allTeams = allTeams.concat(models);
+
+                                if (models.length === maxSize && allTeams.length < collection.total) {
                                     fetchPage(offset + maxSize);
+                                } else {
+                                    resolve(allTeams);
                                 }
                             }).catch(reject);
                         });
@@ -147,7 +143,6 @@ define(['view'], function (View) {
                 });
             };
 
-            // Función para cargar todas las encuestas en revisión con paginación
             const getAllRevisionSurveys = () => {
                 return new Promise((resolve, reject) => {
                     const maxSize = 200;
@@ -155,26 +150,25 @@ define(['view'], function (View) {
                     
                     const fetchPage = (offset) => {
                         this.getCollectionFactory().create('Encuesta', (collection) => {
-                            collection.fetch({
-                                data: {
-                                    select: 'equipoId',
-                                    where: [
-                                        { attribute: 'estado', type: 'equals', value: 'revision' },
-                                        { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: fechaInicio },
-                                        { type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: fechaCierre }
-                                    ],
-                                    maxSize: maxSize,
-                                    offset: offset
-                                }
-                            }).then(() => {
-                                allSurveys = allSurveys.concat(collection.models);
+                            collection.maxSize = maxSize;
+                            collection.offset = offset;
+                            collection.data = {
+                                select: 'equipoId'
+                            };
+                            collection.where = [
+                                { attribute: 'estado', type: 'equals', value: 'revision' },
+                                { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: fechaInicio },
+                                { type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: fechaCierre }
+                            ];
+                            
+                            collection.fetch().then(() => {
+                                const models = collection.models || [];
+                                allSurveys = allSurveys.concat(models);
                                 
-                                // Si recibimos menos de maxSize, ya no hay más páginas
-                                if (collection.models.length < maxSize) {
-                                    resolve(allSurveys);
-                                } else {
-                                    // Continuar con la siguiente página
+                                if (models.length === maxSize && allSurveys.length < collection.total) {
                                     fetchPage(offset + maxSize);
+                                } else {
+                                    resolve(allSurveys);
                                 }
                             }).catch(reject);
                         });
@@ -184,7 +178,10 @@ define(['view'], function (View) {
                 });
             };
 
-            Promise.all([getAllTeams(), getAllRevisionSurveys()]).then(([allTeams, allSurveys]) => {
+            Promise.all([
+                getAllTeams.call(this), 
+                getAllRevisionSurveys.call(this)
+            ]).then(([allTeams, allSurveys]) => {
                 const equiposConRevision = new Set();
                 allSurveys.forEach(encuesta => {
                     if (encuesta.get('equipoId')) {
@@ -206,6 +203,7 @@ define(['view'], function (View) {
 
                 this.wait(false);
             }).catch(error => {
+                console.error('Error al cargar equipos:', error);
                 Espo.Ui.error('Error al cargar la lista de oficinas con su estado.');
                 this.wait(false);
             });

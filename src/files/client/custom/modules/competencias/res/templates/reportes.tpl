@@ -1,5 +1,5 @@
 <div class="century21-header text-center" style="margin-bottom: 30px;">
-    <h1 style="color: #666; font-size: 1.5em;">Reportes de Analisis de Competencias</h1>
+    <h1 style="color: #666; font-size: 1.5em;">Reportes de Análisis de Competencias</h1>
 </div>
 
 {{#if noHayPeriodos}}
@@ -9,7 +9,7 @@
     </div>
 {{else}}
 
-    {{#if esCasaNacional}}
+        <!-- Panel de información para todos los usuarios -->
     <div class="reports-info panel panel-default" style="margin-bottom: 20px;">
         <div class="panel-body">
             <div class="row">
@@ -17,9 +17,20 @@
                     <h4><strong>Usuario:</strong> {{usuario.name}}</h4>
                 </div>
                 <div class="col-md-6">
-                    <h4><strong>Rol:</strong> Casa Nacional</h4>
+                    <h4><strong>Rol:</strong> 
+                        {{#if esCasaNacional}}
+                            Casa Nacional
+                        {{else if esGerenteODirector}}
+                            Gerente/Director
+                        {{else if esAsesor}}
+                            Asesor
+                        {{/if}}
+                    </h4>
                 </div>
             </div>
+
+            {{#if esCasaNacional}}
+            <!-- Resumen de estadísticas solo para Casa Nacional -->
             <div class="alert alert-secondary text-center" style="margin-top: 15px; padding: 10px;">
                 <i class="fas fa-info-circle"></i> Mostrando datos del período: <strong>{{periodoMostrado}}</strong>.
             </div>
@@ -27,28 +38,42 @@
             {{#if estadisticas}}
                 <div class="row" style="margin-top: 15px;">
                     <div class="col-md-12">
-                        <div class="alert alert-info">
-                            <strong>Resumen del Período Actual:</strong> 
-                            {{estadisticas.totalEncuestas}} encuestas en total.
-                            <span class="label label-success" style="margin-left: 10px;">Completadas: {{estadisticas.encuestasCompletas}}</span>
-                            <span class="label label-warning">En Revisión: {{estadisticas.encuestasRevision}}</span>
-                            <span class="label label-danger">Incompletas: {{estadisticas.encuestasIncompletas}}</span>
+                        <div class="alert alert-info estadisticas-periodo">
+                            <div class="estadisticas-contenido">
+                                <div class="estadisticas-texto">
+                                    <strong>Resumen del Período Actual:</strong> 
+                                </div>
+                                <div class="estadisticas-total">
+                                    {{estadisticas.totalEncuestas}} encuestas en total.
+                                </div>
+                                <div class="estadisticas-labels">
+                                    <span class="label label-success estadistica-badge">Completadas: {{estadisticas.encuestasCompletas}}</span>
+                                    <span class="label label-warning estadistica-badge">En Revisión: {{estadisticas.encuestasRevision}}</span>
+                                    <span class="label label-danger estadistica-badge">Incompletas: {{estadisticas.encuestasIncompletas}}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="row" style="margin-top: 20px;">
-                    <div class="col-md-6">
-                        <label for="periodo">Seleccionar periodo</label>
+            {{/if}}
+
+            <!-- Selectores para Casa Nacional -->
+            <div class="row" style="margin-top: 15px;">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Seleccionar Período:</label>
                         <select name="periodo" class="form-control periodo-select">
                             {{#each periodos}}
-                                <option value="{{id}}" {{#if @first}}selected{{/if}}>{{name}}</option>
+                                <option value="{{id}}">{{name}}</option>
                             {{/each}}
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <label for="oficina">Filtrar por Oficina</label>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Filtrar por Oficina (Opcional):</label>
                         <select name="oficina" class="form-control oficina-select">
-                            <option value=""></option>
+                            <option value="">Todas las oficinas</option>
                             {{#each oficinas}}
                                 <option value="{{id}}">{{name}}</option>
                             {{/each}}
@@ -57,9 +82,41 @@
                 </div>
             </div>
             {{/if}}
+
+            {{#if esGerenteODirector}}
+            {{#unless esCasaNacional}}
+            <!-- Selector de período para Gerentes/Directores -->
+            <div class="alert alert-secondary text-center" style="margin-top: 15px; padding: 10px;">
+                <i class="fas fa-info-circle"></i> Mostrando datos del período: <strong>{{periodoMostrado}}</strong>.
+            </div>
+            <div class="row" style="margin-top: 15px;">
+                <div class="col-md-6 col-md-offset-3">
+                    <div class="form-group">
+                        <label>Seleccionar Período:</label>
+                        <select name="periodo" class="form-control periodo-select">
+                            {{#each periodos}}
+                                <option value="{{id}}">{{name}}</option>
+                            {{/each}}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            {{/unless}}
+            {{/if}}
+
+            {{#if esAsesor}}
+            {{#unless esCasaNacional}}
+            {{#unless esGerenteODirector}}
+            <!-- Información del período para Asesores (sin selector) -->
+            <div class="alert alert-secondary text-center" style="margin-top: 15px; padding: 10px;">
+                <i class="fas fa-info-circle"></i> Mostrando datos del período: <strong>{{periodoMostrado}}</strong>.
+            </div>
+            {{/unless}}
+            {{/unless}}
+            {{/if}}
+
         </div>
     </div>
-    {{/if}}
 
 <div class="reports-title text-center" style="margin-bottom: 30px;">
     <h3 style="background: #333; color: white; padding: 15px; margin: 0; border-radius: 8px;">
@@ -150,6 +207,43 @@
     transition: color 0.3s ease;
 }
 
+.estadisticas-periodo {
+    padding: 15px;
+    margin-bottom: 0;
+}
+
+.estadisticas-contenido {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.estadisticas-texto {
+    font-size: 1.1em;
+    text-align: center;
+}
+
+.estadisticas-total {
+    font-size: 1em;
+    text-align: center;
+}
+
+.estadisticas-labels {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.estadistica-badge {
+    font-size: 0.95em;
+    padding: 6px 12px;
+    flex: 1;
+    min-width: 150px;
+    text-align: center;
+}
+
 @media (max-width: 768px) {
     .col-md-6 {
         margin-bottom: 15px;
@@ -160,20 +254,72 @@
     }
     
     .report-icon {
-        font-size: 2.5em !important;
-        margin-bottom: 10px !important;
+        display: none !important;
+    }
+    
+    .report-card .panel-body {
+        justify-content: center !important;
+        padding: 15px !important;
+    }
+    
+    .report-card h4 {
+        font-size: 16px !important;
+        margin-bottom: 8px !important;
+        line-height: 1.3 !important;
+    }
+    
+    .report-card p {
+        font-size: 13px !important;
+        margin-bottom: 0 !important;
+        line-height: 1.4 !important;
     }
     
     .century21-header h1 {
-        font-size: 2em !important;
+        font-size: 1.3em !important;
+    }
+
+    /* Responsive para estadísticas en móvil */
+    .estadisticas-labels {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .estadistica-badge {
+        width: 100%;
+        min-width: auto;
+        margin-bottom: 5px;
+        display: block;
+    }
+
+    .estadisticas-texto {
+        font-size: 1em;
+    }
+
+    .estadisticas-total {
+        font-size: 0.95em;
+    }
+}
+
+@media (max-width: 480px) {
+    .report-card {
+        height: 140px !important;
+        min-height: 140px;
     }
     
-    .century21-header h2 {
-        font-size: 1.2em !important;
+    .report-card h4 {
+        font-size: 15px !important;
+    }
+    
+    .report-card p {
+        font-size: 12px !important;
+    }
+
+    .century21-header h1 {
+        font-size: 1.1em !important;
     }
 }
 
 .periodo-select, .oficina-select {
-    width: 100%; /* Asegura que ambos select tengan el mismo ancho */
+    width: 100%; 
 }
 </style>

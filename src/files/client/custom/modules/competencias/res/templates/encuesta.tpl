@@ -21,10 +21,10 @@
     <div class="survey-info panel panel-default">
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-6 col-xs-12">
                     <h3><strong>Oficina:</strong> {{teamName}}</h3>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6 col-xs-12">
                     <h3><strong>Usuario evaluado:</strong> {{userName}}</h3>
                 </div>
             </div>
@@ -37,10 +37,22 @@
         </h3>
     </div>
 
+    <!-- Leyenda solo visible en móviles -->
+    <div class="mobile-legend-container">
+        <div class="mobile-legend-item">
+            <span class="mobile-legend-dot completo"></span>
+            <span>Completo</span>
+        </div>
+        <div class="mobile-legend-item">
+            <span class="mobile-legend-dot incompleto"></span>
+            <span>Incompleto</span>
+        </div>
+    </div>
+
     {{#each preguntas}}
     <div class="categoria-principal">
         <h3 class="categoria-header" data-action="toggleCategoria" data-categoria-nombre="{{@key}}">
-            <span>{{@key}}</span>
+            <span class="categoria-title">{{@key}}</span>
             <span class="estado-completitud"></span>
             <i class="fas fa-chevron-down categoria-chevron"></i>
         </h3>
@@ -49,7 +61,7 @@
             {{#each this}}
             <div class="subcategoria-section">
                 <h3 class="subcategoria-header" data-action="toggleSubcategoria" data-subcategoria-nombre="{{@key}}">
-                    <span><i class="fas fa-folder-open"></i> {{@key}}</span>
+                    <span class="subcategoria-title"><i class="fas fa-folder-open"></i> {{@key}}</span>
                     <span class="estado-completitud"></span>
                     <i class="fas fa-chevron-down subcategoria-chevron"></i>
                 </h3>
@@ -119,20 +131,22 @@
 
     <div class="survey-actions">
         <div class="row">
-            <div class="col-md-6">
-                <button class="btn btn-default" data-action="back">
+            <div class="col-md-6 col-xs-12">
+                <button class="btn btn-default btn-block-mobile" data-action="back">
                     <i class="fas fa-arrow-left"></i> Volver
                 </button>
             </div>
-            <div class="col-md-6 text-right">
-                <button class="btn btn-success btn-lg" data-action="saveSurvey">
-                    <i class="fas fa-save"></i> Guardar Encuesta
-                </button>
-                {{#if esCasaNacional}}
-                <button class="btn btn-primary btn-lg" data-action="completeSurvey" style="margin-left: 10px;">
-                    <i class="fas fa-check-circle"></i> Completar Encuesta
-                </button>
-                {{/if}}
+            <div class="col-md-6 col-xs-12 text-right-desktop">
+                <div class="action-buttons-container">
+                    <button class="btn btn-success btn-lg btn-action" data-action="saveSurvey">
+                        <i class="fas fa-save"></i> Guardar Encuesta
+                    </button>
+                    {{#if esCasaNacional}}
+                    <button class="btn btn-success btn-lg btn-action" data-action="completeSurvey">
+                        <i class="fas fa-check-circle"></i> Completar Encuesta
+                    </button>
+                    {{/if}}
+                </div>
             </div>
         </div>
     </div>
@@ -251,15 +265,58 @@
     margin-top: 30px;
 }
 
-.survey-actions .btn-primary[data-action="completeSurvey"] {
-    background-color: #007bff;
-    border-color: #007bff;
+.action-buttons-container {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
 }
 
-.survey-actions .btn-primary[data-action="completeSurvey"]:hover,
-.survey-actions .btn-primary[data-action="completeSurvey"]:focus {
-    background-color: #0056b3;
-    border-color: #004085;
+.btn-action {
+    min-width: 200px;
+}
+
+.survey-actions .btn-success[data-action="saveSurvey"] {
+    background-color: #666;
+    border-color: #555;
+}
+
+.survey-actions .btn-success[data-action="saveSurvey"]:hover,
+.survey-actions .btn-success[data-action="saveSurvey"]:focus {
+    background-color: #555;
+    border-color: #444;
+}
+
+/* Leyenda móvil - solo visible en pantallas pequeñas */
+.mobile-legend-container {
+    display: none;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px 15px;
+    margin-bottom: 15px;
+}
+
+.mobile-legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 15px;
+    font-size: 0.9em;
+}
+
+.mobile-legend-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.mobile-legend-dot.completo {
+    background-color: #4CAF50;
+}
+
+.mobile-legend-dot.incompleto {
+    background-color: #FFC107;
 }
 
 .estado-completitud {
@@ -306,6 +363,12 @@
     background-color: #555;
 }
 
+.categoria-title {
+    display: inline-block;
+    max-width: calc(100% - 100px);
+    word-wrap: break-word;
+}
+
 .categoria-chevron {
     position: absolute;
     right: 20px;
@@ -336,6 +399,12 @@
     background-color: #e9ecef;
 }
 
+.subcategoria-title {
+    display: inline-block;
+    max-width: calc(100% - 100px);
+    word-wrap: break-word;
+}
+
 .subcategoria-chevron {
     position: absolute;
     right: 15px;
@@ -356,6 +425,17 @@
 
 .survey-actions .btn-success[data-action="saveSurvey"]:hover,
 .survey-actions .btn-success[data-action="saveSurvey"]:focus {
+    background-color: #555;
+    border-color: #444;
+}
+
+.survey-actions .btn-success[data-action="completeSurvey"] {
+    background-color: #666;
+    border-color: #555;
+}
+
+.survey-actions .btn-success[data-action="completeSurvey"]:hover,
+.survey-actions .btn-success[data-action="completeSurvey"]:focus {
     background-color: #555;
     border-color: #444;
 }
@@ -429,7 +509,6 @@
     margin: 5px 0 10px 0;
 }
 
-/* Estilos para el tooltip */
 .tooltip-inner {
     max-width: 350px;
     text-align: left;
@@ -455,7 +534,6 @@
     border-right-color: #333;
 }
 
-/* Estilos para el modal de información */
 #infoModal .modal-dialog {
     margin: 50px auto !important;
 }
@@ -553,7 +631,6 @@
     border-top: 1px solid #dee2e6;
 }
 
-/* Scrollbar personalizado para el modal */
 #infoModal .modal-body::-webkit-scrollbar {
     width: 8px;
 }
@@ -570,5 +647,145 @@
 
 #infoModal .modal-body::-webkit-scrollbar-thumb:hover {
     background: #555;
+}
+
+/* Media queries para responsive */
+@media (max-width: 768px) {
+    /* Mostrar leyenda solo en móviles */
+    .mobile-legend-container {
+        display: block;
+    }
+
+    /* Convertir badges de texto en puntos en móviles */
+    .estado-completitud {
+        width: 12px;
+        height: 12px;
+        padding: 0;
+        border-radius: 50%;
+        font-size: 0;
+        margin-left: 10px;
+        right: 35px;
+    }
+
+    .estado-completitud.completo {
+        background-color: #4CAF50;
+    }
+
+    .estado-completitud.incompleto {
+        background-color: #FFC107;
+    }
+
+    /* Ajustar títulos para que no choquen con los puntos */
+    .categoria-title,
+    .subcategoria-title {
+        max-width: calc(100% - 65px);
+        padding-right: 5px;
+    }
+
+    .categoria-header {
+        font-size: 1em;
+        padding: 12px 10px;
+    }
+
+    .subcategoria-header {
+        font-size: 0.95em;
+        padding: 10px;
+    }
+
+    .categoria-chevron {
+        right: 15px;
+        font-size: 0.9em;
+    }
+
+    .subcategoria-chevron {
+        right: 12px;
+        font-size: 0.75em;
+    }
+
+    .survey-info h3 {
+        font-size: 1.2em;
+    }
+
+    .survey-title h3 {
+        font-size: 1.3em;
+        padding: 10px;
+    }
+
+    .survey-actions {
+        margin-top: 20px;
+    }
+
+    .action-buttons-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn-action {
+        width: 100%;
+        min-width: auto;
+    }
+
+    .btn-block-mobile {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .text-right-desktop {
+        text-align: left !important;
+    }
+
+    .survey-actions .btn-success[data-action="completeSurvey"] {
+        margin-left: 0 !important;
+    }
+
+    /* Ajustar tabla para móviles */
+    .subcategoria-content table thead th {
+        font-size: 12px;
+        padding: 8px 4px;
+    }
+
+    .subcategoria-content table tbody td {
+        padding: 8px 4px;
+    }
+
+    .pregunta-row h4 {
+        font-size: 14px;
+    }
+
+    .color-option {
+        width: 22px;
+        height: 22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .categoria-header {
+        font-size: 0.9em;
+        padding: 10px 8px;
+    }
+
+    .subcategoria-header {
+        font-size: 0.85em;
+        padding: 8px;
+    }
+
+    .survey-info h3 {
+        font-size: 1em;
+    }
+
+    .pregunta-row h4 {
+        font-size: 13px;
+    }
+
+    .subcategoria-content table thead th {
+        font-size: 11px;
+        padding: 6px 2px;
+    }
+
+    .color-option {
+        width: 20px;
+        height: 20px;
+    }
 }
 </style>

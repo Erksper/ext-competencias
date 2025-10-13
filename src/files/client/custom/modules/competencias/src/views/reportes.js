@@ -125,15 +125,19 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                     return;
                 }
 
-                // Buscar el período activo (que incluya la fecha actual)
-                const hoy = new Date().toISOString().split('T')[0];
-                let periodoActivo = this.periodos.find(p => hoy >= p.fechaInicio && hoy <= p.fechaCierre);
-                
-                // Si no hay período activo, usar el último período (primero en la lista ordenada)
-                const periodoAUsar = periodoActivo || this.periodos[0];
-
-                this.periodoSeleccionadoId = periodoAUsar.id;
-                this.actualizarPeriodoSeleccionado();
+                // Para asesores: usar el último período (más reciente)
+                // Para otros roles: buscar período activo o usar el más reciente
+                if (this.esAsesor && !this.esCasaNacional && !this.esGerenteODirector) {
+                    const periodoAUsar = this.periodos[0];
+                    this.periodoSeleccionadoId = periodoAUsar.id;
+                    this.actualizarPeriodoSeleccionado();
+                } else {
+                    const hoy = new Date().toISOString().split('T')[0];
+                    let periodoActivo = this.periodos.find(p => hoy >= p.fechaInicio && hoy <= p.fechaCierre);
+                    const periodoAUsar = periodoActivo || this.periodos[0];
+                    this.periodoSeleccionadoId = periodoAUsar.id;
+                    this.actualizarPeriodoSeleccionado();
+                }
 
             }).catch(() => {
                 Espo.Ui.error('Error al cargar datos iniciales. Revise la consola del navegador para más detalles.');
@@ -147,7 +151,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
             const fechaInicio = periodo.fechaInicio;
             const fechaCierre = periodo.fechaCierre;
-            const hoy = new Date().toISOString().split('T')[0];
 
             this.periodoMostrado = `${this.getDateTime().toDisplayDate(fechaInicio)} al ${this.getDateTime().toDisplayDate(fechaCierre)}`;
             this.fechaInicioPeriodo = fechaInicio;
@@ -228,7 +231,7 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                     } 
                 });
                 
-                // Función para cargar todas las oficinas con paginación
+                // Cargar todas las oficinas con paginación
                 const fetchOficinas = () => {
                     return new Promise((resolve, reject) => {
                         const maxSize = 200;
@@ -236,20 +239,17 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                         
                         const fetchPage = (offset) => {
                             this.getCollectionFactory().create('Team', (collection) => {
-                                collection.fetch({
-                                    data: {
-                                        maxSize: maxSize,
-                                        offset: offset
-                                    }
-                                }).then(() => {
-                                    allTeams = allTeams.concat(collection.models);
+                                collection.maxSize = maxSize;
+                                collection.offset = offset;
+                                
+                                collection.fetch().then(() => {
+                                    const models = collection.models || [];
+                                    allTeams = allTeams.concat(models);
                                     
-                                    // Si recibimos menos de maxSize, ya no hay más páginas
-                                    if (collection.models.length < maxSize) {
-                                        resolve(allTeams);
-                                    } else {
-                                        // Continuar con la siguiente página
+                                    if (models.length === maxSize && allTeams.length < collection.total) {
                                         fetchPage(offset + maxSize);
+                                    } else {
+                                        resolve(allTeams);
                                     }
                                 }).catch(reject);
                             });
@@ -259,7 +259,7 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                     });
                 };
                 
-                promesas.push(fetchCompletas, fetchRevision, fetchIncompletas, fetchOficinas());
+                promesas.push(fetchCompletas, fetchRevision, fetchIncompletas, fetchOficinas.call(this));
             }
 
             const whereOficina = { type: 'equals', attribute: 'equipoId', value: this.idOficinaUsuario };
@@ -388,7 +388,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
         afterRender: function () {
             if (this.esCasaNacional) {
-                // Inicializar select de oficinas SOLO si no existe
                 if (this.oficinas.length > 0) {
                     const $selectOficina = this.$el.find('select[name="oficina"]');
                     if (!$selectOficina[0].selectize) {
@@ -401,19 +400,29 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                     this.$el.find('.report-item-container[data-report-type="oficinaAsesores"]').hide();
                 }
                 
-                // Inicializar select de períodos SOLO si no existe
                 const $selectPeriodo = this.$el.find('select[name="periodo"]');
                 
                 if (!$selectPeriodo[0].selectize) {
-                    // Inicializar selectize solo si no existe
                     $selectPeriodo.selectize({
                         placeholder: 'Seleccione un período',
                         allowClear: false
                     });
                     
-                    // Establecer el valor seleccionado SOLO en la primera inicialización
                     if (this.periodoSeleccionadoId) {
-                        $selectPeriodo[0].selectize.setValue(this.periodoSeleccionadoId, true); // true = silent (no trigger events)
+                        $selectPeriodo[0].selectize.setValue(this.periodoSeleccionadoId, true);
+                    }
+                }
+            } else if (this.esGerenteODirector) {
+                const $selectPeriodo = this.$el.find('select[name="periodo"]');
+                
+                if ($selectPeriodo.length && !$selectPeriodo[0].selectize) {
+                    $selectPeriodo.selectize({
+                        placeholder: 'Seleccione un período',
+                        allowClear: false
+                    });
+                    
+                    if (this.periodoSeleccionadoId) {
+                        $selectPeriodo[0].selectize.setValue(this.periodoSeleccionadoId, true);
                     }
                 }
             }
@@ -484,25 +493,12 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 return;
             }
             const periodoId = this.periodoSeleccionadoId || this.periodos[0].id;
-            
-            console.log('📤 NAVEGANDO_A_REPORTE:', {
-                tipo: tipo,
-                oficinaId: oficinaId,
-                periodoId: periodoId
-            });
-            
             const params = `tipo=${tipo}&oficinaId=${oficinaId}&periodoId=${periodoId}`;
             this.getRouter().navigate(`#Competencias/reporteBase?${params}`, {trigger: true});
         },
 
         verReporteGeneral: function (tipo) {
             const periodoId = this.periodoSeleccionadoId || this.periodos[0].id;
-            
-            console.log('📤 NAVEGANDO_A_REPORTE:', {
-                tipo: tipo,
-                periodoId: periodoId
-            });
-            
             let params = `tipo=${tipo}&periodoId=${periodoId}`;
             this.getRouter().navigate(`#Competencias/reporteBase?${params}`, {trigger: true});
         },
@@ -517,6 +513,8 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 },
                 tieneReportes: this.reportesDisponibles.some(r => r.disponible || (this.esCasaNacional && r.esDinamico)),
                 esCasaNacional: this.esCasaNacional,
+                esGerenteODirector: this.esGerenteODirector,
+                esAsesor: this.esAsesor,
                 noHayPeriodos: this.noHayPeriodos,
                 periodos: this.periodos,
                 oficinas: this.oficinas,

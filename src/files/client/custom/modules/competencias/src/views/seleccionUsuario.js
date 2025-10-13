@@ -88,27 +88,27 @@ define(['view'], function (View) {
         cargarUsuariosConEstado: function (fechaInicio, fechaCierre) {
             this.wait(true);
             
-            const getRoleIds = new Promise((resolve, reject) => {
-                this.getCollectionFactory().create('Role', (roleCollection) => {
-                    roleCollection.fetch({
-                        data: {
-                            where: [{
-                                type: 'in',
-                                attribute: 'name',
-                                value: ['Gerente', 'Director', 'Asesor']
-                            }]
-                        }
-                    }).then(() => {
-                        const roleIdMap = {};
-                        roleCollection.forEach(role => {
-                            roleIdMap[role.get('name').toLowerCase()] = role.id;
-                        });
-                        resolve(roleIdMap);
-                    }).catch(reject);
+            const getRoleIds = () => {
+                return new Promise((resolve, reject) => {
+                    this.getCollectionFactory().create('Role', (roleCollection) => {
+                        roleCollection.maxSize = 200;
+                        roleCollection.where = [{
+                            type: 'in',
+                            attribute: 'name',
+                            value: ['Gerente', 'Director', 'Asesor']
+                        }];
+                        
+                        roleCollection.fetch().then(() => {
+                            const roleIdMap = {};
+                            roleCollection.forEach(role => {
+                                roleIdMap[role.get('name').toLowerCase()] = role.id;
+                            });
+                            resolve(roleIdMap);
+                        }).catch(reject);
+                    });
                 });
-            });
+            };
 
-            // Función para cargar todos los usuarios del equipo con paginación
             const getAllTeamUsers = () => {
                 return new Promise((resolve, reject) => {
                     const maxSize = 200;
@@ -126,11 +126,9 @@ define(['view'], function (View) {
                             const users = (response.list || []).filter(u => u.isActive);
                             allUsers = allUsers.concat(users);
                             
-                            // Si recibimos menos de maxSize, ya no hay más páginas
                             if (response.list.length < maxSize) {
                                 resolve(allUsers);
                             } else {
-                                // Continuar con la siguiente página
                                 fetchPage(offset + maxSize);
                             }
                         }).catch(reject);
@@ -140,7 +138,7 @@ define(['view'], function (View) {
                 });
             };
 
-            Promise.all([getRoleIds, getAllTeamUsers()]).then(([roleIdMap, teamUsers]) => {
+            Promise.all([getRoleIds.call(this), getAllTeamUsers.call(this)]).then(([roleIdMap, teamUsers]) => {
                 const rolBuscado = this.options.role.toLowerCase();
                 const targetRoleIds = new Set();
 
@@ -174,7 +172,6 @@ define(['view'], function (View) {
                     fechaCierre += ' 23:59:59';
                 }
 
-                // Función para cargar todas las encuestas con paginación
                 const getAllEncuestas = () => {
                     return new Promise((resolve, reject) => {
                         const maxSize = 200;
@@ -182,26 +179,25 @@ define(['view'], function (View) {
                         
                         const fetchEncuestasPage = (offset) => {
                             this.getCollectionFactory().create('Encuesta', (encuestaCollection) => {
-                                encuestaCollection.fetch({
-                                    data: {
-                                        where: [
-                                            { type: 'in', attribute: 'usuarioEvaluadoId', value: finalUserIds },
-                                            { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: fechaInicio },
-                                            { type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: fechaCierre }
-                                        ],
-                                        select: 'id,usuarioEvaluadoId,estado',
-                                        maxSize: maxSize,
-                                        offset: offset,
-                                        orderBy: 'fechaCreacion',
-                                        order: 'desc'
-                                    }
-                                }).then(() => {
-                                    allEncuestas = allEncuestas.concat(encuestaCollection.models);
+                                encuestaCollection.maxSize = maxSize;
+                                encuestaCollection.offset = offset;
+                                encuestaCollection.data = {
+                                    select: 'id,usuarioEvaluadoId,estado'
+                                };
+                                encuestaCollection.where = [
+                                    { type: 'in', attribute: 'usuarioEvaluadoId', value: finalUserIds },
+                                    { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: fechaInicio },
+                                    { type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: fechaCierre }
+                                ];
+                                
+                                encuestaCollection.fetch().then(() => {
+                                    const models = encuestaCollection.models || [];
+                                    allEncuestas = allEncuestas.concat(models);
                                     
-                                    if (encuestaCollection.models.length < maxSize) {
-                                        resolve(allEncuestas);
-                                    } else {
+                                    if (models.length === maxSize && allEncuestas.length < encuestaCollection.total) {
                                         fetchEncuestasPage(offset + maxSize);
+                                    } else {
+                                        resolve(allEncuestas);
                                     }
                                 }).catch(reject);
                             });
@@ -211,7 +207,7 @@ define(['view'], function (View) {
                     });
                 };
 
-                getAllEncuestas().then((todasLasEncuestas) => {
+                getAllEncuestas.call(this).then((todasLasEncuestas) => {
                     const ultimasEncuestas = {};
                     todasLasEncuestas.forEach((encuesta) => {
                         const userId = encuesta.get('usuarioEvaluadoId');
@@ -227,7 +223,7 @@ define(['view'], function (View) {
                         })
                         .map(user => {
                             const encuesta = ultimasEncuestas[user.id];
-                            let color = '#f8d7da'; // Rojo pastel (no evaluado)
+                            let color = '#f8d7da';
                             
                             if (encuesta) {
                                 const estado = encuesta.get('estado');

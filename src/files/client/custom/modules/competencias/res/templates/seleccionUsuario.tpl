@@ -49,13 +49,15 @@
                             </div>
                         </div>
 
-                        {{#each usuarios}}
-                        <div class="user-item" style="margin-bottom: 10px;">
-                            <button class="btn btn-default btn-block text-left" data-action="selectUser" data-user-id="{{id}}" data-user-name="{{name}}" style="background-color: {{color}}; border-color: #ccc;">
-                                <i class="fas fa-user"></i> {{name}}
-                            </button>
+                        <div class="users-list-container">
+                            {{#each usuarios}}
+                            <div class="user-item" style="margin-bottom: 10px;">
+                                <button class="btn btn-default btn-block text-left" data-action="selectUser" data-user-id="{{id}}" data-user-name="{{name}}" style="background-color: {{color}}; border-color: #ccc;">
+                                    <i class="fas fa-user"></i> {{name}}
+                                </button>
+                            </div>
+                            {{/each}}
                         </div>
-                        {{/each}}
                     {{else}}
                         <div class="text-center" style="padding: 20px;">
                             <p class="text-muted">No hay usuarios disponibles para evaluar en esta oficina y rol.</p>
@@ -99,5 +101,24 @@
     border-radius: 3px;
     margin-right: 10px;
     flex-shrink: 0;
+}
+.users-list-container {
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+.users-list-container::-webkit-scrollbar {
+    width: 8px;
+}
+.users-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+.users-list-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+.users-list-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 </style>

@@ -56,15 +56,17 @@
                             {{/if}}
                         {{/if}}
 
-                        {{#each equipos}}
-                        <div class="team-item" style="margin-bottom: 10px;">
-                            <button class="btn btn-default btn-block text-left" data-action="selectTeam" data-team-id="{{id}}" data-team-name="{{name}}" style="background-color: {{color}}; border-color: #ccc;">
-                                <i class="fas fa-building"></i> {{name}}
-                            </button>
+                        <div class="teams-list-container">
+                            {{#each equipos}}
+                            <div class="team-item" style="margin-bottom: 10px;">
+                                <button class="btn btn-default btn-block text-left" data-action="selectTeam" data-team-id="{{id}}" data-team-name="{{name}}" style="background-color: {{color}}; border-color: #ccc;">
+                                    <i class="fas fa-building"></i> {{name}}
+                                </button>
+                            </div>
+                            {{else}}
+                                <p class="text-center text-muted">No hay oficinas disponibles para seleccionar.</p>
+                            {{/each}}
                         </div>
-                        {{else}}
-                            <p class="text-center text-muted">No hay oficinas disponibles para seleccionar.</p>
-                        {{/each}}
                         
                         <hr>
                         <button class="btn btn-link" data-action="back">
@@ -103,5 +105,24 @@
     border-radius: 3px;
     margin-right: 10px;
     flex-shrink: 0;
+}
+.teams-list-container {
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+.teams-list-container::-webkit-scrollbar {
+    width: 8px;
+}
+.teams-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+.teams-list-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+.teams-list-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 </style>
