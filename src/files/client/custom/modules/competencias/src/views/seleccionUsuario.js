@@ -118,7 +118,6 @@ define(['view'], function (View) {
             };
 
             getAllTeamUsers.call(this).then((teamUsers) => {
-                console.log('Usuarios del equipo cargados:', teamUsers.length);
                 const rolBuscado = this.options.role.toLowerCase();
                 
                 // Filtrar usuarios por nombre de rol en lugar de ID
