@@ -87,27 +87,6 @@ define(['view'], function (View) {
 
         cargarUsuariosConEstado: function (fechaInicio, fechaCierre) {
             this.wait(true);
-            
-            const getRoleIds = () => {
-                return new Promise((resolve, reject) => {
-                    this.getCollectionFactory().create('Role', (roleCollection) => {
-                        roleCollection.maxSize = 200;
-                        roleCollection.where = [{
-                            type: 'in',
-                            attribute: 'name',
-                            value: ['Gerente', 'Director', 'Asesor']
-                        }];
-                        
-                        roleCollection.fetch().then(() => {
-                            const roleIdMap = {};
-                            roleCollection.forEach(role => {
-                                roleIdMap[role.get('name').toLowerCase()] = role.id;
-                            });
-                            resolve(roleIdMap);
-                        }).catch(reject);
-                    });
-                });
-            };
 
             const getAllTeamUsers = () => {
                 return new Promise((resolve, reject) => {
@@ -118,7 +97,7 @@ define(['view'], function (View) {
                         $.ajax({
                             url: `api/v1/Team/${this.options.teamId}/users`,
                             data: {
-                                select: 'id,name,rolesIds,isActive',
+                                select: 'id,name,rolesNames,isActive',
                                 maxSize: maxSize,
                                 offset: offset
                             }
@@ -138,26 +117,22 @@ define(['view'], function (View) {
                 });
             };
 
-            Promise.all([getRoleIds.call(this), getAllTeamUsers.call(this)]).then(([roleIdMap, teamUsers]) => {
+            getAllTeamUsers.call(this).then((teamUsers) => {
+                console.log('Usuarios del equipo cargados:', teamUsers.length);
                 const rolBuscado = this.options.role.toLowerCase();
-                const targetRoleIds = new Set();
-
-                if (rolBuscado === 'gerente') {
-                    if (roleIdMap['gerente']) targetRoleIds.add(roleIdMap['gerente']);
-                    if (roleIdMap['director']) targetRoleIds.add(roleIdMap['director']);
-                } else if (rolBuscado === 'asesor') {
-                    if (roleIdMap['asesor']) targetRoleIds.add(roleIdMap['asesor']);
-                }
-
-                if (targetRoleIds.size === 0) {
-                    this.usuarios = [];
-                    this.wait(false);
-                    return;
-                }
-
+                
+                // Filtrar usuarios por nombre de rol en lugar de ID
                 const usuariosPorRol = teamUsers.filter(user => {
-                    const userRoleIds = user.rolesIds || [];
-                    return userRoleIds.some(roleId => targetRoleIds.has(roleId));
+                    const rolesNames = user.rolesNames || {};
+                    const userRoleNamesLower = Object.values(rolesNames).map(r => r.toLowerCase());
+                    
+                    if (rolBuscado === 'gerente') {
+                        return userRoleNamesLower.includes('gerente') || userRoleNamesLower.includes('director');
+                    } else if (rolBuscado === 'asesor') {
+                        return userRoleNamesLower.includes('asesor');
+                    }
+                    
+                    return false;
                 });
 
                 if (usuariosPorRol.length === 0) {
