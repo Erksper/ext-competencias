@@ -110,17 +110,23 @@
             <div class="panel-body">
                 <p><strong>Acciones peligrosas. Usar con extrema precaución.</strong></p>
                 <div class="row">
-                    <div class="col-sm-6" style="margin-bottom: 10px;">
+                    <div class="col-sm-4" style="margin-bottom: 10px;">
                         <button class="btn btn-warning btn-block" data-action="cambiarPeriodos">
                             <i class="fas fa-calendar-minus"></i> Restar 1 Semana a Períodos
                         </button>
                         <small class="text-muted">Resta 7 días a las fechas de inicio y cierre de todos los períodos de evaluación guardados.</small>
                     </div>
-                    <div class="col-sm-6" style="margin-bottom: 10px;">
+                    <div class="col-sm-4" style="margin-bottom: 10px;">
                         <button class="btn btn-danger btn-block" data-action="borrarPreguntas">
                             <i class="fas fa-trash-alt"></i> Borrar TODAS las Preguntas
                         </button>
                         <small class="text-muted">Elimina permanentemente todas las preguntas del sistema. No se puede deshacer.</small>
+                    </div>
+                    <div class="col-sm-4" style="margin-bottom: 10px;">
+                        <button class="btn btn-danger btn-block" data-action="borrarTodaLaData">
+                            <i class="fas fa-bomb"></i> Borrar TODA la Data
+                        </button>
+                        <small class="text-muted">Elimina TODA la data del módulo (Preguntas, Respuestas, Encuestas, Períodos). IRREVERSIBLE.</small>
                     </div>
                 </div>
             </div>

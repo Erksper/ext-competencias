@@ -31,6 +31,9 @@ define(['view'], function (View) {
             'click [data-action="cambiarPeriodos"]': function () {
                 this.cambiarPeriodos();
             },
+            'click [data-action="borrarTodaLaData"]': function () {
+                this.borrarTodaLaData();
+            },
             'change #fecha-cierre-input': function (e) {
                 this.handleFechaCierreChange(e);
             }
@@ -321,6 +324,79 @@ define(['view'], function (View) {
                     });
                 });
             });
+        },
+
+        borrarTodaLaData: function () {
+            if (!confirm('🚨 ¡ADVERTENCIA MÁXIMA! 🚨\n\nEstás a punto de borrar TODA LA DATA del módulo de competencias (Respuestas, Encuestas, Preguntas y Períodos).\n\nEsta acción es IRREVERSIBLE.')) {
+                return;
+            }
+            if (!confirm('CONFIRMACIÓN FINAL: ¿Estás absolutamente seguro de que quieres proceder? No habrá vuelta atrás.')) {
+                return;
+            }
+
+            this.wait(true);
+            Espo.Ui.notify('Iniciando borrado completo de datos del módulo...', 'warning');
+
+            const entidades = ['RespuestaEncuesta', 'Encuesta', 'Pregunta', 'Competencias'];
+            let indiceEntidadActual = 0;
+
+            const onProgress = (entityName, count) => {
+                Espo.Ui.notify(`Borrados ${count} registros de ${entityName}...`, 'info');
+            };
+
+            const procesarSiguienteEntidad = () => {
+                if (indiceEntidadActual >= entidades.length) {
+                    this.wait(false);
+                    Espo.Ui.success('¡Borrado completado! Todos los datos del módulo han sido eliminados. La página se recargará.');
+                    setTimeout(() => window.location.reload(), 3000);
+                    return;
+                }
+
+                const entidadActual = entidades[indiceEntidadActual];
+                Espo.Ui.notify(`Borrando registros de ${entidadActual}...`, 'info');
+
+                this._borrarEntidadEnLotes(entidadActual, onProgress, (totalBorrados) => {
+                    Espo.Ui.notify(`Se borraron ${totalBorrados} registros de ${entidadActual}.`, 'info');
+                    indiceEntidadActual++;
+                    setTimeout(procesarSiguienteEntidad, 200);
+                });
+            };
+
+            procesarSiguienteEntidad();
+        },
+
+        _borrarEntidadEnLotes: function (entityName, onProgress, onComplete) {
+            let totalBorradas = 0;
+            const batchSize = 200;
+
+            const borrarLote = () => {
+                this.getCollectionFactory().create(entityName, (collection) => {
+                    collection.fetch({ data: { maxSize: batchSize } }).then(() => {
+                        if (collection.models.length === 0) {
+                            onComplete(totalBorradas);
+                            return;
+                        }
+
+                        const promises = collection.models.map(model => model.destroy());
+
+                        Promise.all(promises).then(() => {
+                            totalBorradas += promises.length;
+                            onProgress(entityName, totalBorradas);
+                            setTimeout(borrarLote, 100);
+                        }).catch((e) => {
+                            Espo.Ui.error(`Ocurrió un error al borrar un lote de '${entityName}'. El proceso se ha detenido.`);
+                            this.wait(false);
+                        });
+                    }).catch((e) => {
+                        Espo.Ui.error(`Error al obtener la lista de '${entityName}' para borrar.`);
+                        this.wait(false);
+                    });
+                }, (error) => {
+                    onComplete(totalBorradas);
+                });
+            };
+
+            borrarLote();
         },
 
         crearPreguntasDirectamente: function () {
@@ -665,22 +741,22 @@ define(['view'], function (View) {
                 { texto: 'Manejo de las leyes inmobiliarias básicas para atender un cliente', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliaria', rolObjetivo: ['asesor'], info: '', orden: 6 },
                 { texto: 'Conocimientos básicos para la realización de un AMC', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliaria', rolObjetivo: ['asesor'], info: '', orden: 7 },
                 { texto: 'Conocimiento del manual interno de operaciones de la oficina', categoria: 'Competencias Técnicas', subCategoria: 'Conocimiento importante para la actividad inmobiliaria', rolObjetivo: ['asesor'], info: '', orden: 8 },
-                { texto: 'Agenda', categoria: 'Competencias Técnicas', subCategoria: 'Planificación', rolObjetivo: ['asesor'], info: '', orden: 9 },
-                { texto: 'Planificación semanal', categoria: 'Competencias Técnicas', subCategoria: 'Planificación', rolObjetivo: ['asesor'], info: '', orden: 10 },
-                { texto: 'Primer contacto', categoria: 'Competencias Técnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], info: '', orden: 11 },
-                { texto: 'Primera reunión', categoria: 'Competencias Técnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], info: '', orden: 12 },
-                { texto: 'Presentación de la propiedad', categoria: 'Competencias Técnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], info: '', orden: 13 },
-                { texto: 'Manejo de estructura comunicacional para las  objeciones', categoria: 'Competencias Técnicas', subCategoria: 'Negociación', rolObjetivo: ['asesor'], info: '', orden: 14 },
-                { texto: 'Manejo del sistema tecnológico de la oficina (21 Online)', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['asesor'], info: '', orden: 15 },
-                { texto: 'Fotografía', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['asesor'], info: '', orden: 16 },
-                { texto: 'Herramientas de Office', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['asesor'], info: '', orden: 17 },
-                { texto: 'Atención al cliente: Satisfacción de clientes mayor a 90%', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['asesor'], info: '', orden: 18 },
-                { texto: 'Tiene activo digital disponible en Meta', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: '', orden: 19 },
-                { texto: 'Utiliza lenguaje cliente en sus publicaciones', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: '', orden: 20 },
-                { texto: 'Sabe cómo utilizar las herramientas tecnológicas para crear post - videos', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: '', orden: 21 },
-                { texto: 'Sabe cómo segmentar en Meta con base de datos y con video', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: '', orden: 22 },
-                { texto: 'Sabe cómo automatizar su mercadeo en Meta', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: '', orden: 23 },
-                { texto: 'Sabe hacer publicidad en Google', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: '', orden: 24 },
+                { texto: 'Agenda', categoria: 'Competencias Técnicas', subCategoria: 'Planificación', rolObjetivo: ['asesor'], info: 'Es la herramienta táctica donde decides cuándo vas a hacer lo planificado.', orden: 9 },
+                { texto: 'Planificación semanal', categoria: 'Competencias Técnicas', subCategoria: 'Planificación', rolObjetivo: ['asesor'], info: 'Es el proceso estratégico de decidir qué necesitas lograr.', orden: 10 },
+                { texto: 'Primer contacto', categoria: 'Competencias Técnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], info: 'Si maneja un buen contacto inicial, el asesor hace muchas presentaciones de servicio.', orden: 11 },
+                { texto: 'Primera reunión', categoria: 'Competencias Técnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], info: 'Si el asesor hace muchas presentaciones de servicio, tiene buena cantidad de exclusivas puras.', orden: 12 },
+                { texto: 'Presentación de la propiedad', categoria: 'Competencias Técnicas', subCategoria: 'Comunicación de ventas', rolObjetivo: ['asesor'], info: 'Si el asesor sabe cómo presentar una propiedad, tiene buena cantidad de cierres.', orden: 13 },
+                { texto: 'Manejo de estructura comunicacional para las  objeciones', categoria: 'Competencias Técnicas', subCategoria: 'Negociación', rolObjetivo: ['asesor'], info: 'Si el asesor maneja bien las objeciones, tiene buena cantidad de exclusivas.', orden: 14 },
+                { texto: 'Manejo del sistema tecnológico de la oficina (21 Online)', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['asesor'], info: 'Registra sus contactos y maneja el CRM.', orden: 15 },
+                { texto: 'Fotografía', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['asesor'], info: 'Calidad de fotografía que se aprecia en la publicación de  las propiedades.', orden: 16 },
+                { texto: 'Herramientas de Office', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['asesor'], info: 'Word , Excel y Power Point.', orden: 17 },
+                { texto: 'Atención al cliente', categoria: 'Competencias Técnicas', subCategoria: 'Aspectos Técnicos Generales', rolObjetivo: ['asesor'], info: 'Satisfacción de clientes mayor a 80%.', orden: 18 },
+                { texto: 'Tiene activo digital disponible en Meta', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: 'El Bussines Manager de Meta operativo.', orden: 19 },
+                { texto: 'Utiliza lenguaje cliente en sus publicaciones', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: 'Copy persuasivos.', orden: 20 },
+                { texto: 'Sabe cómo utilizar las herramientas tecnológicas para crear post - videos', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: 'Cap Cut y Canvas.', orden: 21 },
+                { texto: 'Sabe cómo segmentar en Meta con base de datos y con video', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: 'Esto aplica publicidades paga.', orden: 22 },
+                { texto: 'Sabe cómo automatizar su mercadeo en Meta', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: 'Utiliza Many Chat.', orden: 23 },
+                { texto: 'Sabe hacer publicidad en Google', categoria: 'Competencias Técnicas', subCategoria: 'Marketing', rolObjetivo: ['asesor'], info: 'Sabe como hace Google ADS.', orden: 24 },
                 { texto: 'Orientación a la mejora continua personal', categoria: 'Competencias Funcionales', subCategoria: 'Competencias Funcionales', rolObjetivo: ['asesor'], info: 'La mejora continua requiere que hagamos parte de nosotros el proceso PHVA. Planear investigar, determinar las necesidades, diagnosticar, revisar las prácticas actuales, puntos de referencia (benchmarking) resumir y comparar las mejores prácticas.  Hacer es ejecutar la tarea, educar y entrenar, instruir e implementar, definir responsabilidades, por qué, qué y cómo; reconocimiento: reconocer el aporte de otras personas. Verificar los resultados de la tarea ejecutada, evaluar y validar. Actuar correctivamente, corregir y estandarizar, revisar la retroalimentación y hacer correcciones, estandarizarlas.', orden: 25 },
                 { texto: 'Autoconfianza', categoria: 'Competencias Funcionales', subCategoria: 'Competencias Funcionales', rolObjetivo: ['asesor'], info: 'Es el convencimiento íntimo de que uno es capaz de realizar con éxito una determinada tarea o misión, o bien elegir la mejor alternativa cuando se presenta un problema, es decir tomar la mejor decisión. Es confiar en que, en general, uno va a salir airoso de una situación, por difícil que parezca.', orden: 26 },
                 { texto: 'Sentido del negocio', categoria: 'Competencias Funcionales', subCategoria: 'Competencias Funcionales', rolObjetivo: ['asesor'], info: 'Foco en lo esencial sin descuidar lo accesorio, Visión Global, pensamiento conceptual, Enfoque, Observador, Pasión, Compromiso, Constancia.', orden: 27 },

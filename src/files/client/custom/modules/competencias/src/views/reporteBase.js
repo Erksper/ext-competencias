@@ -393,10 +393,13 @@ define(['view'], function (View) {
 
                 this.procesarPreguntas(preguntas);
 
-                const todasLasOficinas = allTeamsModels.map(team => ({
-                    id: team.id,
-                    name: team.get('name')
-                }));
+                const claPattern = /^CLA\d+$/i;
+                const todasLasOficinas = allTeamsModels
+                    .filter(team => !claPattern.test(team.id))
+                    .map(team => ({
+                        id: team.id,
+                        name: team.get('name')
+                    }));
 
                 if (encuestas.length === 0) {
                     this.oficinas = [];

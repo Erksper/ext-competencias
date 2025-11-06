@@ -348,10 +348,13 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                         encuestasIncompletas: encuestasIncompletas
                     };
 
-                    this.oficinas = (allTeamsModels || []).map(team => ({
-                        id: team.id,
-                        name: team.get('name')
-                    }));
+                    const claPattern = /^CLA\d+$/i;
+                    this.oficinas = (allTeamsModels || [])
+                        .filter(team => !claPattern.test(team.id))
+                        .map(team => ({
+                            id: team.id,
+                            name: team.get('name')
+                        }));
                     this.oficinas.sort((a, b) => a.name.localeCompare(b.name));
                 } else if (this.esGerenteODirector) {
                     this.sinReporteGerente = encuestasGerenteOficina === 0;

@@ -45,7 +45,10 @@ define(['view'], function (View) {
                         var teamNames = userModel.get('teamsNames') || {};
 
                         if (teamIds.length > 0) {
-                            this.equipos = teamIds.map(function(id) {
+                            const claPattern = /^CLA\d+$/i;
+                            const filteredTeamIds = teamIds.filter(id => !claPattern.test(id));
+
+                            this.equipos = filteredTeamIds.map(function(id) {
                                 return {
                                     id: id,
                                     name: teamNames[id]
@@ -189,15 +192,19 @@ define(['view'], function (View) {
                     }
                 });
                 
-                this.equipos = allTeams.map(team => {
-                    const tieneRevision = equiposConRevision.has(team.id);
-                    return {
-                        id: team.id,
-                        name: team.get('name'),
-                        color: tieneRevision ? '#d4edda' : 'transparent',
-                        sortOrder: tieneRevision ? 1 : 2
-                    };
-                });
+                const claPattern = /^CLA\d+$/i;
+
+                this.equipos = allTeams
+                    .filter(team => !claPattern.test(team.id))
+                    .map(team => {
+                        const tieneRevision = equiposConRevision.has(team.id);
+                        return {
+                            id: team.id,
+                            name: team.get('name'),
+                            color: tieneRevision ? '#d4edda' : 'transparent',
+                            sortOrder: tieneRevision ? 1 : 2
+                        };
+                    });
 
                 this.equipos.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 
