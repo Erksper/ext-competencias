@@ -48,12 +48,12 @@ define(['view'], function (View) {
                             const claPattern = /^CLA\d+$/i;
                             const filteredTeamIds = teamIds.filter(id => !claPattern.test(id));
 
-                            this.equipos = filteredTeamIds.map(function(id) {
+                            this.equipos = filteredTeamIds.map(function (id) {
                                 return {
                                     id: id,
                                     name: teamNames[id]
                                 };
-                            });
+                            }).filter(team => team.name && team.name.toLowerCase() !== 'venezuela');
                             this.wait(false);
                         } else {
                             this.sinOficinaAsignada = true;
@@ -195,7 +195,10 @@ define(['view'], function (View) {
                 const claPattern = /^CLA\d+$/i;
 
                 this.equipos = allTeams
-                    .filter(team => !claPattern.test(team.id))
+                    .filter(team => {
+                        const teamName = team.get('name') || '';
+                        return !claPattern.test(team.id) && teamName.toLowerCase() !== 'venezuela';
+                    })
                     .map(team => {
                         const tieneRevision = equiposConRevision.has(team.id);
                         return {

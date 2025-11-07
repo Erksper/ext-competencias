@@ -350,7 +350,10 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
                     const claPattern = /^CLA\d+$/i;
                     this.oficinas = (allTeamsModels || [])
-                        .filter(team => !claPattern.test(team.id))
+                        .filter(team => {
+                            const teamName = team.get('name') || '';
+                            return !claPattern.test(team.id) && teamName.toLowerCase() !== 'venezuela';
+                        })
                         .map(team => ({
                             id: team.id,
                             name: team.get('name')

@@ -395,7 +395,10 @@ define(['view'], function (View) {
 
                 const claPattern = /^CLA\d+$/i;
                 const todasLasOficinas = allTeamsModels
-                    .filter(team => !claPattern.test(team.id))
+                    .filter(team => {
+                        const teamName = team.get('name') || '';
+                        return !claPattern.test(team.id) && teamName.toLowerCase() !== 'venezuela';
+                    })
                     .map(team => ({
                         id: team.id,
                         name: team.get('name')
