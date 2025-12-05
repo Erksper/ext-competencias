@@ -545,7 +545,8 @@ define(['view'], function (View) {
             const totalPreguntasDisponibles = this.totalPreguntasDisponibles || 0;
             const estaCompleta = (totalPreguntasDisponibles > 0) && (preguntasRespondidasCount === totalPreguntasDisponibles);
 
-            if (completar && !estaCompleta) {
+            // Modificación: Casa Nacional puede finalizar sin completar todas las preguntas
+            if (completar && !estaCompleta && !this.esCasaNacional) {
                 Espo.Ui.warning('Debe responder todas las preguntas para completar la evaluación.');
                 return;
             }
@@ -576,6 +577,9 @@ define(['view'], function (View) {
                     if (estadoActual !== 'completada') {
                         if (completar && estaCompleta) {
                             estadoEncuesta = this.esCasaNacional ? 'completada' : 'revision';
+                        } else if (completar && this.esCasaNacional) {
+                            // Casa Nacional puede marcar como completada aunque falten preguntas
+                            estadoEncuesta = 'completada';
                         } else if (estaCompleta && !completar) {
                             estadoEncuesta = 'revision';
                         } else {
