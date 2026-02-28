@@ -1,0 +1,70 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "entity": "User"
+        },
+        "planAccion": {
+            "type": "link",
+            "entity": "GesPlaAccPlanAccion",
+            "required": true
+        },
+        "texto": {
+            "type": "text",
+            "required": true
+        },
+        "fechaCreacion": {
+            "type": "datetime"
+        },
+        "autor": {
+            "type": "link",
+            "entity": "User"
+        },
+        "rolAutor": {
+            "type": "varchar",
+            "maxLength": 100
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "planAccion": {
+            "type": "belongsTo",
+            "entity": "GesPlaAccPlanAccion",
+            "foreign": "chats"
+        },
+        "autor": {
+            "type": "belongsTo",
+            "entity": "User",
+            "foreign": "gesplaaccChatsCreados"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "asc"
+    }
+}

@@ -206,6 +206,10 @@
 </div>
 {{/if}}
 
+{{#unless esReporteGeneralCasaNacional}}
+    <div id="seccion-planes-accion"></div>
+{{/unless}}
+
 <style>
 .report-matrix {
     border-collapse: collapse !important;
