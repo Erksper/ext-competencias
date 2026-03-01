@@ -153,19 +153,23 @@ define([], function () {
             if (!respuestas || respuestas.length === 0) { this.usuariosData = []; return; }
 
             var totalesPorOficina  = {};
-            var totalesGenerales   = { verdes: 0, total: 0 };
+            var totalesGenerales   = { verdes: 0, amarillos: 0, rojos: 0, total: 0 };
             var totalesPorPregunta = {};
 
             this.oficinas.forEach(function(o) {
-                totalesPorOficina[o.id] = { name: o.name, totalesPorPregunta: {}, totalesOficina: { verdes: 0, total: 0 } };
+                totalesPorOficina[o.id] = {
+                    name: o.name,
+                    totalesPorPregunta: {},
+                    totalesOficina: { verdes: 0, amarillos: 0, rojos: 0, total: 0 }
+                };
             });
 
             Object.values(this.preguntasAgrupadas).forEach(function(cat) {
                 Object.values(cat).forEach(function(subcat) {
                     subcat.forEach(function(p) {
-                        totalesPorPregunta[p.id] = { verdes: 0, total: 0 };
+                        totalesPorPregunta[p.id] = { verdes: 0, amarillos: 0, rojos: 0, total: 0 };
                         self.oficinas.forEach(function(o) {
-                            totalesPorOficina[o.id].totalesPorPregunta[p.id] = { verdes: 0, total: 0 };
+                            totalesPorOficina[o.id].totalesPorPregunta[p.id] = { verdes: 0, amarillos: 0, rojos: 0, total: 0 };
                         });
                     });
                 });
@@ -174,16 +178,27 @@ define([], function () {
             respuestas.forEach(function(resp) {
                 var oid = resp['encuesta.equipoId'];
                 var pid = resp.preguntaId;
+                var r   = resp.respuesta;
                 if (oid && totalesPorOficina[oid] && totalesPorPregunta[pid]) {
                     totalesPorOficina[oid].totalesPorPregunta[pid].total++;
                     totalesPorOficina[oid].totalesOficina.total++;
                     totalesPorPregunta[pid].total++;
                     totalesGenerales.total++;
-                    if (resp.respuesta === 'verde') {
+                    if (r === 'verde') {
                         totalesPorOficina[oid].totalesPorPregunta[pid].verdes++;
                         totalesPorOficina[oid].totalesOficina.verdes++;
                         totalesPorPregunta[pid].verdes++;
                         totalesGenerales.verdes++;
+                    } else if (r === 'amarillo') {
+                        totalesPorOficina[oid].totalesPorPregunta[pid].amarillos++;
+                        totalesPorOficina[oid].totalesOficina.amarillos++;
+                        totalesPorPregunta[pid].amarillos++;
+                        totalesGenerales.amarillos++;
+                    } else if (r === 'rojo') {
+                        totalesPorOficina[oid].totalesPorPregunta[pid].rojos++;
+                        totalesPorOficina[oid].totalesOficina.rojos++;
+                        totalesPorPregunta[pid].rojos++;
+                        totalesGenerales.rojos++;
                     }
                 }
             });
@@ -193,11 +208,11 @@ define([], function () {
                 Object.keys(od.totalesPorPregunta).forEach(function(pid) {
                     var pd = od.totalesPorPregunta[pid];
                     pd.porcentaje = pd.total > 0 ? (pd.verdes / pd.total) * 100 : 0;
-                    pd.color = self.obtenerColorPorPorcentaje(pd.porcentaje);
+                    pd.color = self.obtenerColorDistribucion(pd.verdes, pd.amarillos, pd.rojos, pd.total);
                 });
                 var otd = od.totalesOficina;
                 otd.porcentaje = otd.total > 0 ? (otd.verdes / otd.total) * 100 : 0;
-                otd.color = self.obtenerColorPorPorcentaje(otd.porcentaje);
+                otd.color = self.obtenerColorDistribucion(otd.verdes, otd.amarillos, otd.rojos, otd.total);
                 o.totalesPorPregunta = od.totalesPorPregunta;
                 o.totalesOficina     = od.totalesOficina;
             });
@@ -205,12 +220,12 @@ define([], function () {
             Object.keys(totalesPorPregunta).forEach(function(pid) {
                 var pd = totalesPorPregunta[pid];
                 pd.porcentaje = pd.total > 0 ? (pd.verdes / pd.total) * 100 : 0;
-                pd.color = self.obtenerColorPorPorcentaje(pd.porcentaje);
+                pd.color = self.obtenerColorDistribucion(pd.verdes, pd.amarillos, pd.rojos, pd.total);
             });
 
             var pg = totalesGenerales.total > 0 ? (totalesGenerales.verdes / totalesGenerales.total) * 100 : 0;
             totalesGenerales.porcentaje = pg;
-            totalesGenerales.color      = self.obtenerColorPorPorcentaje(pg);
+            totalesGenerales.color      = self.obtenerColorDistribucion(totalesGenerales.verdes, totalesGenerales.amarillos, totalesGenerales.rojos, totalesGenerales.total);
 
             this.totalesPorPregunta = totalesPorPregunta;
             this.totalesGenerales   = totalesGenerales;
@@ -336,33 +351,108 @@ define([], function () {
                 });
             });
 
+            // ── Totales por columna (pregunta) ──────────────────────────
             todasLasPreguntas.forEach(function(pid) {
-                var verdes = 0, total = 0;
+                var verdes = 0, amarillos = 0, rojos = 0, total = 0;
                 self.usuariosData.forEach(function(u) {
-                    if (u.respuestas[pid]) {
+                    var r = u.respuestas[pid];
+                    if (r) {
                         total++;
-                        if (u.respuestas[pid] === 'verde') verdes++;
+                        if (r === 'verde')    verdes++;
+                        else if (r === 'amarillo') amarillos++;
+                        else if (r === 'rojo')     rojos++;
                     }
                 });
                 var pct = total > 0 ? (verdes / total) * 100 : 0;
-                totalPorPregunta[pid] = { verdes: verdes, total: total, porcentaje: pct, color: self.obtenerColorPorPorcentaje(pct) };
+                totalPorPregunta[pid] = {
+                    verdes: verdes, amarillos: amarillos, rojos: rojos,
+                    total: total, porcentaje: pct,
+                    color: self.obtenerColorDistribucion(verdes, amarillos, rojos, total)
+                };
             });
 
+            // ── Totales por fila (usuario) ───────────────────────────────
             this.usuariosData.forEach(function(u) {
-                var verdes = 0, total = 0;
+                var verdes = 0, amarillos = 0, rojos = 0, total = 0;
                 todasLasPreguntas.forEach(function(pid) {
-                    if (u.respuestas[pid]) {
+                    var r = u.respuestas[pid];
+                    if (r) {
                         total++;
-                        if (u.respuestas[pid] === 'verde') verdes++;
+                        if (r === 'verde')    verdes++;
+                        else if (r === 'amarillo') amarillos++;
+                        else if (r === 'rojo')     rojos++;
                     }
                 });
                 var pct = total > 0 ? (verdes / total) * 100 : 0;
-                u.totales = { verdes: verdes, total: total, porcentaje: pct, color: self.obtenerColorPorPorcentaje(pct) };
+                u.totales = {
+                    verdes: verdes, amarillos: amarillos, rojos: rojos,
+                    total: total, porcentaje: pct,
+                    color: self.obtenerColorDistribucion(verdes, amarillos, rojos, total)
+                };
             });
 
             this.totalesPorPregunta = totalPorPregunta;
         },
 
+        /**
+         * Fórmula de semáforo basada en distribución de competencias.
+         *
+         * Reglas (de la tabla de referencia):
+         *
+         * VERDE si:
+         *   - 100% verde
+         *   - ≥80% verde + resto amarillo   (ej: 80V+20A)
+         *   - ≥80% verde + resto rojo        (ej: 80V+20R)
+         *
+         * AMARILLO si:
+         *   - 60–79% verde + resto rojo      (ej: 60V+40R, 60V+40R)
+         *   - 60–79% verde + resto rojo+amar (ej: 60V+20R+20A)
+         *   - 40% verde + 40% rojo + 20% amarillo
+         *   - 40% verde + 20% rojo + 40% amarillo
+         *   - 40% verde + 60% amarillo
+         *
+         * ROJO si:
+         *   - 40% verde + 40% rojo + 20% amarillo  (cuando rojo >= amarillo y situación mixta grave)
+         *   - 40% verde + 60% rojo
+         *   - Cualquier caso restante con ≥ rojo dominante
+         *
+         * Resumen implementado:
+         *   pV = % verde   pA = % amarillo   pR = % rojo
+         *
+         *   Verde:    pV >= 80
+         *   Amarillo: pV >= 60  (independientemente del mix de A y R)
+         *             pV >= 40  && pR == 0   (40V + 60A → amarillo)
+         *             pV >= 40  && pA >= pR  && pR <= 40  (40V+40A+20R → amarillo; 40V+20R+40A → amarillo)
+         *   Rojo:     resto (incluye 40V+60R, 40V+40R+20A cuando rojo domina)
+         */
+        obtenerColorDistribucion: function (verdes, amarillos, rojos, total) {
+            if (total === 0) return 'gris';
+
+            var pV = (verdes   / total) * 100;
+            var pA = (amarillos / total) * 100;
+            var pR = (rojos    / total) * 100;
+
+            // Verde: ≥80% en verde (el resto puede ser amarillo o rojo)
+            if (pV >= 80) return 'verde';
+
+            // Amarillo: ≥60% en verde
+            if (pV >= 60) return 'amarillo';
+
+            // Con 40–59% verde:
+            if (pV >= 40) {
+                // Sin rojos (todo el resto es amarillo) → Amarillo
+                if (pR === 0) return 'amarillo';
+                // Amarillo domina sobre rojo → Amarillo
+                if (pA >= pR) return 'amarillo';
+                // Rojo domina sobre amarillo → Rojo
+                return 'rojo';
+            }
+
+            // Menos del 40% verde → Rojo
+            return 'rojo';
+        },
+
+        // Mantener para compatibilidad con llamadas en procesarRespuestasGenerales
         obtenerColorPorPorcentaje: function (porcentaje) {
             if (porcentaje >= 80) return 'verde';
             if (porcentaje >= 60) return 'amarillo';
