@@ -35,7 +35,7 @@
     {{else}}
         <strong>Total de {{rolObjetivo}}s evaluados:</strong>&nbsp;{{totalUsuarios}}&nbsp;&nbsp;|&nbsp;&nbsp;
     {{/if}}
-    <span>Criterio: <strong>Verde</strong> ≥80% &nbsp;·&nbsp; <strong>Amarillo</strong> 60–80% &nbsp;·&nbsp; <strong>Rojo</strong> &lt;60%</span>
+    <span>Criterio: <strong>Verde</strong> ≥80% verde &nbsp;·&nbsp; <strong>Amarillo</strong> ≥60%, o ≥40% con amarillo ≥ rojo &nbsp;·&nbsp; <strong>Rojo</strong> &lt;40%, o rojo domina</span>
 </div>
 
 <div class="reporte-matrix-wrapper">
@@ -111,6 +111,7 @@
             </tbody>
             {{/if}}
 
+            {{#unless mostrarSoloGerentes}}
             <tfoot>
                 <tr class="totales-row">
                     <td><strong>Totales</strong></td>
@@ -132,17 +133,26 @@
                     {{/if}}
                 </tr>
             </tfoot>
+            {{/unless}}
         </table>
     </div>
 </div>
 
 <div class="reporte-leyenda">
-    <span class="leyenda-titulo"><i class="fas fa-circle-info" style="margin-right:5px;"></i>Leyenda:</span>
+    <span class="leyenda-titulo"><i class="fas fa-circle-info" style="margin-right:5px;"></i>Leyenda de semáforo:</span>
     <div class="leyenda-items">
-        <span class="legend-item"><span class="legend-color" style="background:#4CAF50;"></span>Verde (≥80%)</span>
-        <span class="legend-item"><span class="legend-color" style="background:#FFC107;"></span>Amarillo (60–79%)</span>
-        <span class="legend-item"><span class="legend-color" style="background:#F44336;"></span>Rojo (&lt;60%)</span>
-        <span class="legend-item"><span class="legend-color" style="background:#9E9E9E;"></span>Sin respuesta</span>
+        <span class="legend-item"><span class="legend-color" style="background:#4CAF50;"></span>
+            <span><strong>Verde</strong> — ≥80% verde</span>
+        </span>
+        <span class="legend-item"><span class="legend-color" style="background:#FFC107;"></span>
+            <span><strong>Amarillo</strong> — ≥60% verde, o ≥40% verde con amarillo ≥ rojo</span>
+        </span>
+        <span class="legend-item"><span class="legend-color" style="background:#F44336;"></span>
+            <span><strong>Rojo</strong> — &lt;40% verde, o rojo domina sobre amarillo</span>
+        </span>
+        <span class="legend-item"><span class="legend-color" style="background:#9E9E9E;"></span>
+            <span><strong>Gris</strong> — Sin respuesta</span>
+        </span>
     </div>
 </div>
 

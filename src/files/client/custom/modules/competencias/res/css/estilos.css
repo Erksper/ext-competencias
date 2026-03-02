@@ -421,7 +421,7 @@
 }
 
 .btn-volver {
-    background: var(--color-secondary);
+    background: var(--color-primary);
     color: #fff;
     border: none;
     border-radius: var(--radius-lg);
@@ -436,7 +436,8 @@
     text-decoration: none;
 }
 .btn-volver:hover {
-    background: var(--color-secondary-dark);
+    background: var(--color-primary-dark);
+    box-shadow: var(--shadow-primary);
     transform: translateY(-1px);
 }
 
@@ -518,12 +519,12 @@
     font-size: 12px;
 }
 
-/* Nivel 2 - subcategorías: gris oscuro */
+/* Nivel 2 - subcategorías: gris claro */
 .report-matrix thead .subcategoria-row th {
-    background: var(--color-secondary);
+    background: #9E9B9C;
     color: #fff;
     padding: 6px 4px;
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
     text-align: center;
     vertical-align: middle;
     font-size: 10px;
@@ -567,11 +568,12 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
     height: 100%;
+    gap: 10px;
 }
 
-.th-main-header .logo-expanded { flex-shrink: 0; margin-bottom: 12px; }
+.th-main-header .logo-expanded { flex-shrink: 0; }
 
 .th-main-header .logo-expanded img {
     max-height: 110px;
@@ -588,10 +590,10 @@
     font-size: 12px;
 }
 
-/* Celda sumatoria: gris oscuro */
+/* Celda sumatoria: gris claro (igual que subcategorías) */
 .th-sumatoria {
     width: 100px;
-    background: var(--color-secondary) !important;
+    background: #9E9B9C !important;
     color: #fff !important;
     vertical-align: bottom !important;
     text-align: center !important;
@@ -713,6 +715,84 @@
     border: 1px solid rgba(0,0,0,0.12);
     flex-shrink: 0;
     display: inline-block;
+}
+
+/* ── Panel de filtro CLA / Oficina (pantalla de reportes - Casa Nacional) ── */
+.rep-filtro-oficina-panel {
+    background: var(--color-gray-very-light);
+    border: 1px solid var(--color-gray-light);
+    border-radius: var(--radius-xl);
+    padding: 16px 20px;
+    margin-top: 16px;
+}
+
+.rep-filtro-titulo {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--color-secondary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.rep-filtro-titulo i { color: var(--color-primary); }
+
+.rep-filtro-campos {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.rep-filtro-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.rep-filtro-label {
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--color-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.rep-filtro-select {
+    width: 100%;
+    border: 2px solid var(--color-gray-light);
+    border-radius: var(--radius-lg);
+    padding: 9px 12px;
+    font-size: 13px;
+    background: #fff;
+    color: var(--color-dark);
+    cursor: pointer;
+    transition: border-color var(--transition);
+    appearance: auto;
+}
+.rep-filtro-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(184,162,121,0.18);
+}
+.rep-filtro-select:disabled {
+    background: #f0f0f0;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+.rep-filtro-hint {
+    font-size: 12px;
+    color: #999;
+    margin: 10px 0 0;
+}
+.rep-filtro-hint i { color: var(--color-primary); }
+
+@media (max-width: 768px) {
+    .rep-filtro-campos { flex-direction: column; }
+    .rep-filtro-grupo  { min-width: 100%; }
 }
 
 /* Sin datos */

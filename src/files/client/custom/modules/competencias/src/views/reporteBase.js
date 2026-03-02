@@ -97,8 +97,16 @@ define([
 
                 var roles = Object.values(userModel.get('rolesNames') || {}).map(function (r) { return r.toLowerCase(); });
                 self.esCasaNacional     = roles.includes('casa nacional');
-                self.esGerenteODirector = roles.includes('gerente') || roles.includes('director');
+                // Coordinador equivale a gerente/director
+                self.esGerenteODirector = roles.includes('gerente') || roles.includes('director') || roles.includes('coordinador');
                 self.esAsesor           = roles.includes('asesor');
+                // Rol formateado para planesAccionManager
+                if      (roles.includes('casa nacional'))  self.rolUsuario = 'Casa Nacional';
+                else if (roles.includes('director'))       self.rolUsuario = 'Director';
+                else if (roles.includes('gerente'))        self.rolUsuario = 'Gerente';
+                else if (roles.includes('coordinador'))    self.rolUsuario = 'Coordinador';
+                else if (roles.includes('asesor'))         self.rolUsuario = 'Asesor';
+                else                                       self.rolUsuario = 'Usuario';
 
                 // Exponer datos de usuario para que PlanesAccionManager los lea
                 self.usuarioActualId     = self.getUser().id;
@@ -281,6 +289,8 @@ define([
                 totalesPorPregunta:          this.totalesPorPregunta,
                 tienedatos:                  (this.usuariosData && this.usuariosData.length > 0) ||
                                              (this.esReporteGeneralCasaNacional && this.oficinas.length > 0),
+                // tfoot de totales: ocultar en reportes de gerentes (no en asesores ni generales)
+                mostrarSoloGerentes:         this.rolObjetivo === 'gerente' && !this.esReporteGeneralCasaNacional,
                 totalUsuarios:               this.usuariosData ? this.usuariosData.length : 0,
                 esReporteGeneralCasaNacional: this.esReporteGeneralCasaNacional,
                 oficinas:                    this.oficinas,

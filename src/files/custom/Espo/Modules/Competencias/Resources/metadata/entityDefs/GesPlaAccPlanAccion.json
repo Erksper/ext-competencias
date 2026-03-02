@@ -57,13 +57,13 @@
         "estado": {
             "type": "enum",
             "options": [
-                "esperaEjecutor",
-                "esperaGenerador",
+                "pendienteGDC",
+                "pendienteCN",
                 "cancelado",
                 "pausado",
-                "terminado"
+                "completado"
             ],
-            "default": "esperaEjecutor"
+            "default": "pendienteGDC"
         },
         "itemEvaluado": {
             "type": "varchar",
@@ -78,6 +78,10 @@
         },
         "fechaActualizacionEjecutor": {
             "type": "datetime"
+        },
+        "equipo": {
+            "type": "link",
+            "entity": "Team"
         }
     },
     "links": {
@@ -104,6 +108,11 @@
             "entity": "GesPlaAccChat",
             "foreignKey": "planAccionId",
             "foreign": "planAccion"
+        },
+        "equipo": {
+            "type": "belongsTo",
+            "entity": "Team",
+            "foreign": "gesplaaccPlanes"
         }
     },
     "collection": {

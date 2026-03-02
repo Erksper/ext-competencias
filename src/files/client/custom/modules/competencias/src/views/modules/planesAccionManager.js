@@ -20,20 +20,22 @@ define([], function () {
     //    Casa Nacional: "esperaEjecutor" → "Esperando asesor" | "esperaGenerador" → "Por revisar"
     //    Asesor/Gerente: "esperaEjecutor" → "En espera por ti" | "esperaGenerador" → "En espera por supervisor"
     // ────────────────────────────────────────────────────────────────────
+    // Estados: pendienteCN = en espera de revisión por Casa Nacional
+    //           pendienteGDC = en espera de acción por Gerente/Director/Coordinador
     var ESTADOS_CN = {
-        'esperaEjecutor':  { bg: '#d4edda', color: '#155724', texto: 'Esperando asesor' },
-        'esperaGenerador': { bg: '#fff3cd', color: '#856404', texto: 'Por revisar' },
-        'cancelado':       { bg: '#f8d7da', color: '#721c24', texto: 'Cancelado' },
-        'pausado':         { bg: '#e2e3e5', color: '#383d41', texto: 'Pausado' },
-        'terminado':       { bg: '#d1ecf1', color: '#0c5460', texto: 'Terminado' }
+        'pendienteCN':  { bg: '#fff3cd', color: '#856404', texto: 'Por revisar' },
+        'pendienteGDC': { bg: '#d4edda', color: '#155724', texto: 'Esperando por Gerente/Director/Coordinador' },
+        'cancelado':    { bg: '#f8d7da', color: '#721c24', texto: 'Cancelado' },
+        'pausado':      { bg: '#e2e3e5', color: '#383d41', texto: 'Pausado' },
+        'completado':   { bg: '#d1ecf1', color: '#0c5460', texto: 'Completado' }
     };
 
-    var ESTADOS_ASESOR = {
-        'esperaEjecutor':  { bg: '#fff3cd', color: '#856404', texto: 'En espera por ti' },
-        'esperaGenerador': { bg: '#d4edda', color: '#155724', texto: 'En espera por supervisor' },
-        'cancelado':       { bg: '#f8d7da', color: '#721c24', texto: 'Cancelado' },
-        'pausado':         { bg: '#e2e3e5', color: '#383d41', texto: 'Pausado' },
-        'terminado':       { bg: '#d1ecf1', color: '#0c5460', texto: 'Terminado' }
+    var ESTADOS_GDC = {
+        'pendienteCN':  { bg: '#d4edda', color: '#155724', texto: 'Esperando por Casa Nacional' },
+        'pendienteGDC': { bg: '#fff3cd', color: '#856404', texto: 'Por revisar' },
+        'cancelado':    { bg: '#f8d7da', color: '#721c24', texto: 'Cancelado' },
+        'pausado':      { bg: '#e2e3e5', color: '#383d41', texto: 'Pausado' },
+        'completado':   { bg: '#d1ecf1', color: '#0c5460', texto: 'Completado' }
     };
 
     var INPUT_STYLE = 'width:100%;border:2px solid #e0e0e0;border-radius:8px;padding:10px 12px;font-size:14px;box-sizing:border-box;';
@@ -103,6 +105,7 @@ define([], function () {
         this.modulo   = this.opciones.modulo   || 'Competencias';
         this.usuarios = this.opciones.usuarios  || [];
         this.items    = this.opciones.items     || {};
+        this.oficina  = this.opciones.oficina   || null;
 
         this.planes         = [];
         this.paginacion     = { pagina: 1, porPagina: 10, total: 0, totalPaginas: 0 };
@@ -121,16 +124,25 @@ define([], function () {
         // ──────────────────────────────────────────────────────
         _resolverUsuario: function () {
             var v = this.view;
-            this.usuarioId     = v.usuarioActualId     || (v.getUser ? v.getUser().id : null);
-            this.usuarioNombre = v.usuarioActualNombre || (v.getUser ? v.getUser().get('name') : null);
-            this.esCasaNacional = !!v.esCasaNacional;
+            this.usuarioId      = v.usuarioActualId     || (v.getUser ? v.getUser().id : null);
+            this.usuarioNombre  = v.usuarioActualNombre || (v.getUser ? v.getUser().get('name') : null);
+            this.esCasaNacional    = !!v.esCasaNacional;
+            this.esGerenteODirector = !!v.esGerenteODirector;  // incluye coordinador
 
-            if      (v.esCasaNacional)     this.usuarioRol = 'Supervisor';
-            else if (v.esGerenteODirector) this.usuarioRol = 'Asesor';
-            else                           this.usuarioRol = 'Asesor';
+            // Rol formateado (viene de la view, con mayúsculas correctas)
+            if (v.esCasaNacional) {
+                this.usuarioRol = 'Casa Nacional';
+            } else if (v.rolUsuario) {
+                // rolUsuario viene de _determinarRolFormateado en reportes.js / reporteBase.js
+                this.usuarioRol = v.rolUsuario;
+            } else if (v.esGerenteODirector) {
+                this.usuarioRol = 'Gerente';
+            } else {
+                this.usuarioRol = 'Asesor';
+            }
 
-            // Solo Casa Nacional puede crear planes
-            this.puedeCrear = this.esCasaNacional;
+            // Casa Nacional Y Gerentes/Directores/Coordinadores pueden crear planes
+            this.puedeCrear = this.esCasaNacional || this.esGerenteODirector;
         },
 
         actualizarConfig: function (opciones) {
@@ -138,11 +150,12 @@ define([], function () {
             if (opciones.modulo   !== undefined) this.modulo   = opciones.modulo;
             if (opciones.usuarios !== undefined) this.usuarios = opciones.usuarios;
             if (opciones.items    !== undefined) this.items    = opciones.items;
+            if (opciones.oficina  !== undefined) this.oficina  = opciones.oficina;
             this._resolverUsuario();
         },
 
         _badge: function (estado) {
-            var mapa = this.esCasaNacional ? ESTADOS_CN : ESTADOS_ASESOR;
+            var mapa = this.esCasaNacional ? ESTADOS_CN : ESTADOS_GDC;
             return mapa[estado] || { bg: '#e2e3e5', color: '#383d41', texto: estado };
         },
 
@@ -176,13 +189,12 @@ define([], function () {
             };
 
             if (!self.esCasaNacional) {
-                wp['where[1][type]']      = 'equals';
-                wp['where[1][attribute]'] = 'asesorEjecutorId';
-                wp['where[1][value]']     = self.usuarioId;
-                wp['where[2][type]']      = 'notIn';
-                wp['where[2][attribute]'] = 'estado';
-                wp['where[2][value][0]']  = 'cancelado';
-                wp['where[2][value][1]']  = 'terminado';
+                // GDC ven todos los planes de su oficina
+                if (self.oficina) {
+                    wp['where[1][type]']      = 'equals';
+                    wp['where[1][attribute]'] = 'equipoId';
+                    wp['where[1][value]']     = self.oficina;
+                }
             }
 
             // Paso 1: obtener total real
@@ -211,9 +223,9 @@ define([], function () {
                         Espo.Ajax.getRequest('GesPlaAccPlanAccion', Object.assign({}, wp, {
                             select: selectFields, orderBy: 'createdAt', order: 'desc', maxSize: 200, offset: 0
                         })).then(function (r) {
-                            var ordenCN = { 'esperaGenerador': 0, 'esperaEjecutor': 1, 'pausado': 2, 'terminado': 3, 'cancelado': 4 };
-                            var ordenAs = { 'esperaEjecutor':  0, 'esperaGenerador': 1, 'pausado': 2, 'terminado': 3, 'cancelado': 4 };
-                            var orden   = self.esCasaNacional ? ordenCN : ordenAs;
+                            var ordenCN  = { 'pendienteCN': 0, 'pendienteGDC': 1, 'pausado': 2, 'completado': 3, 'cancelado': 4 };
+                            var ordenGDC = { 'pendienteGDC': 0, 'pendienteCN': 1, 'pausado': 2, 'completado': 3, 'cancelado': 4 };
+                            var orden    = self.esCasaNacional ? ordenCN : ordenGDC;
                             var lista   = (r.list || []).sort(function (a, b) {
                                 var oa = orden[a.estado] !== undefined ? orden[a.estado] : 2;
                                 var ob = orden[b.estado] !== undefined ? orden[b.estado] : 2;
@@ -303,8 +315,8 @@ define([], function () {
             var planes = this.planes;
 
             // Contadores usando textos del rol actual
-            var porRevCN   = planes.filter(function (p) { return p.estado === 'esperaGenerador'; }).length;
-            var espAseCN   = planes.filter(function (p) { return p.estado === 'esperaEjecutor';  }).length;
+            var porRevCN  = planes.filter(function (p) { return p.estado === 'pendienteCN';  }).length;
+            var espGDC    = planes.filter(function (p) { return p.estado === 'pendienteGDC'; }).length;
 
             var cuerpo;
             if (planes.length === 0) {
@@ -356,10 +368,12 @@ define([], function () {
             }
 
             // Etiquetas de contadores según rol
-            var etiqPorRev = this.esCasaNacional ? 'Por revisar' : 'En espera por supervisor';
-            var etiqEspAse = this.esCasaNacional ? 'Esperando asesor' : 'En espera por ti';
-            var cntPorRev  = this.esCasaNacional ? porRevCN : planes.filter(function(p){return p.estado==='esperaGenerador';}).length;
-            var cntEspAse  = this.esCasaNacional ? espAseCN : planes.filter(function(p){return p.estado==='esperaEjecutor';}).length;
+            var etiqPorRev = 'Por revisar';
+            var etiqEspGDC = this.esCasaNacional
+                ? 'Esperando por Gerente/Director/Coordinador'
+                : 'Esperando por Casa Nacional';
+            var cntPorRev = porRevCN;
+            var cntEspGDC = espGDC;
 
             var paginacionHtml = this._buildPaginacion();
 
@@ -377,7 +391,7 @@ define([], function () {
                             '<span style="background:#fff3cd;color:#856404;padding:5px 12px;border-radius:20px;font-size:0.85rem;font-weight:600;">' +
                                 '<i class="fas fa-clock" style="margin-right:5px;"></i>' + etiqPorRev + ': ' + cntPorRev + '</span>' +
                             '<span style="background:#d4edda;color:#155724;padding:5px 12px;border-radius:20px;font-size:0.85rem;font-weight:600;">' +
-                                '<i class="fas fa-check-circle" style="margin-right:5px;"></i>' + etiqEspAse + ': ' + cntEspAse + '</span>' +
+                                '<i class="fas fa-hourglass-half" style="margin-right:5px;"></i>' + etiqEspGDC + ': ' + cntEspGDC + '</span>' +
                         '</div>' +
                     '</div>' +
                     cuerpo +
@@ -479,7 +493,7 @@ define([], function () {
 
                             '<div>' +
                                 '<label style="' + LABEL_STYLE + '">Asesor evaluado *</label>' +
-                                '<select id="gpa-asesorEjecutorId" style="' + INPUT_STYLE + '">' +
+                                '<select id="gpa-asesorEjecutorId" style="' + INPUT_STYLE + 'background:#fff;">' +
                                     '<option value="">— Seleccionar —</option>' + opcsUsuarios +
                                 '</select>' +
                             '</div>' +
@@ -501,24 +515,24 @@ define([], function () {
                             '</div>' +
 
                             '<div>' +
-                                '<label style="' + LABEL_STYLE + '">Ítem evaluado *</label>' +
-                                '<select id="gpa-itemEvaluado" style="' + INPUT_STYLE + '">' +
+                                '<label style="' + LABEL_STYLE + '">Competencia *</label>' +
+                                '<select id="gpa-itemEvaluado" style="' + INPUT_STYLE + 'background:#fff;">' +
                                     '<option value="">— Seleccionar —</option>' + opcsItems +
                                 '</select>' +
                             '</div>' +
 
                             '<div>' +
-                                '<label style="' + LABEL_STYLE + '">Sub ítem evaluado *</label>' +
-                                '<select id="gpa-subItemEvaluado" style="' + INPUT_STYLE + '" disabled>' +
-                                    '<option value="">— Seleccionar ítem primero —</option>' +
+                                '<label style="' + LABEL_STYLE + '">Subcompetencia *</label>' +
+                                '<select id="gpa-subItemEvaluado" style="' + INPUT_STYLE + 'background:#fff;" disabled>' +
+                                    '<option value="">— Seleccionar competencia primero —</option>' +
                                 '</select>' +
                             '</div>' +
 
                             '<div>' +
-                                '<label style="' + LABEL_STYLE + '">Mensaje inicial *</label>' +
+                                '<label style="' + LABEL_STYLE + '">Plan de acción *</label>' +
                                 '<textarea id="gpa-mensajeInicial" rows="4" ' +
                                     'placeholder="Describe el plan, los objetivos y los pasos a seguir..." ' +
-                                    'style="' + INPUT_STYLE + 'resize:vertical;"></textarea>' +
+                                    'style="' + INPUT_STYLE + 'resize:vertical;background:#fff;"></textarea>' +
                             '</div>' +
 
                         '</div>' +
@@ -612,14 +626,15 @@ define([], function () {
                 name:                        titulo,
                 titulo:                      titulo,
                 asesorGeneradorId:           self.usuarioId,
-                rolGenerador:                'Supervisor',
+                rolGenerador:                self.usuarioRol,
                 asesorEjecutorId:            asesorId,
                 asesorEjecutorName:          asesorNombre,
                 rolEjecutor:                 'Asesor',
                 modulo:                      self.modulo,
+                equipoId:                    self.oficina || null,
                 fechaInicio:                 fechaIni + ' 00:00:00',
                 fechaFin:                    fechaFin + ' 23:59:59',
-                estado:                      'esperaEjecutor',
+                estado:                      'pendienteGDC',
                 itemEvaluado:                item,
                 subItemEvaluado:             subItem,
                 fechaActualizacionGenerador: nowISO()
@@ -638,7 +653,7 @@ define([], function () {
                                 texto:         mensaje,
                                 fechaCreacion: nowISO(),
                                 autorId:       self.usuarioId,
-                                rolAutor:      'Supervisor'
+                                rolAutor:      self.usuarioRol
                             });
                             chat.save();
                         });
@@ -684,7 +699,7 @@ define([], function () {
             var self  = this;
             var plan  = this.planActualData;
             var b     = this._badge(plan.estado);
-            var esSupervisor = this.esCasaNacional;
+            var puedeGestionar = this.esCasaNacional || this.esGerenteODirector;
 
             var chatHtml = this.chats.length === 0
                 ? '<div style="text-align:center;padding:30px;color:#999;">' +
@@ -692,11 +707,11 @@ define([], function () {
                 : this.chats.map(function (msg) { return buildMensajeHtml(msg, self.usuarioId); }).join('');
 
             var botonesEstado = '';
-            if (esSupervisor && plan.estado !== 'terminado' && plan.estado !== 'cancelado') {
+            if (puedeGestionar && plan.estado !== 'completado' && plan.estado !== 'cancelado') {
                 botonesEstado =
                     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">' +
                     '<button id="gpa-btn-terminar" style="padding:6px 14px;background:#28a745;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">' +
-                        '<i class="fas fa-check-circle" style="margin-right:4px;"></i>Terminar</button>' +
+                        '<i class="fas fa-check-circle" style="margin-right:4px;"></i>Completar</button>' +
                     (plan.estado !== 'pausado'
                         ? '<button id="gpa-btn-pausar" style="padding:6px 14px;background:#6c757d;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">' +
                           '<i class="fas fa-pause" style="margin-right:4px;"></i>Pausar</button>' : '') +
@@ -721,7 +736,7 @@ define([], function () {
                   (plan.itemEvaluado ? '<i class="fas fa-tag" style="margin-right:6px;color:#B8A279;"></i>' +
                   '<strong>Ítem:</strong> ' + esc(plan.itemEvaluado) +
                   (plan.subItemEvaluado ? ' › ' + esc(plan.subItemEvaluado) : '') + '&nbsp;&nbsp;|&nbsp;&nbsp;' : '') +
-                  '<strong>Supervisor:</strong> ' + esc(plan.asesorGeneradorName || '—') +
+                  '<strong>Generado por:</strong> ' + esc(plan.asesorGeneradorName || '—') + ' (' + esc(plan.rolGenerador || '—') + ')' +
                   '</div>'
                 : '';
 
@@ -776,7 +791,7 @@ define([], function () {
                 if ($(e.target).is('#gesplacc-modal-overlay')) self._cerrarModalYRecargar();
             });
 
-            if ($('#gpa-btn-terminar').length)     $('#gpa-btn-terminar').on('click',     function () { self._cambiarEstado('terminado'); });
+            if ($('#gpa-btn-terminar').length)     $('#gpa-btn-terminar').on('click',     function () { self._cambiarEstado('completado'); });
             if ($('#gpa-btn-pausar').length)        $('#gpa-btn-pausar').on('click',        function () { self._cambiarEstado('pausado'); });
             if ($('#gpa-btn-cancelar-plan').length) $('#gpa-btn-cancelar-plan').on('click', function () { self._cambiarEstado('cancelado'); });
 
@@ -798,8 +813,8 @@ define([], function () {
 
             var now     = nowISO();
             // El turno cambia: si soy supervisor (CN) dejo la pelota al asesor y viceversa
-            var nuevoEstado = this.esCasaNacional ? 'esperaEjecutor' : 'esperaGenerador';
-            var rolAutor    = this.esCasaNacional ? 'Supervisor' : 'Asesor';
+            var nuevoEstado = this.esCasaNacional ? 'pendienteGDC' : 'pendienteCN';
+            var rolAutor    = this.usuarioRol;
 
             this.view.getModelFactory().create('GesPlaAccChat', function (model) {
                 model.set({
@@ -856,7 +871,10 @@ define([], function () {
             this.view.getModelFactory().create('GesPlaAccPlanAccion', function (model) {
                 model.id = self.planActualId;
                 model.fetch().then(function () {
-                    model.set({ estado: nuevoEstado, fechaActualizacionGenerador: now });
+                    var upd = { estado: nuevoEstado };
+                    if (self.esCasaNacional) upd.fechaActualizacionGenerador = now;
+                    else                     upd.fechaActualizacionEjecutor  = now;
+                    model.set(upd);
                     model.save().then(function () {
                         self._cerrarModal();
                         Espo.Ui.success('Estado del plan actualizado.');

@@ -26,7 +26,7 @@
             <div class="col-md-6">
                 <h4><strong>Rol:</strong>
                     {{#if esCasaNacional}}Casa Nacional
-                    {{else if esGerenteODirector}}Gerente/Director
+                    {{else if esGerenteODirector}}Gerente / Director / Coordinador
                     {{else if esAsesor}}Asesor
                     {{/if}}
                 </h4>
@@ -62,15 +62,28 @@
                     </select>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="rep-form-group">
-                    <label>Filtrar por Oficina (Opcional):</label>
-                    <select name="oficina" class="oficina-select">
-                        <option value="">Todas las oficinas</option>
-                        {{#each oficinas}}<option value="{{id}}">{{name}}</option>{{/each}}
+        </div>
+
+        <!-- ── Filtro CLA → Oficina ── -->
+        <div class="rep-filtro-oficina-panel">
+            <div class="rep-filtro-titulo">
+                <i class="fas fa-filter"></i> Buscar reporte por oficina
+            </div>
+            <div class="rep-filtro-campos">
+                <div class="rep-filtro-grupo filtro-grupo-cla">
+                    <label class="rep-filtro-label">CLA</label>
+                    <select id="filtro-cla-reportes" class="rep-filtro-select">
+                        <option value="">— Cargando... —</option>
+                    </select>
+                </div>
+                <div class="rep-filtro-grupo">
+                    <label class="rep-filtro-label">Oficina</label>
+                    <select id="filtro-oficina-reportes" class="rep-filtro-select" disabled>
+                        <option value="">— Seleccionar CLA primero —</option>
                     </select>
                 </div>
             </div>
+            <p class="rep-filtro-hint"><i class="fas fa-info-circle"></i> Seleccione un CLA y luego la oficina. Los reportes disponibles se mostrarán automáticamente.</p>
         </div>
         {{/if}}
 
