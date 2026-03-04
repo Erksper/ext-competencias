@@ -35,7 +35,7 @@
     {{else}}
         <strong>Total de {{rolObjetivo}}s evaluados:</strong>&nbsp;{{totalUsuarios}}&nbsp;&nbsp;|&nbsp;&nbsp;
     {{/if}}
-    <span>Criterio: <strong>Verde</strong> ≥80% verde &nbsp;·&nbsp; <strong>Amarillo</strong> ≥60%, o ≥40% con amarillo ≥ rojo &nbsp;·&nbsp; <strong>Rojo</strong> &lt;40%, o rojo domina</span>
+    <span>Criterio: <strong>Verde</strong> — 80% o más de respuestas verdes &nbsp;·&nbsp; <strong>Amarillo</strong> — entre 60% y 79% verdes, o entre 40% y 59% verdes siempre que amarillo sea mayor o igual que rojo &nbsp;·&nbsp; <strong>Rojo</strong> — menos del 40% verdes, o rojo supera a amarillo</span>
 </div>
 
 <div class="reporte-matrix-wrapper">
@@ -141,17 +141,21 @@
 <div class="reporte-leyenda">
     <span class="leyenda-titulo"><i class="fas fa-circle-info" style="margin-right:5px;"></i>Leyenda de semáforo:</span>
     <div class="leyenda-items">
-        <span class="legend-item"><span class="legend-color" style="background:#4CAF50;"></span>
-            <span><strong>Verde</strong> — ≥80% verde</span>
+        <span class="legend-item">
+            <span class="legend-color" style="background:#4CAF50;"></span>
+            <span><strong>Verde</strong> — 80% o más de respuestas verdes</span>
         </span>
-        <span class="legend-item"><span class="legend-color" style="background:#FFC107;"></span>
-            <span><strong>Amarillo</strong> — ≥60% verde, o ≥40% verde con amarillo ≥ rojo</span>
+        <span class="legend-item">
+            <span class="legend-color" style="background:#FFC107;"></span>
+            <span><strong>Amarillo</strong> — entre 60% y 79% verdes, o entre 40% y 59% verdes siempre que amarillo sea mayor o igual que rojo</span>
         </span>
-        <span class="legend-item"><span class="legend-color" style="background:#F44336;"></span>
-            <span><strong>Rojo</strong> — &lt;40% verde, o rojo domina sobre amarillo</span>
+        <span class="legend-item">
+            <span class="legend-color" style="background:#F44336;"></span>
+            <span><strong>Rojo</strong> — menos del 40% verdes, o rojo supera a amarillo</span>
         </span>
-        <span class="legend-item"><span class="legend-color" style="background:#9E9E9E;"></span>
-            <span><strong>Gris</strong> — Sin respuesta</span>
+        <span class="legend-item">
+            <span class="legend-color" style="background:#9E9E9E;"></span>
+            <span><strong>Gris</strong> — sin respuesta registrada</span>
         </span>
     </div>
 </div>

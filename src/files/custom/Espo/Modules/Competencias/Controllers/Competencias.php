@@ -198,6 +198,99 @@ class Competencias extends Record
         }
     }
 
+    public function getActionGetCLAs($params, $data, $request)
+    {
+        if (!$this->checkAccess()) {
+            throw new \Espo\Core\Exceptions\Forbidden();
+        }
+
+        try {
+            $entityManager = $this->getEntityManager();
+            $teams = $entityManager->getRepository('Team')
+                ->select(['id', 'name'])
+                ->find();
+
+            $clas = [];
+            foreach ($teams as $team) {
+                $id = $team->get('id');
+                // CLAs tienen ID que empieza por CLA (ej: CLA1, CLA2)
+                if (preg_match('/^CLA\d+$/i', $id)) {
+                    $clas[] = ['id' => $id, 'name' => $team->get('name')];
+                }
+            }
+
+            usort($clas, function($a, $b) {
+                return strcmp($a['name'], $b['name']);
+            });
+
+            return ['success' => true, 'data' => $clas];
+        } catch (\Exception $e) {
+            return ['success' => false, 'data' => [], 'error' => $e->getMessage()];
+        }
+    }
+
+    public function getActionGetOficinasByCLA($params, $data, $request)
+    {
+        if (!$this->checkAccess()) {
+            throw new \Espo\Core\Exceptions\Forbidden();
+        }
+
+        $claId = $request->getQueryParam('claId');
+        if (!$claId) {
+            return ['success' => false, 'data' => [], 'error' => 'claId requerido'];
+        }
+
+        try {
+            $entityManager = $this->getEntityManager();
+            
+            // Obtener todos los usuarios que pertenecen al CLA
+            $usersInCla = $entityManager->getRepository('User')
+                ->join('teams')
+                ->where(['teamsMiddle.teamId' => $claId, 'isActive' => true])
+                ->select(['id'])
+                ->find();
+
+            $userIds = [];
+            foreach ($usersInCla as $user) {
+                $userIds[] = $user->get('id');
+            }
+
+            if (empty($userIds)) {
+                return ['success' => true, 'data' => []];
+            }
+
+            // Para cada usuario del CLA, obtener sus otros teams (las oficinas)
+            // Un equipo es "oficina" si su ID NO empieza por CLA
+            $oficinasMap = [];
+            foreach ($userIds as $userId) {
+                $userTeams = $entityManager->getRepository('Team')
+                    ->join('users')
+                    ->where(['usersMiddle.userId' => $userId])
+                    ->select(['id', 'name'])
+                    ->find();
+                
+                foreach ($userTeams as $team) {
+                    $tid = $team->get('id');
+                    $tname = $team->get('name');
+                    $lname = strtolower($tname ?? '');
+                    // Excluir CLAs y Venezuela
+                    if (!preg_match('/^CLA\d+$/i', $tid) && $lname !== 'venezuela' && $tname) {
+                        $oficinasMap[$tid] = ['id' => $tid, 'name' => $tname];
+                    }
+                }
+            }
+
+            $oficinas = array_values($oficinasMap);
+            usort($oficinas, function($a, $b) {
+                return strcmp($a['name'], $b['name']);
+            });
+
+            return ['success' => true, 'data' => $oficinas];
+        } catch (\Exception $e) {
+            return ['success' => false, 'data' => [], 'error' => $e->getMessage()];
+        }
+    }
+
     public function getActionVerificarPreguntas($params, $data, $request)
     {
         try {

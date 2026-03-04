@@ -55,10 +55,17 @@ define([
 
             // Instanciar el manager — config real se pasa en cargarDatosIniciales
             // tras resolver usuarios y categorías del reporte
+            // etiquetaEjecutor: "Asesor evaluado" para reportes de asesores,
+            //                   "Gerente, Director o Coordinador evaluado" para reportes de gerentes
+            var etiquetaEjecutor = this.rolObjetivo === 'gerente'
+                ? 'Gerente, Director o Coordinador evaluado'
+                : 'Asesor evaluado';
+
             this.planesManager = new PlanesAccionManager(this, {
-                modulo:   'Competencias',
-                usuarios: [],
-                items:    {}
+                modulo:           'Competencias',
+                usuarios:         [],
+                items:            {},
+                etiquetaEjecutor: etiquetaEjecutor
             });
 
             this.registrarHandlebarsHelpers();
@@ -251,7 +258,8 @@ define([
         // ════════════════════════════════════════════════════════
         afterRender: function () {
             Dep.prototype.afterRender.call(this);
-            if (!this.esReporteGeneralCasaNacional) {
+            // Asesores no ven la sección de planes de acción
+            if (!this.esAsesor && !this.esReporteGeneralCasaNacional) {
                 this.planesManager.render();
             }
         },
@@ -260,6 +268,7 @@ define([
         // Solo aplica en reportes por oficina o por usuario — no en generales.
         cargarPlanesAccion: function () {
             if (this.esReporteGeneralCasaNacional) return;
+            if (this.esAsesor) return;  // Asesores no ven planes de acción
 
             // Construir lista de usuarios desde los datos del reporte
             var usuarios = (this.usuariosData || []).map(function (u) {

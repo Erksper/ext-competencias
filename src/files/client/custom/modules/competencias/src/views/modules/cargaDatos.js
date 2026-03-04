@@ -33,31 +33,52 @@ define([], function () {
                 { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: this.fechaInicio },
                 { type: 'lessThanOrEquals',    attribute: 'fechaCreacion', value: this.fechaCierre + ' 23:59:59' }
             ];
-            var whereEncuestas = [{ type: 'equals', attribute: 'rolUsuario', value: this.rolObjetivo }].concat(wherePeriodo);
+            var whereEncuestas = [
+                { type: 'equals', attribute: 'rolUsuario', value: this.rolObjetivo }
+            ].concat(wherePeriodo);
 
-            var cargarPreguntas = $.ajax({
-                url: 'api/v1/Pregunta',
-                data: {
-                    where: [{ type: 'and', value: [
-                        { type: 'or', value: [
-                            { type: 'equals', attribute: 'rolObjetivo', value: this.rolObjetivo },
-                            { type: 'contains', attribute: 'rolObjetivo', value: this.rolObjetivo }
-                        ]},
-                        { type: 'equals', attribute: 'estaActiva', value: 1 }
-                    ]}],
-                    orderBy: 'orden'
-                }
+            // 1. Cargar preguntas activas del rol objetivo usando Espo.Ajax
+            var cargarPreguntas = Espo.Ajax.getRequest('Pregunta', {
+                where: [
+                    {
+                        type: 'and',
+                        value: [
+                            {
+                                type: 'or',
+                                value: [
+                                    { type: 'equals', attribute: 'rolObjetivo', value: this.rolObjetivo },
+                                    { type: 'contains', attribute: 'rolObjetivo', value: this.rolObjetivo }
+                                ]
+                            },
+                            { type: 'equals', attribute: 'estaActiva', value: 1 }
+                        ]
+                    }
+                ],
+                orderBy: 'orden',
+                maxSize: 200
             });
 
+            // 2. Cargar todas las oficinas (excluyendo CLAs y Venezuela)
             var cargarOficinas = function () {
                 return new Promise(function (resolve, reject) {
-                    var maxSize = 200, allTeams = [];
+                    var maxSize = 200;
+                    var allTeams = [];
+                    
                     var fetchPage = function (offset) {
                         self.getCollectionFactory().create('Team', function (col) {
-                            col.fetch({ data: { maxSize: maxSize, offset: offset } }).then(function () {
+                            col.fetch({ 
+                                data: { 
+                                    maxSize: maxSize, 
+                                    offset: offset,
+                                    select: 'id,name'
+                                } 
+                            }).then(function () {
                                 allTeams = allTeams.concat(col.models);
-                                if (col.models.length < maxSize) resolve(allTeams);
-                                else fetchPage(offset + maxSize);
+                                if (col.models.length < maxSize) {
+                                    resolve(allTeams);
+                                } else {
+                                    fetchPage(offset + maxSize);
+                                }
                             }).catch(reject);
                         });
                     };
@@ -65,26 +86,49 @@ define([], function () {
                 });
             };
 
-            var cargarEncuestas = $.ajax({
-                url: 'api/v1/Encuesta',
-                data: { where: whereEncuestas, select: 'id,equipoId,equipoName' }
+            // 3. Cargar todas las encuestas del período para el rol objetivo usando Espo.Ajax
+            var cargarEncuestas = Espo.Ajax.getRequest('Encuesta', {
+                where: whereEncuestas,
+                select: 'id,equipoId,equipoName,usuarioEvaluadoId',
+                maxSize: 1000
             });
 
             Promise.all([cargarPreguntas, cargarOficinas(), cargarEncuestas]).then(function (results) {
-                var preguntas      = results[0].list || [];
+                var preguntas = results[0] && results[0].list ? results[0].list : [];
                 var allTeamsModels = results[1];
-                var encuestas      = results[2].list || [];
+                var encuestas = results[2] && results[2].list ? results[2].list : [];
 
+                console.log('📊 Reporte General - Datos cargados:', {
+                    totalPreguntas: preguntas.length,
+                    totalOficinas: allTeamsModels.length,
+                    totalEncuestas: encuestas.length,
+                    rolObjetivo: self.rolObjetivo,
+                    fechaInicio: self.fechaInicio,
+                    fechaCierre: self.fechaCierre
+                });
+
+                // Procesar preguntas (agrupar por categoría/subcategoría)
                 self.procesarPreguntas(preguntas);
 
+                // Filtrar oficinas: excluir CLAs y Venezuela
                 var claPattern = /^CLA\d+$/i;
                 var todasLasOficinas = allTeamsModels
                     .filter(function(team) {
-                        return !claPattern.test(team.id) && (team.get('name') || '').toLowerCase() !== 'venezuela';
+                        var teamId = team.id;
+                        var teamName = (team.get('name') || '').toLowerCase();
+                        return !claPattern.test(teamId) && teamName !== 'venezuela';
                     })
-                    .map(function(team) { return { id: team.id, name: team.get('name') }; });
+                    .map(function(team) { 
+                        return { 
+                            id: team.id, 
+                            name: team.get('name') 
+                        }; 
+                    });
+
+                console.log('🏢 Oficinas filtradas:', todasLasOficinas.length);
 
                 if (encuestas.length === 0) {
+                    console.log('⚠️ No hay encuestas para el período');
                     self.oficinas = [];
                     self.procesarRespuestasGenerales([]);
                     self.wait(false);
@@ -92,57 +136,158 @@ define([], function () {
                     return;
                 }
 
+                // Agrupar encuestas por oficina
                 var oficinasConEncuestas = new Set();
-                var encuestasConOficina  = [];
+                var encuestasPorOficina = {};
+
                 encuestas.forEach(function(e) {
                     if (e.id && e.equipoId) {
-                        encuestasConOficina.push({ id: e.id, oficinaId: e.equipoId, oficinaName: e.equipoName || 'Sin nombre' });
                         oficinasConEncuestas.add(e.equipoId);
+                        
+                        if (!encuestasPorOficina[e.equipoId]) {
+                            encuestasPorOficina[e.equipoId] = [];
+                        }
+                        encuestasPorOficina[e.equipoId].push({
+                            id: e.id,
+                            oficinaId: e.equipoId,
+                            oficinaName: e.equipoName || 'Sin nombre',
+                            usuarioEvaluadoId: e.usuarioEvaluadoId
+                        });
                     }
                 });
 
-                self.oficinas = todasLasOficinas
-                    .filter(function(o) { return oficinasConEncuestas.has(o.id); })
-                    .sort(function(a, b) { return a.name.localeCompare(b.name); });
+                console.log('🏢 Oficinas con encuestas:', oficinasConEncuestas.size);
 
-                if (encuestasConOficina.length === 0) {
+                // Filtrar solo oficinas que tienen encuestas
+                self.oficinas = todasLasOficinas
+                    .filter(function(o) { 
+                        return oficinasConEncuestas.has(o.id); 
+                    })
+                    .sort(function(a, b) { 
+                        return a.name.localeCompare(b.name); 
+                    });
+
+                console.log('📋 Oficinas a mostrar:', self.oficinas.map(o => o.name));
+
+                if (self.oficinas.length === 0) {
+                    console.log('⚠️ No hay oficinas con encuestas para mostrar');
                     self.procesarRespuestasGenerales([]);
                     self.wait(false);
                     self.reRender();
                     return;
                 }
 
-                self.cargarRespuestasParaEncuestasGeneral(encuestasConOficina);
-            }).catch(function () {
+                // Cargar respuestas para todas las encuestas
+                self.cargarRespuestasParaEncuestasGeneral(encuestas);
+            }).catch(function (error) {
+                console.error('❌ Error al cargar datos del reporte general:', error);
                 Espo.Ui.error('Error al cargar los datos del reporte general.');
                 self.wait(false);
             });
         },
 
-        cargarRespuestasParaEncuestasGeneral: function (encuestasConEquipo) {
+        cargarRespuestasParaEncuestasGeneral: function (encuestas) {
             var self = this;
-            var promesas = encuestasConEquipo.map(function(encuesta) {
-                return $.ajax({
-                    url: 'api/v1/RespuestaEncuesta',
-                    data: {
-                        where: [{ type: 'equals', attribute: 'encuestaId', value: encuesta.id }],
-                        select: 'preguntaId,preguntaName,respuesta'
-                    }
-                }).then(function(resp) {
-                    return (resp.list || []).map(function(r) {
-                        return { preguntaId: r.preguntaId, respuesta: r.respuesta, 'encuesta.equipoId': encuesta.oficinaId };
-                    });
-                }).catch(function() { return []; });
+            
+            // Crear un mapa de encuestas por ID para acceso rápido
+            var encuestasMap = {};
+            encuestas.forEach(function(e) {
+                encuestasMap[e.id] = e;
             });
 
-            Promise.all(promesas).then(function (respuestasPorEncuesta) {
-                var todas = [];
-                respuestasPorEncuesta.forEach(function(r) { todas = todas.concat(r); });
-                self.procesarRespuestasGenerales(todas);
+            var encuestasIds = encuestas.map(function(e) { return e.id; });
+            
+            if (encuestasIds.length === 0) {
+                self.procesarRespuestasGenerales([]);
+                self.wait(false);
+                self.reRender();
+                return;
+            }
+
+            console.log('📥 Cargando respuestas para', encuestasIds.length, 'encuestas');
+
+            // Dividir en lotes de encuestas (límite de where in)
+            var lotesEncuestas = [];
+            var tamanoLoteEncuestas = 200;
+            for (var i = 0; i < encuestasIds.length; i += tamanoLoteEncuestas) {
+                lotesEncuestas.push(encuestasIds.slice(i, i + tamanoLoteEncuestas));
+            }
+
+            // Para cada lote de encuestas, paginar las respuestas
+            var promesasTotales = [];
+
+            lotesEncuestas.forEach(function(loteEncuestasIds) {
+                var promesaLote = new Promise(function(resolve, reject) {
+                    var maxSize = 200;
+                    var offset = 0;
+                    var todasLasRespuestasDelLote = [];
+                    
+                    function fetchNextPage() {
+                        Espo.Ajax.getRequest('RespuestaEncuesta', {
+                            where: [
+                                { 
+                                    type: 'in', 
+                                    attribute: 'encuestaId', 
+                                    value: loteEncuestasIds 
+                                }
+                            ],
+                            select: 'id,preguntaId,preguntaName,respuesta,encuestaId',
+                            maxSize: maxSize,
+                            offset: offset
+                        }).then(function(response) {
+                            var respuestas = response.list || [];
+                            todasLasRespuestasDelLote = todasLasRespuestasDelLote.concat(respuestas);
+                            
+                            if (respuestas.length < maxSize) {
+                                resolve(todasLasRespuestasDelLote);
+                            } else {
+                                offset += maxSize;
+                                fetchNextPage();
+                            }
+                        }).catch(function(error) {
+                            console.error('Error cargando página de respuestas:', error);
+                            reject(error);
+                        });
+                    }
+                    
+                    fetchNextPage();
+                });
+                
+                promesasTotales.push(promesaLote);
+            });
+
+            Promise.all(promesasTotales).then(function(resultadosLotes) {
+                // Combinar todas las respuestas
+                var todasLasRespuestas = [];
+                resultadosLotes.forEach(function(lote) {
+                    todasLasRespuestas = todasLasRespuestas.concat(lote);
+                });
+
+                console.log('✅ Total respuestas cargadas:', todasLasRespuestas.length);
+
+                // Enriquecer respuestas con datos de la encuesta
+                var respuestasEnriquecidas = todasLasRespuestas.map(function(r) {
+                    var encuesta = encuestasMap[r.encuestaId] || {};
+                    return {
+                        preguntaId: r.preguntaId,
+                        respuesta: r.respuesta,
+                        'encuesta.equipoId': encuesta.equipoId,
+                        'encuesta.equipoName': encuesta.equipoName
+                    };
+                }).filter(function(r) {
+                    // Filtrar respuestas sin oficina válida
+                    return r['encuesta.equipoId'] && self.oficinas.some(o => o.id === r['encuesta.equipoId']);
+                });
+
+                console.log('📊 Respuestas enriquecidas:', respuestasEnriquecidas.length);
+
+                self.procesarRespuestasGenerales(respuestasEnriquecidas);
                 self.wait(false);
                 self.reRender();
                 self.cargarPlanesAccion();
-            }).catch(function () {
+
+            }).catch(function(error) {
+                console.error('❌ Error al cargar las respuestas:', error);
                 Espo.Ui.error('Error al cargar las respuestas del reporte general.');
                 self.wait(false);
             });
@@ -150,12 +295,23 @@ define([], function () {
 
         procesarRespuestasGenerales: function (respuestas) {
             var self = this;
-            if (!respuestas || respuestas.length === 0) { this.usuariosData = []; return; }
+            
+            if (!respuestas || respuestas.length === 0) {
+                console.log('ℹ️ No hay respuestas para procesar');
+                this.usuariosData = [];
+                this.totalesPorPregunta = {};
+                this.totalesGenerales = { verdes: 0, amarillos: 0, rojos: 0, total: 0, porcentaje: 0, color: 'gris' };
+                return;
+            }
 
-            var totalesPorOficina  = {};
-            var totalesGenerales   = { verdes: 0, amarillos: 0, rojos: 0, total: 0 };
+            console.log('🔄 Procesando', respuestas.length, 'respuestas para', this.oficinas.length, 'oficinas');
+
+            // Inicializar estructuras de datos
+            var totalesPorOficina = {};
+            var totalesGenerales = { verdes: 0, amarillos: 0, rojos: 0, total: 0 };
             var totalesPorPregunta = {};
 
+            // Inicializar oficinas
             this.oficinas.forEach(function(o) {
                 totalesPorOficina[o.id] = {
                     name: o.name,
@@ -164,72 +320,166 @@ define([], function () {
                 };
             });
 
-            Object.values(this.preguntasAgrupadas).forEach(function(cat) {
+            // Inicializar preguntas
+            Object.values(this.preguntasAgrupadas || {}).forEach(function(cat) {
                 Object.values(cat).forEach(function(subcat) {
                     subcat.forEach(function(p) {
                         totalesPorPregunta[p.id] = { verdes: 0, amarillos: 0, rojos: 0, total: 0 };
+                        
                         self.oficinas.forEach(function(o) {
-                            totalesPorOficina[o.id].totalesPorPregunta[p.id] = { verdes: 0, amarillos: 0, rojos: 0, total: 0 };
+                            if (!totalesPorOficina[o.id].totalesPorPregunta[p.id]) {
+                                totalesPorOficina[o.id].totalesPorPregunta[p.id] = { 
+                                    verdes: 0, amarillos: 0, rojos: 0, total: 0 
+                                };
+                            }
                         });
                     });
                 });
             });
 
-            respuestas.forEach(function(resp) {
-                var oid = resp['encuesta.equipoId'];
-                var pid = resp.preguntaId;
-                var r   = resp.respuesta;
-                if (oid && totalesPorOficina[oid] && totalesPorPregunta[pid]) {
-                    totalesPorOficina[oid].totalesPorPregunta[pid].total++;
-                    totalesPorOficina[oid].totalesOficina.total++;
-                    totalesPorPregunta[pid].total++;
-                    totalesGenerales.total++;
-                    if (r === 'verde') {
-                        totalesPorOficina[oid].totalesPorPregunta[pid].verdes++;
-                        totalesPorOficina[oid].totalesOficina.verdes++;
-                        totalesPorPregunta[pid].verdes++;
-                        totalesGenerales.verdes++;
-                    } else if (r === 'amarillo') {
-                        totalesPorOficina[oid].totalesPorPregunta[pid].amarillos++;
-                        totalesPorOficina[oid].totalesOficina.amarillos++;
-                        totalesPorPregunta[pid].amarillos++;
-                        totalesGenerales.amarillos++;
-                    } else if (r === 'rojo') {
-                        totalesPorOficina[oid].totalesPorPregunta[pid].rojos++;
-                        totalesPorOficina[oid].totalesOficina.rojos++;
-                        totalesPorPregunta[pid].rojos++;
-                        totalesGenerales.rojos++;
+            console.log('📊 Estructuras inicializadas');
+
+            // Procesar cada respuesta
+            respuestas.forEach(function(resp, index) {
+                var oficinaId = resp['encuesta.equipoId'];
+                var preguntaId = resp.preguntaId;
+                var color = resp.respuesta;
+
+                if (!oficinaId || !preguntaId || !color) {
+                    console.warn('⚠️ Respuesta incompleta:', resp);
+                    return;
+                }
+
+                var oficina = totalesPorOficina[oficinaId];
+                var preguntaTotales = totalesPorPregunta[preguntaId];
+
+                if (!oficina) {
+                    console.warn('⚠️ Oficina no encontrada:', oficinaId);
+                    return;
+                }
+
+                if (!preguntaTotales) {
+                    console.warn('⚠️ Pregunta no encontrada:', preguntaId);
+                    return;
+                }
+
+                // Actualizar totales de oficina por pregunta
+                if (oficina.totalesPorPregunta[preguntaId]) {
+                    oficina.totalesPorPregunta[preguntaId].total++;
+                    
+                    if (color === 'verde') {
+                        oficina.totalesPorPregunta[preguntaId].verdes++;
+                    } else if (color === 'amarillo') {
+                        oficina.totalesPorPregunta[preguntaId].amarillos++;
+                    } else if (color === 'rojo') {
+                        oficina.totalesPorPregunta[preguntaId].rojos++;
                     }
+                }
+
+                // Actualizar totales generales de oficina
+                oficina.totalesOficina.total++;
+                if (color === 'verde') {
+                    oficina.totalesOficina.verdes++;
+                } else if (color === 'amarillo') {
+                    oficina.totalesOficina.amarillos++;
+                } else if (color === 'rojo') {
+                    oficina.totalesOficina.rojos++;
+                }
+
+                // Actualizar totales por pregunta (global)
+                preguntaTotales.total++;
+                if (color === 'verde') {
+                    preguntaTotales.verdes++;
+                } else if (color === 'amarillo') {
+                    preguntaTotales.amarillos++;
+                } else if (color === 'rojo') {
+                    preguntaTotales.rojos++;
+                }
+
+                // Actualizar totales generales
+                totalesGenerales.total++;
+                if (color === 'verde') {
+                    totalesGenerales.verdes++;
+                } else if (color === 'amarillo') {
+                    totalesGenerales.amarillos++;
+                } else if (color === 'rojo') {
+                    totalesGenerales.rojos++;
                 }
             });
 
+            console.log('📊 Totales generales:', totalesGenerales);
+
+            // Calcular porcentajes y colores para cada oficina (por pregunta)
             self.oficinas.forEach(function(o) {
                 var od = totalesPorOficina[o.id];
+                
+                // Calcular por pregunta
                 Object.keys(od.totalesPorPregunta).forEach(function(pid) {
                     var pd = od.totalesPorPregunta[pid];
-                    pd.porcentaje = pd.total > 0 ? (pd.verdes / pd.total) * 100 : 0;
-                    pd.color = self.obtenerColorDistribucion(pd.verdes, pd.amarillos, pd.rojos, pd.total);
+                    if (pd.total > 0) {
+                        pd.porcentaje = (pd.verdes / pd.total) * 100;
+                        pd.color = self.obtenerColorDistribucion(
+                            pd.verdes, pd.amarillos, pd.rojos, pd.total
+                        );
+                    } else {
+                        pd.porcentaje = 0;
+                        pd.color = 'gris';
+                    }
                 });
+
+                // Calcular totales de oficina
                 var otd = od.totalesOficina;
-                otd.porcentaje = otd.total > 0 ? (otd.verdes / otd.total) * 100 : 0;
-                otd.color = self.obtenerColorDistribucion(otd.verdes, otd.amarillos, otd.rojos, otd.total);
+                if (otd.total > 0) {
+                    otd.porcentaje = (otd.verdes / otd.total) * 100;
+                    otd.color = self.obtenerColorDistribucion(
+                        otd.verdes, otd.amarillos, otd.rojos, otd.total
+                    );
+                } else {
+                    otd.porcentaje = 0;
+                    otd.color = 'gris';
+                }
+
+                // Asignar de vuelta
                 o.totalesPorPregunta = od.totalesPorPregunta;
-                o.totalesOficina     = od.totalesOficina;
+                o.totalesOficina = od.totalesOficina;
             });
 
+            // Calcular porcentajes y colores por pregunta (global)
             Object.keys(totalesPorPregunta).forEach(function(pid) {
                 var pd = totalesPorPregunta[pid];
-                pd.porcentaje = pd.total > 0 ? (pd.verdes / pd.total) * 100 : 0;
-                pd.color = self.obtenerColorDistribucion(pd.verdes, pd.amarillos, pd.rojos, pd.total);
+                if (pd.total > 0) {
+                    pd.porcentaje = (pd.verdes / pd.total) * 100;
+                    pd.color = self.obtenerColorDistribucion(
+                        pd.verdes, pd.amarillos, pd.rojos, pd.total
+                    );
+                } else {
+                    pd.porcentaje = 0;
+                    pd.color = 'gris';
+                }
             });
 
-            var pg = totalesGenerales.total > 0 ? (totalesGenerales.verdes / totalesGenerales.total) * 100 : 0;
-            totalesGenerales.porcentaje = pg;
-            totalesGenerales.color      = self.obtenerColorDistribucion(totalesGenerales.verdes, totalesGenerales.amarillos, totalesGenerales.rojos, totalesGenerales.total);
+            // Calcular totales generales
+            if (totalesGenerales.total > 0) {
+                totalesGenerales.porcentaje = (totalesGenerales.verdes / totalesGenerales.total) * 100;
+                totalesGenerales.color = self.obtenerColorDistribucion(
+                    totalesGenerales.verdes, 
+                    totalesGenerales.amarillos, 
+                    totalesGenerales.rojos, 
+                    totalesGenerales.total
+                );
+            } else {
+                totalesGenerales.porcentaje = 0;
+                totalesGenerales.color = 'gris';
+            }
 
+            // Asignar a la instancia
             this.totalesPorPregunta = totalesPorPregunta;
-            this.totalesGenerales   = totalesGenerales;
-            this.usuariosData       = [{}];
+            this.totalesGenerales = totalesGenerales;
+            this.usuariosData = [{}]; // Placeholder para mantener compatibilidad
+
+            console.log('✅ Procesamiento completado');
+            console.log('🏢 Oficinas procesadas:', this.oficinas.length);
+            console.log('📊 Oficinas con datos:', this.oficinas.filter(o => o.totalesOficina.total > 0).length);
         },
 
         // ════════════════════════════════════════════════════════
@@ -237,34 +487,90 @@ define([], function () {
         // ════════════════════════════════════════════════════════
         cargarDatosReporteDetallado: function () {
             var self = this;
-            var cargarPreguntas = $.ajax({
-                url: 'api/v1/Pregunta',
-                data: { where: [{ type: 'and', value: [
-                    { type: 'or', value: [
-                        { type: 'equals', attribute: 'rolObjetivo', value: this.rolObjetivo },
-                        { type: 'contains', attribute: 'rolObjetivo', value: this.rolObjetivo }
-                    ]},
-                    { type: 'equals', attribute: 'estaActiva', value: 1 }
-                ]}], orderBy: 'orden' }
+            
+            var cargarPreguntas = Espo.Ajax.getRequest('Pregunta', {
+                where: [
+                    {
+                        type: 'and',
+                        value: [
+                            {
+                                type: 'or',
+                                value: [
+                                    { type: 'equals', attribute: 'rolObjetivo', value: this.rolObjetivo },
+                                    { type: 'contains', attribute: 'rolObjetivo', value: this.rolObjetivo }
+                                ]
+                            },
+                            { type: 'equals', attribute: 'estaActiva', value: 1 }
+                        ]
+                    }
+                ],
+                orderBy: 'orden',
+                maxSize: 200
             });
 
             var whereEncuestas = [{ type: 'equals', attribute: 'rolUsuario', value: this.rolObjetivo }];
-            if (this.oficinaIdParaFiltrar) whereEncuestas.push({ type: 'equals', attribute: 'equipoId', value: this.oficinaIdParaFiltrar });
-            if (this.usuarioId)           whereEncuestas.push({ type: 'equals', attribute: 'usuarioEvaluadoId', value: this.usuarioId });
+            if (this.oficinaIdParaFiltrar) {
+                whereEncuestas.push({ type: 'equals', attribute: 'equipoId', value: this.oficinaIdParaFiltrar });
+            }
+            if (this.usuarioId) {
+                whereEncuestas.push({ type: 'equals', attribute: 'usuarioEvaluadoId', value: this.usuarioId });
+            }
             if (this.fechaInicio && this.fechaCierre) {
                 whereEncuestas.push({ type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: this.fechaInicio });
-                whereEncuestas.push({ type: 'lessThanOrEquals',    attribute: 'fechaCreacion', value: this.fechaCierre + ' 23:59:59' });
+                whereEncuestas.push({ type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: this.fechaCierre + ' 23:59:59' });
             }
 
-            var cargarEncuestas = $.ajax({
-                url: 'api/v1/Encuesta',
-                data: { where: whereEncuestas, select: 'id,name,usuarioEvaluadoId,usuarioEvaluadoName,fechaEncuesta,porcentajeCompletado,equipoName' }
-            });
+            // Cargar TODAS las encuestas con paginación (lotes de 200)
+            var cargarTodasLasEncuestas = function() {
+                return new Promise(function(resolve, reject) {
+                    var maxSize = 200;
+                    var offset = 0;
+                    var todasLasEncuestas = [];
+                    
+                    function fetchNextPage() {
+                        Espo.Ajax.getRequest('Encuesta', {
+                            where: whereEncuestas,
+                            select: 'id,name,usuarioEvaluadoId,usuarioEvaluadoName,fechaEncuesta,porcentajeCompletado,equipoName',
+                            maxSize: maxSize,
+                            offset: offset
+                        }).then(function(response) {
+                            var encuestas = response.list || [];
+                            todasLasEncuestas = todasLasEncuestas.concat(encuestas);
+                            
+                            if (encuestas.length < maxSize) {
+                                // No hay más páginas
+                                resolve(todasLasEncuestas);
+                            } else {
+                                // Ir a la siguiente página
+                                offset += maxSize;
+                                fetchNextPage();
+                            }
+                        }).catch(function(error) {
+                            console.error('Error cargando página de encuestas:', error);
+                            reject(error);
+                        });
+                    }
+                    
+                    fetchNextPage();
+                });
+            };
 
-            Promise.all([cargarPreguntas, cargarEncuestas]).then(function(results) {
-                self.procesarPreguntas(results[0].list || []);
-                self.procesarEncuestas(results[1].list || []);
-            }).catch(function() {
+            Promise.all([cargarPreguntas, cargarTodasLasEncuestas()]).then(function(results) {
+                var preguntas = results[0] && results[0].list ? results[0].list : [];
+                var encuestas = results[1] || [];
+
+                console.log('📊 Reporte Detallado - Datos cargados:', {
+                    totalPreguntas: preguntas.length,
+                    totalEncuestas: encuestas.length,
+                    rolObjetivo: self.rolObjetivo,
+                    oficinaId: self.oficinaIdParaFiltrar,
+                    usuarioId: self.usuarioId
+                });
+
+                self.procesarPreguntas(preguntas);
+                self.procesarEncuestas(encuestas);
+            }).catch(function(error) {
+                console.error('❌ Error al cargar datos del reporte detallado:', error);
                 Espo.Ui.error('Error al cargar los datos del reporte');
                 self.wait(false);
             });
@@ -272,30 +578,46 @@ define([], function () {
 
         procesarPreguntas: function (preguntas) {
             var agrupadas = {};
+            
             preguntas.forEach(function(p) {
-                var cat = p.categoria    || 'Sin Categoría';
+                var cat = p.categoria || 'Sin Categoría';
                 var sub = p.subCategoria || 'General';
-                if (!agrupadas[cat])      agrupadas[cat]      = {};
+                
+                if (!agrupadas[cat]) agrupadas[cat] = {};
                 if (!agrupadas[cat][sub]) agrupadas[cat][sub] = [];
-                agrupadas[cat][sub].push({ id: p.id, texto: p.textoPregunta || p.name, orden: p.orden || 0 });
-            });
-            Object.keys(agrupadas).forEach(function(cat) {
-                Object.keys(agrupadas[cat]).forEach(function(sub) {
-                    agrupadas[cat][sub].sort(function(a, b) { return (a.orden || 0) - (b.orden || 0); });
+                
+                agrupadas[cat][sub].push({ 
+                    id: p.id, 
+                    texto: p.textoPregunta || p.name, 
+                    orden: p.orden || 0 
                 });
             });
+
+            // Ordenar preguntas dentro de cada subcategoría
+            Object.keys(agrupadas).forEach(function(cat) {
+                Object.keys(agrupadas[cat]).forEach(function(sub) {
+                    agrupadas[cat][sub].sort(function(a, b) { 
+                        return (a.orden || 0) - (b.orden || 0); 
+                    });
+                });
+            });
+
             this.preguntasAgrupadas = agrupadas;
+            console.log('📚 Preguntas agrupadas:', Object.keys(agrupadas).length, 'categorías');
         },
 
         procesarEncuestas: function (encuestas) {
             var self = this;
+            
             if (encuestas.length === 0) {
+                console.log('ℹ️ No hay encuestas para procesar');
                 this.usuariosData = [];
                 this.wait(false);
                 this.reRender();
                 this.cargarPlanesAccion();
                 return;
             }
+
             var encuestasUnicas = encuestas.map(function(e) {
                 return {
                     id:                  e.id,
@@ -306,34 +628,114 @@ define([], function () {
                     oficinaName:         e.equipoName || ''
                 };
             });
+
             this.cargarRespuestasParaEncuestas(encuestasUnicas);
         },
 
         cargarRespuestasParaEncuestas: function (encuestas) {
             var self = this;
-            var promesas = encuestas.map(function(encuesta) {
-                return $.ajax({
-                    url: 'api/v1/RespuestaEncuesta',
-                    data: {
-                        where: [{ type: 'equals', attribute: 'encuestaId', value: encuesta.id }],
-                        select: 'preguntaId,preguntaName,respuesta'
+            
+            var encuestasIds = encuestas.map(function(e) { return e.id; });
+            
+            if (encuestasIds.length === 0) {
+                self.usuariosData = [];
+                self.wait(false);
+                self.reRender();
+                return;
+            }
+
+            console.log('📥 Cargando respuestas para', encuestasIds.length, 'encuestas');
+
+            // Dividir en lotes de encuestas (límite de where in)
+            var lotesEncuestas = [];
+            var tamanoLoteEncuestas = 200;
+            for (var i = 0; i < encuestasIds.length; i += tamanoLoteEncuestas) {
+                lotesEncuestas.push(encuestasIds.slice(i, i + tamanoLoteEncuestas));
+            }
+
+            // Para cada lote de encuestas, necesitamos paginar las respuestas
+            var promesasTotales = [];
+
+            lotesEncuestas.forEach(function(loteEncuestasIds) {
+                // Crear una promesa que maneje la paginación de respuestas para este lote de encuestas
+                var promesaLote = new Promise(function(resolve, reject) {
+                    var maxSize = 200;
+                    var offset = 0;
+                    var todasLasRespuestasDelLote = [];
+                    
+                    function fetchNextPage() {
+                        Espo.Ajax.getRequest('RespuestaEncuesta', {
+                            where: [
+                                { 
+                                    type: 'in', 
+                                    attribute: 'encuestaId', 
+                                    value: loteEncuestasIds 
+                                }
+                            ],
+                            select: 'preguntaId,respuesta,encuestaId',
+                            maxSize: maxSize,
+                            offset: offset
+                        }).then(function(response) {
+                            var respuestas = response.list || [];
+                            todasLasRespuestasDelLote = todasLasRespuestasDelLote.concat(respuestas);
+                            
+                            if (respuestas.length < maxSize) {
+                                // No hay más páginas para este lote
+                                resolve(todasLasRespuestasDelLote);
+                            } else {
+                                // Ir a la siguiente página
+                                offset += maxSize;
+                                fetchNextPage();
+                            }
+                        }).catch(function(error) {
+                            console.error('Error cargando página de respuestas:', error);
+                            reject(error);
+                        });
                     }
-                }).then(function(resp) {
-                    encuesta.respuestas = {};
-                    (resp.list || []).forEach(function(r) { encuesta.respuestas[r.preguntaId] = r.respuesta; });
-                    return encuesta;
+                    
+                    fetchNextPage();
                 });
+                
+                promesasTotales.push(promesaLote);
             });
 
-            Promise.all(promesas).then(function(encuestasConRespuestas) {
-                self.usuariosData = encuestasConRespuestas;
-                self.usuariosMap  = {};
-                self.usuariosData.forEach(function(u) { self.usuariosMap[u.userId] = u; });
+            Promise.all(promesasTotales).then(function(resultadosLotes) {
+                // Combinar todas las respuestas de todos los lotes
+                var todasLasRespuestas = [];
+                resultadosLotes.forEach(function(lote) {
+                    todasLasRespuestas = todasLasRespuestas.concat(lote);
+                });
+
+                console.log('✅ Total respuestas cargadas:', todasLasRespuestas.length);
+
+                // Crear mapa de respuestas por encuesta
+                var respuestasPorEncuesta = {};
+                
+                todasLasRespuestas.forEach(function(r) {
+                    if (!respuestasPorEncuesta[r.encuestaId]) {
+                        respuestasPorEncuesta[r.encuestaId] = {};
+                    }
+                    respuestasPorEncuesta[r.encuestaId][r.preguntaId] = r.respuesta;
+                });
+
+                // Asignar respuestas a cada encuesta
+                encuestas.forEach(function(e) {
+                    e.respuestas = respuestasPorEncuesta[e.id] || {};
+                });
+
+                self.usuariosData = encuestas;
+                self.usuariosMap = {};
+                self.usuariosData.forEach(function(u) { 
+                    self.usuariosMap[u.userId] = u; 
+                });
+
                 self.calcularTotales();
                 self.wait(false);
                 self.reRender();
                 self.cargarPlanesAccion();
-            }).catch(function() {
+
+            }).catch(function(error) {
+                console.error('❌ Error al cargar respuestas:', error);
                 self.usuariosData = [];
                 self.wait(false);
                 self.reRender();
@@ -343,87 +745,78 @@ define([], function () {
         calcularTotales: function () {
             var self = this;
             var todasLasPreguntas = [];
-            var totalPorPregunta  = {};
+            var totalPorPregunta = {};
 
-            Object.keys(this.preguntasAgrupadas).forEach(function(cat) {
+            // Obtener todas las preguntas
+            Object.keys(this.preguntasAgrupadas || {}).forEach(function(cat) {
                 Object.keys(self.preguntasAgrupadas[cat]).forEach(function(sub) {
-                    self.preguntasAgrupadas[cat][sub].forEach(function(p) { todasLasPreguntas.push(p.id); });
+                    self.preguntasAgrupadas[cat][sub].forEach(function(p) { 
+                        todasLasPreguntas.push(p.id); 
+                    });
                 });
             });
 
-            // ── Totales por columna (pregunta) ──────────────────────────
+            // Totales por columna (pregunta)
             todasLasPreguntas.forEach(function(pid) {
                 var verdes = 0, amarillos = 0, rojos = 0, total = 0;
+                
                 self.usuariosData.forEach(function(u) {
                     var r = u.respuestas[pid];
                     if (r) {
                         total++;
-                        if (r === 'verde')    verdes++;
+                        if (r === 'verde') verdes++;
                         else if (r === 'amarillo') amarillos++;
-                        else if (r === 'rojo')     rojos++;
+                        else if (r === 'rojo') rojos++;
                     }
                 });
+
                 var pct = total > 0 ? (verdes / total) * 100 : 0;
                 totalPorPregunta[pid] = {
-                    verdes: verdes, amarillos: amarillos, rojos: rojos,
-                    total: total, porcentaje: pct,
+                    verdes: verdes, 
+                    amarillos: amarillos, 
+                    rojos: rojos,
+                    total: total, 
+                    porcentaje: pct,
                     color: self.obtenerColorDistribucion(verdes, amarillos, rojos, total)
                 };
             });
 
-            // ── Totales por fila (usuario) ───────────────────────────────
+            // Totales por fila (usuario)
             this.usuariosData.forEach(function(u) {
                 var verdes = 0, amarillos = 0, rojos = 0, total = 0;
+                
                 todasLasPreguntas.forEach(function(pid) {
                     var r = u.respuestas[pid];
                     if (r) {
                         total++;
-                        if (r === 'verde')    verdes++;
+                        if (r === 'verde') verdes++;
                         else if (r === 'amarillo') amarillos++;
-                        else if (r === 'rojo')     rojos++;
+                        else if (r === 'rojo') rojos++;
                     }
                 });
+
                 var pct = total > 0 ? (verdes / total) * 100 : 0;
                 u.totales = {
-                    verdes: verdes, amarillos: amarillos, rojos: rojos,
-                    total: total, porcentaje: pct,
+                    verdes: verdes, 
+                    amarillos: amarillos, 
+                    rojos: rojos,
+                    total: total, 
+                    porcentaje: pct,
                     color: self.obtenerColorDistribucion(verdes, amarillos, rojos, total)
                 };
             });
 
             this.totalesPorPregunta = totalPorPregunta;
+            
+            console.log('📊 Totales calculados:', {
+                totalUsuarios: this.usuariosData.length,
+                totalPreguntas: todasLasPreguntas.length,
+                preguntasConDatos: Object.values(totalPorPregunta).filter(t => t.total > 0).length
+            });
         },
 
         /**
          * Fórmula de semáforo basada en distribución de competencias.
-         *
-         * Reglas (de la tabla de referencia):
-         *
-         * VERDE si:
-         *   - 100% verde
-         *   - ≥80% verde + resto amarillo   (ej: 80V+20A)
-         *   - ≥80% verde + resto rojo        (ej: 80V+20R)
-         *
-         * AMARILLO si:
-         *   - 60–79% verde + resto rojo      (ej: 60V+40R, 60V+40R)
-         *   - 60–79% verde + resto rojo+amar (ej: 60V+20R+20A)
-         *   - 40% verde + 40% rojo + 20% amarillo
-         *   - 40% verde + 20% rojo + 40% amarillo
-         *   - 40% verde + 60% amarillo
-         *
-         * ROJO si:
-         *   - 40% verde + 40% rojo + 20% amarillo  (cuando rojo >= amarillo y situación mixta grave)
-         *   - 40% verde + 60% rojo
-         *   - Cualquier caso restante con ≥ rojo dominante
-         *
-         * Resumen implementado:
-         *   pV = % verde   pA = % amarillo   pR = % rojo
-         *
-         *   Verde:    pV >= 80
-         *   Amarillo: pV >= 60  (independientemente del mix de A y R)
-         *             pV >= 40  && pR == 0   (40V + 60A → amarillo)
-         *             pV >= 40  && pA >= pR  && pR <= 40  (40V+40A+20R → amarillo; 40V+20R+40A → amarillo)
-         *   Rojo:     resto (incluye 40V+60R, 40V+40R+20A cuando rojo domina)
          */
         obtenerColorDistribucion: function (verdes, amarillos, rojos, total) {
             if (total === 0) return 'gris';
@@ -452,7 +845,7 @@ define([], function () {
             return 'rojo';
         },
 
-        // Mantener para compatibilidad con llamadas en procesarRespuestasGenerales
+        // Mantener para compatibilidad
         obtenerColorPorPorcentaje: function (porcentaje) {
             if (porcentaje >= 80) return 'verde';
             if (porcentaje >= 60) return 'amarillo';

@@ -106,6 +106,8 @@ define([], function () {
         this.usuarios = this.opciones.usuarios  || [];
         this.items    = this.opciones.items     || {};
         this.oficina  = this.opciones.oficina   || null;
+        // Etiqueta dinámica para la columna del evaluado en tabla y modal
+        this.etiquetaEjecutor = this.opciones.etiquetaEjecutor || 'Evaluado';
 
         this.planes         = [];
         this.paginacion     = { pagina: 1, porPagina: 10, total: 0, totalPaginas: 0 };
@@ -141,16 +143,19 @@ define([], function () {
                 this.usuarioRol = 'Asesor';
             }
 
-            // Casa Nacional Y Gerentes/Directores/Coordinadores pueden crear planes
-            this.puedeCrear = this.esCasaNacional || this.esGerenteODirector;
+            // Solo Casa Nacional puede crear planes
+            this.puedeCrear = this.esCasaNacional;
+            // Casa Nacional y GDC pueden ver la sección de planes (asesores no)
+            this.puedeVer   = this.esCasaNacional || this.esGerenteODirector;
         },
 
         actualizarConfig: function (opciones) {
             opciones = opciones || {};
-            if (opciones.modulo   !== undefined) this.modulo   = opciones.modulo;
-            if (opciones.usuarios !== undefined) this.usuarios = opciones.usuarios;
-            if (opciones.items    !== undefined) this.items    = opciones.items;
-            if (opciones.oficina  !== undefined) this.oficina  = opciones.oficina;
+            if (opciones.modulo           !== undefined) this.modulo           = opciones.modulo;
+            if (opciones.usuarios         !== undefined) this.usuarios         = opciones.usuarios;
+            if (opciones.items            !== undefined) this.items            = opciones.items;
+            if (opciones.oficina          !== undefined) this.oficina          = opciones.oficina;
+            if (opciones.etiquetaEjecutor !== undefined) this.etiquetaEjecutor = opciones.etiquetaEjecutor;
             this._resolverUsuario();
         },
 
@@ -163,6 +168,7 @@ define([], function () {
         //  CARGA
         // ──────────────────────────────────────────────────────
         cargar: function () {
+            if (!this.puedeVer) return;  // Asesores: no cargar
             this.paginacion.pagina = 1;
             this._fetchPagina(1);
         },
@@ -188,14 +194,25 @@ define([], function () {
                 'where[0][value]':     self.modulo
             };
 
-            if (!self.esCasaNacional) {
-                // GDC ven todos los planes de su oficina
-                if (self.oficina) {
-                    wp['where[1][type]']      = 'equals';
-                    wp['where[1][attribute]'] = 'equipoId';
-                    wp['where[1][value]']     = self.oficina;
-                }
+            var whereIdx = 1;
+
+            // Siempre filtrar por oficina (GDC y CN ven solo los planes de la oficina en contexto)
+            if (self.oficina) {
+                wp['where[' + whereIdx + '][type]']      = 'equals';
+                wp['where[' + whereIdx + '][attribute]'] = 'equipoId';
+                wp['where[' + whereIdx + '][value]']     = self.oficina;
+                whereIdx++;
             }
+
+            // GDC: excluir estados 'completado' y 'cancelado'
+            if (!self.esCasaNacional && self.esGerenteODirector) {
+                wp['where[' + whereIdx + '][type]']         = 'notIn';
+                wp['where[' + whereIdx + '][attribute]']    = 'estado';
+                wp['where[' + whereIdx + '][value][0]']     = 'completado';
+                wp['where[' + whereIdx + '][value][1]']     = 'cancelado';
+                whereIdx++;
+            }
+            // Casa Nacional: ve todos los estados (sin filtro adicional de estado)
 
             // Paso 1: obtener total real
             Espo.Ajax.getRequest('GesPlaAccPlanAccion', Object.assign({}, wp, { maxSize: 1, offset: 0, select: 'id' }))
@@ -273,6 +290,7 @@ define([], function () {
         },
 
         render: function () {
+            if (!this.puedeVer) return;  // Asesores: no renderizar nada
             var $c = this.view.$el.find('#seccion-planes-accion');
             if (!$c.length) return;
             // Si paginacion aún no está inicializada, mostrar cargando
@@ -320,12 +338,16 @@ define([], function () {
 
             var cuerpo;
             if (planes.length === 0) {
+                var msgVacio = this.esCasaNacional
+                    ? 'No hay planes de acción registrados para esta oficina.'
+                    : 'No hay planes de acción activos en tu oficina.';
                 cuerpo = '<div style="text-align:center;padding:40px 20px;color:#999;">' +
                     '<i class="fas fa-clipboard" style="font-size:3em;margin-bottom:15px;display:block;"></i>' +
-                    '<p>No hay planes de acción registrados.</p>' +
+                    '<p>' + msgVacio + '</p>' +
                     (this.puedeCrear ? '<p style="font-size:0.9em;">Usa <strong>Nuevo Plan</strong> para crear el primero.</p>' : '') +
                     '</div>';
             } else {
+                var labelEjecutor = esc(this.etiquetaEjecutor);
                 var filas = planes.map(function (plan, idx) {
                     var b      = self._badge(plan.estado);
                     var nombre = plan.asesorEjecutorName || '—';
@@ -357,7 +379,7 @@ define([], function () {
                     '<table style="width:100%;border-collapse:collapse;">' +
                     '<thead style="background:#f5f5f5;border-bottom:2px solid #B8A279;"><tr>' +
                         '<th style="padding:14px 12px;text-align:center;width:50px;font-weight:700;color:#333;">N°</th>' +
-                        '<th style="padding:14px 12px;text-align:left;font-weight:700;color:#333;">Asesor evaluado</th>' +
+                        '<th style="padding:14px 12px;text-align:left;font-weight:700;color:#333;">' + labelEjecutor + '</th>' +
                         '<th style="padding:14px 12px;text-align:left;font-weight:700;color:#333;">Título del Plan</th>' +
                         '<th style="padding:14px 12px;text-align:center;font-weight:700;color:#333;white-space:nowrap;">Fecha Inicio</th>' +
                         '<th style="padding:14px 12px;text-align:center;font-weight:700;color:#333;white-space:nowrap;">Fecha Fin</th>' +
@@ -367,13 +389,28 @@ define([], function () {
                     '</table></div>';
             }
 
-            // Etiquetas de contadores según rol
-            var etiqPorRev = 'Por revisar';
-            var etiqEspGDC = this.esCasaNacional
-                ? 'Esperando por Gerente/Director/Coordinador'
-                : 'Esperando por Casa Nacional';
-            var cntPorRev = porRevCN;
-            var cntEspGDC = espGDC;
+            // ──────────────────────────────────────────────────────────
+            //  CONTADORES Y ETIQUETAS CORREGIDOS
+            // ──────────────────────────────────────────────────────────
+            var etiqPorRev, etiqEspGDC, cntPorRev, cntEspGDC;
+
+            if (this.esCasaNacional) {
+                // Para Casa Nacional:
+                // - 'pendienteCN' significa "Por revisar (por CN)"
+                // - 'pendienteGDC' significa "Esperando por Gerente/Director/Coordinador"
+                etiqPorRev = 'Por revisar';
+                etiqEspGDC = 'Esperando por Gerente/Director/Coordinador';
+                cntPorRev = porRevCN;   // Cuenta los planes con estado 'pendienteCN'
+                cntEspGDC = espGDC;     // Cuenta los planes con estado 'pendienteGDC'
+            } else {
+                // Para Gerente/Director/Coordinador:
+                // - 'pendienteGDC' significa "Por revisar (por ellos)"
+                // - 'pendienteCN' significa "Esperando por Casa Nacional"
+                etiqPorRev = 'Por revisar';
+                etiqEspGDC = 'Esperando por Casa Nacional';
+                cntPorRev = espGDC;      // Lo que ellos ven como "Por revisar" son los planes 'pendienteGDC'
+                cntEspGDC = porRevCN;    // Lo que ven como "Esperando por CN" son los planes 'pendienteCN'
+            }
 
             var paginacionHtml = this._buildPaginacion();
 
@@ -492,7 +529,7 @@ define([], function () {
                         '<div style="display:grid;gap:16px;">' +
 
                             '<div>' +
-                                '<label style="' + LABEL_STYLE + '">Asesor evaluado *</label>' +
+                                '<label style="' + LABEL_STYLE + '">' + esc(self.etiquetaEjecutor) + ' *</label>' +
                                 '<select id="gpa-asesorEjecutorId" style="' + INPUT_STYLE + 'background:#fff;">' +
                                     '<option value="">— Seleccionar —</option>' + opcsUsuarios +
                                 '</select>' +
@@ -600,7 +637,7 @@ define([], function () {
 
             // Validar obligatorios
             var errores = [];
-            if (!asesorId)  errores.push('Asesor evaluado');
+            if (!asesorId)  errores.push(self.etiquetaEjecutor);
             if (!titulo)    errores.push('Título del Plan');
             if (!fechaIni)  errores.push('Fecha Inicio');
             if (!fechaFin)  errores.push('Fecha Fin');
@@ -699,7 +736,8 @@ define([], function () {
             var self  = this;
             var plan  = this.planActualData;
             var b     = this._badge(plan.estado);
-            var puedeGestionar = this.esCasaNacional || this.esGerenteODirector;
+            // SOLO Casa Nacional puede gestionar (completar, pausar, cancelar) los planes
+            var puedeGestionar = this.esCasaNacional;
 
             var chatHtml = this.chats.length === 0
                 ? '<div style="text-align:center;padding:30px;color:#999;">' +
@@ -720,7 +758,8 @@ define([], function () {
                     '</div>';
             }
 
-            var mostrarInput = plan.estado !== 'terminado' && plan.estado !== 'cancelado';
+            // El input SOLO se muestra si el estado NO es 'completado' Y NO es 'cancelado'
+            var mostrarInput = plan.estado !== 'completado' && plan.estado !== 'cancelado';
             var inputChat = mostrarInput
                 ? '<div style="display:flex;gap:10px;align-items:flex-end;">' +
                   '<textarea id="gpa-chatTexto" rows="2" placeholder="Escribe un mensaje... (Enter para enviar)" ' +
@@ -729,7 +768,7 @@ define([], function () {
                   'border-radius:8px;font-weight:600;cursor:pointer;"><i class="fas fa-paper-plane"></i></button>' +
                   '</div>'
                 : '<div style="text-align:center;padding:12px;background:#f8f9fa;border-radius:8px;color:#888;font-size:14px;">' +
-                  '<i class="fas fa-lock" style="margin-right:6px;"></i>Plan ' + esc(b.texto) + '. No se pueden agregar mensajes.</div>';
+                  '<i class="fas fa-lock" style="margin-right:6px;"></i>Plan ' + (plan.estado === 'completado' ? 'completado' : 'cancelado') + '. No se pueden agregar mensajes.</div>';
 
             var infoExtra = (plan.itemEvaluado || plan.asesorGeneradorName)
                 ? '<div style="padding:12px 24px;background:#fafafa;border-bottom:1px solid #e0e0e0;flex-shrink:0;font-size:13px;color:#555;">' +

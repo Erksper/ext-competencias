@@ -1,8 +1,8 @@
 /**
  * reportes.js — Vista de selección de reportes de Competencias
  * ─────────────────────────────────────────────────────────────
- * Roles equivalentes a Gerente/Director: Coordinador
- * Filtro Casa Nacional: CLA → Oficina en cascada (sin botón buscar)
+ * Filtro CLA → Oficina via endpoints PHP dedicados
+ * (mismo patrón que lista.js / CCustomerSurvey)
  */
 define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
@@ -32,11 +32,9 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
         setup: function () {
             this.reportesDisponibles   = [];
-            this.oficinas              = [];
-            this.claList               = [];       // lista de CLAs para el filtro
             this.usuarioActual         = this.getUser();
             this.esCasaNacional        = false;
-            this.esGerenteODirector    = false;   // incluye coordinador
+            this.esGerenteODirector    = false;
             this.esAsesor              = false;
             this.sinReporteAsesor      = false;
             this.sinReporteGerente     = false;
@@ -84,14 +82,11 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
                 var roles = Object.values(userModel.get('rolesNames') || {}).map(function (r) { return r.toLowerCase(); });
                 self.esCasaNacional     = roles.includes('casa nacional');
-                // Coordinador equivale a gerente/director
                 self.esGerenteODirector = roles.includes('gerente') || roles.includes('director') || roles.includes('coordinador');
                 self.esAsesor           = roles.includes('asesor');
+                self.rolUsuario         = self._determinarRolFormateado(roles);
 
-                // Rol formateado para mostrar
-                self.rolUsuario = self._determinarRolFormateado(roles);
-
-                // Capturar la oficina real (ignorar equipos CLA)
+                // Capturar la oficina real del gerente/director (ignorar equipos CLA)
                 if (self.esGerenteODirector && !self.esCasaNacional) {
                     var teamIds   = userModel.get('teamsIds')   || [];
                     var teamNames = userModel.get('teamsNames') || {};
@@ -131,7 +126,8 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 }
                 self.actualizarPeriodoSeleccionado();
 
-            }).catch(function () {
+            }).catch(function (err) {
+                console.error('Error en cargarDatosIniciales:', err);
                 Espo.Ui.error('Error al cargar datos iniciales.');
                 self.wait(false);
             });
@@ -175,17 +171,20 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 select: 'id', maxSize: 1
             }});
 
+            // Promesas base (índices 0 y 1)
             var promesas = [fetchGerentes, fetchAsesores];
 
+            // Casa Nacional: estadísticas de estado (índices 2, 3, 4)
+            // CLAs y oficinas se cargan APARTE en afterRender via _inicializarFiltroClasOficina
             if (this.esCasaNacional) {
                 promesas.push(
                     $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'estado', value: 'completada' }].concat(wherePeriodo), select: 'id', maxSize: 1 }}),
-                    $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'estado', value: 'revision' }].concat(wherePeriodo), select: 'id', maxSize: 1 }}),
-                    $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'estado', value: 'incompleta' }].concat(wherePeriodo), select: 'id', maxSize: 1 }}),
-                    this._fetchTodasLasOficinas()
+                    $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'estado', value: 'revision'   }].concat(wherePeriodo), select: 'id', maxSize: 1 }}),
+                    $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'estado', value: 'incompleta' }].concat(wherePeriodo), select: 'id', maxSize: 1 }})
                 );
             }
 
+            // Gerente/Director: encuestas de su oficina
             var fetchGerentesOficina, fetchAsesoresOficina;
             if (this.esGerenteODirector && !this.esCasaNacional && this.idOficinaUsuario) {
                 var whereOficina = { type: 'equals', attribute: 'equipoId', value: this.idOficinaUsuario };
@@ -215,52 +214,20 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 var encuestasGerente = results[0].total || 0;
                 var encuestasAsesor  = results[1].total || 0;
 
-                var idx = self.esCasaNacional ? 6 : 2;
+                // Casa Nacional: índices 2,3,4 son estadísticas → oficina empieza en 5
+                // Otros roles: no hay extras → oficina empieza en 2
+                var idx = self.esCasaNacional ? 5 : 2;
                 var encuestasGerenteOficina = results[idx++].total || 0;
                 var encuestasAsesorOficina  = results[idx++].total || 0;
                 var encuestasEsteAsesor     = results[idx++].total || 0;
 
                 if (self.esCasaNacional) {
-                    var allTeamsModels = results[5];
                     self.estadisticasGenerales = {
                         totalEncuestas:       (results[2].total || 0) + (results[3].total || 0) + (results[4].total || 0),
                         encuestasCompletas:   results[2].total || 0,
                         encuestasRevision:    results[3].total || 0,
                         encuestasIncompletas: results[4].total || 0
                     };
-
-                    // Construir CLAs y oficinas para el filtro en cascada
-                    // En EspoCRM: CLAs son Teams cuyo id matchea CLA_PATTERN
-                    // Las oficinas tienen team.get('parentId') apuntando al id del CLA padre
-                    var claMap           = {};
-                    var todasLasOficinas = [];
-
-                    (allTeamsModels || []).forEach(function (team) {
-                        var tid  = team.id || '';
-                        var name = team.get('name') || '';
-                        if (CLA_PATTERN.test(tid)) {
-                            // Es un CLA — agregarlo al mapa
-                            if (!claMap[tid]) claMap[tid] = { id: tid, name: name };
-                        }
-                    });
-
-                    (allTeamsModels || []).forEach(function (team) {
-                        var tid      = team.id || '';
-                        var name     = team.get('name') || '';
-                        var parentId = team.get('parentId') || null;
-                        var lname    = name.toLowerCase();
-
-                        // Excluir los propios CLAs, "Venezuela" y teams sin nombre
-                        if (CLA_PATTERN.test(tid) || lname === 'venezuela' || !name) return;
-
-                        // La oficina pertenece al CLA padre si parentId existe y es un CLA
-                        var claId = (parentId && CLA_PATTERN.test(parentId)) ? parentId : null;
-                        todasLasOficinas.push({ id: tid, name: name, claId: claId });
-                    });
-
-                    todasLasOficinas.sort(function (a, b) { return a.name.localeCompare(b.name); });
-                    self.oficinas = todasLasOficinas;
-                    self.claList  = Object.values(claMap).sort(function (a, b) { return a.name.localeCompare(b.name); });
                 }
 
                 self._construirListaReportes(
@@ -270,29 +237,11 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 );
                 self.reRender();
 
-            }).catch(function () {
+            }).catch(function (err) {
+                console.error('Error en cargarDatosReportes:', err);
                 Espo.Ui.error('Error al cargar los datos de los reportes.');
             }).finally(function () {
                 self.wait(false);
-            });
-        },
-
-        _fetchTodasLasOficinas: function () {
-            var self = this;
-            return new Promise(function (resolve, reject) {
-                var maxSize = 200, allTeams = [];
-                var fetchPage = function (offset) {
-                    self.getCollectionFactory().create('Team', function (col) {
-                        col.maxSize = maxSize;
-                        col.offset  = offset;
-                        col.fetch({ data: { select: 'id,name,parentId' } }).then(function () {
-                            allTeams = allTeams.concat(col.models);
-                            if (col.models.length === maxSize && allTeams.length < col.total) fetchPage(offset + maxSize);
-                            else resolve(allTeams);
-                        }).catch(reject);
-                    });
-                };
-                fetchPage(0);
             });
         },
 
@@ -307,8 +256,8 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 this.sinReporteGerente = encGerente === 0;
                 this.sinReporteAsesor  = encAsesor  === 0;
                 reportes = [
-                    base('generalGerentes', 'Reporte General (Gerentes y Directores)', 'Matriz de competencias de todas las oficinas.',  'fa-globe-americas', encGerente > 0),
-                    base('generalAsesores', 'Reporte General (Asesores)',               'Matriz de competencias de todas las oficinas.',  'fa-globe-americas', encAsesor  > 0),
+                    base('generalGerentes', 'Reporte General (Gerentes y Directores)', 'Matriz de competencias de todas las oficinas.',    'fa-globe-americas', encGerente > 0),
+                    base('generalAsesores', 'Reporte General (Asesores)',               'Matriz de competencias de todas las oficinas.',    'fa-globe-americas', encAsesor  > 0),
                     base('oficinaGerentes', 'Reporte de Gerentes y Directores (Oficina)', 'Seleccione una oficina para ver este reporte.', 'fa-user-tie', false, true),
                     base('oficinaAsesores', 'Reporte de Asesores (Oficina)',               'Seleccione una oficina para ver este reporte.', 'fa-users',   false, true)
                 ];
@@ -339,14 +288,11 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             var self = this;
 
             if (this.esCasaNacional) {
-                // Ocultar tarjetas de oficina hasta selección
                 this.$el.find('.rep-card[data-report-type="oficinaGerentes"]').hide();
                 this.$el.find('.rep-card[data-report-type="oficinaAsesores"]').hide();
-
                 this._inicializarFiltroClasOficina();
             }
 
-            // Select de período
             var $selPeriodo = this.$el.find('select[name="periodo"]');
             if ($selPeriodo.length && !$selPeriodo[0].selectize) {
                 $selPeriodo.selectize({
@@ -366,6 +312,9 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
         // ════════════════════════════════════════════════════════
         //  FILTRO CLA → OFICINA (solo Casa Nacional)
+        //  Mismo patrón que lista.js:
+        //    getCLAs          → Competencias/action/getCLAs
+        //    getOficinasByCLA → Competencias/action/getOficinasByCLA
         // ════════════════════════════════════════════════════════
         _inicializarFiltroClasOficina: function () {
             var self       = this;
@@ -374,16 +323,25 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
             if (!$filtroCla.length || !$filtroOfi.length) return;
 
-            // Poblar CLAs
-            $filtroCla.empty().append('<option value="">— Seleccionar CLA —</option>');
-            this.claList.forEach(function (cla) {
-                $filtroCla.append('<option value="' + cla.id + '">' + cla.name + '</option>');
-            });
-            $filtroCla.prop('disabled', this.claList.length === 0);
+            $filtroCla.empty().append('<option value="">— Cargando CLAs... —</option>').prop('disabled', true);
+            $filtroOfi.prop('disabled', true).html('<option value="">— Seleccionar CLA primero —</option>');
 
-            // Oficina siempre empieza deshabilitada
-            $filtroOfi.prop('disabled', true)
-                      .html('<option value="">— Seleccionar CLA primero —</option>');
+            Espo.Ajax.getRequest('Competencias/action/getCLAs')
+                .then(function (response) {
+                    $filtroCla.empty().append('<option value="">— Seleccionar CLA —</option>');
+                    if (response.success && response.data && response.data.length > 0) {
+                        response.data.forEach(function (cla) {
+                            $filtroCla.append('<option value="' + cla.id + '">' + cla.name + '</option>');
+                        });
+                        $filtroCla.prop('disabled', false);
+                    } else {
+                        $filtroCla.append('<option value="">— Sin CLAs disponibles —</option>');
+                    }
+                })
+                .catch(function (err) {
+                    console.error('Error cargando CLAs:', err);
+                    $filtroCla.empty().append('<option value="">— Error al cargar CLAs —</option>');
+                });
 
             $filtroCla.on('change', function () {
                 self._onClaChange($(this).val());
@@ -394,10 +352,9 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
         },
 
         _onClaChange: function (claId) {
-            var self     = this;
+            var self       = this;
             var $filtroOfi = this.$el.find('#filtro-oficina-reportes');
 
-            // Limpiar tarjetas
             this.$el.find('.rep-card[data-report-type="oficinaGerentes"]').hide();
             this.$el.find('.rep-card[data-report-type="oficinaAsesores"]').hide();
             this.$el.find('#no-reports-for-office-msg').remove();
@@ -407,13 +364,26 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 return;
             }
 
-            // Filtrar oficinas del CLA seleccionado
-            var oficinasDelCla = this.oficinas.filter(function (o) { return o.claId === claId; });
-            $filtroOfi.empty().append('<option value="">— Seleccionar oficina —</option>');
-            oficinasDelCla.forEach(function (o) {
-                $filtroOfi.append('<option value="' + o.id + '">' + o.name + '</option>');
-            });
-            $filtroOfi.prop('disabled', oficinasDelCla.length === 0);
+            $filtroOfi.prop('disabled', true).html('<option value="">— Cargando oficinas... —</option>');
+
+            Espo.Ajax.getRequest('Competencias/action/getOficinasByCLA', { claId: claId })
+                .then(function (response) {
+                    $filtroOfi.empty().append('<option value="">— Seleccionar oficina —</option>');
+                    if (response.success && response.data && response.data.length > 0) {
+                        response.data.forEach(function (o) {
+                            $filtroOfi.append('<option value="' + o.id + '">' + o.name + '</option>');
+                        });
+                        $filtroOfi.prop('disabled', false);
+                    } else {
+                        $filtroOfi.append('<option value="">— Sin oficinas en este CLA —</option>');
+                        $filtroOfi.prop('disabled', true);
+                    }
+                })
+                .catch(function (err) {
+                    console.error('Error cargando oficinas:', err);
+                    $filtroOfi.empty().append('<option value="">— Error al cargar oficinas —</option>');
+                    $filtroOfi.prop('disabled', true);
+                });
         },
 
         // ════════════════════════════════════════════════════════
@@ -449,8 +419,7 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 var gDis = (res[0].total || 0) > 0;
                 var aDis = (res[1].total || 0) > 0;
 
-                var oficina = self.oficinas.find(function (o) { return o.id === oficinaId; });
-                var nombre  = oficina ? oficina.name : 'Oficina seleccionada';
+                var nombre = self.$el.find('#filtro-oficina-reportes option:selected').text() || 'Oficina seleccionada';
 
                 if (gDis) {
                     $cG.find('h4').text('Reporte de Gerentes y Directores (' + nombre + ')');
@@ -475,7 +444,8 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                     );
                 }
                 self.wait(false);
-            }).catch(function () {
+            }).catch(function (err) {
+                console.error('Error verificando reportes de oficina:', err);
                 Espo.Ui.error('Error al verificar los reportes de la oficina.');
                 self.wait(false);
             });
@@ -516,8 +486,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 esAsesor:           this.esAsesor,
                 noHayPeriodos:      this.noHayPeriodos,
                 periodos:           this.periodos,
-                oficinas:           this.oficinas,
-                claList:            this.claList,
                 periodoMostrado:    this.periodoMostrado,
                 sinReporteAsesor:   this.sinReporteAsesor,
                 sinReporteGerente:  this.sinReporteGerente
