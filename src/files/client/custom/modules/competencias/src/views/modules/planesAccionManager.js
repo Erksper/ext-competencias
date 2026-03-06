@@ -1,27 +1,8 @@
 /**
  * PlanesAccionManager
- * ───────────────────
- * Módulo reutilizable de Planes de Acción con chat.
- *
- * USO:
- *   this.planesManager = new PlanesAccionManager(this, {
- *       modulo:   'Competencias',
- *       usuarios: [{id, name}],
- *       items:    {'Categoria': ['Sub1','Sub2']}
- *   });
- *
- * REQUIERE en el template: <div id="seccion-planes-accion"></div>
  */
 define([], function () {
 
-    // ────────────────────────────────────────────────────────────────────
-    //  ESTADOS
-    //  Texto diferenciado según quién lo ve:
-    //    Casa Nacional: "esperaEjecutor" → "Esperando asesor" | "esperaGenerador" → "Por revisar"
-    //    Asesor/Gerente: "esperaEjecutor" → "En espera por ti" | "esperaGenerador" → "En espera por supervisor"
-    // ────────────────────────────────────────────────────────────────────
-    // Estados: pendienteCN = en espera de revisión por Casa Nacional
-    //           pendienteGDC = en espera de acción por Gerente/Director/Coordinador
     var ESTADOS_CN = {
         'pendienteCN':  { bg: '#fff3cd', color: '#856404', texto: 'Por revisar' },
         'pendienteGDC': { bg: '#d4edda', color: '#155724', texto: 'Esperando por Gerente/Director/Coordinador' },
@@ -41,9 +22,6 @@ define([], function () {
     var INPUT_STYLE = 'width:100%;border:2px solid #e0e0e0;border-radius:8px;padding:10px 12px;font-size:14px;box-sizing:border-box;';
     var LABEL_STYLE = 'font-weight:600;color:#333;font-size:13px;display:block;margin-bottom:6px;';
 
-    // ────────────────────────────────────────────────────────────────────
-    //  HELPERS
-    // ────────────────────────────────────────────────────────────────────
     function fmtFecha(s) {
         if (!s) return '—';
         return s.substring(0, 10).split('-').reverse().join('/');
@@ -95,9 +73,6 @@ define([], function () {
         '</div>';
     }
 
-    // ────────────────────────────────────────────────────────────────────
-    //  CONSTRUCTOR
-    // ────────────────────────────────────────────────────────────────────
     function PlanesAccionManager(view, opciones) {
         this.view     = view;
         this.opciones = opciones || {};
@@ -106,7 +81,6 @@ define([], function () {
         this.usuarios = this.opciones.usuarios  || [];
         this.items    = this.opciones.items     || {};
         this.oficina  = this.opciones.oficina   || null;
-        // Etiqueta dinámica para la columna del evaluado en tabla y modal
         this.etiquetaEjecutor = this.opciones.etiquetaEjecutor || 'Evaluado';
 
         this.planes         = [];
@@ -121,21 +95,16 @@ define([], function () {
 
     PlanesAccionManager.prototype = {
 
-        // ──────────────────────────────────────────────────────
-        //  USUARIO Y PERMISOS
-        // ──────────────────────────────────────────────────────
         _resolverUsuario: function () {
             var v = this.view;
             this.usuarioId      = v.usuarioActualId     || (v.getUser ? v.getUser().id : null);
             this.usuarioNombre  = v.usuarioActualNombre || (v.getUser ? v.getUser().get('name') : null);
             this.esCasaNacional    = !!v.esCasaNacional;
-            this.esGerenteODirector = !!v.esGerenteODirector;  // incluye coordinador
+            this.esGerenteODirector = !!v.esGerenteODirector;
 
-            // Rol formateado (viene de la view, con mayúsculas correctas)
             if (v.esCasaNacional) {
                 this.usuarioRol = 'Casa Nacional';
             } else if (v.rolUsuario) {
-                // rolUsuario viene de _determinarRolFormateado en reportes.js / reporteBase.js
                 this.usuarioRol = v.rolUsuario;
             } else if (v.esGerenteODirector) {
                 this.usuarioRol = 'Gerente';
@@ -143,9 +112,7 @@ define([], function () {
                 this.usuarioRol = 'Asesor';
             }
 
-            // Solo Casa Nacional puede crear planes
             this.puedeCrear = this.esCasaNacional;
-            // Casa Nacional y GDC pueden ver la sección de planes (asesores no)
             this.puedeVer   = this.esCasaNacional || this.esGerenteODirector;
         },
 
@@ -164,11 +131,8 @@ define([], function () {
             return mapa[estado] || { bg: '#e2e3e5', color: '#383d41', texto: estado };
         },
 
-        // ──────────────────────────────────────────────────────
-        //  CARGA
-        // ──────────────────────────────────────────────────────
         cargar: function () {
-            if (!this.puedeVer) return;  // Asesores: no cargar
+            if (!this.puedeVer) return;
             this.paginacion.pagina = 1;
             this._fetchPagina(1);
         },
@@ -187,7 +151,6 @@ define([], function () {
 
             var porPagina = this.paginacion.porPagina;
 
-            // Parámetros where base
             var wp = {
                 'where[0][type]':      'equals',
                 'where[0][attribute]': 'modulo',
@@ -196,7 +159,6 @@ define([], function () {
 
             var whereIdx = 1;
 
-            // Siempre filtrar por oficina (GDC y CN ven solo los planes de la oficina en contexto)
             if (self.oficina) {
                 wp['where[' + whereIdx + '][type]']      = 'equals';
                 wp['where[' + whereIdx + '][attribute]'] = 'equipoId';
@@ -204,7 +166,6 @@ define([], function () {
                 whereIdx++;
             }
 
-            // GDC: excluir estados 'completado' y 'cancelado'
             if (!self.esCasaNacional && self.esGerenteODirector) {
                 wp['where[' + whereIdx + '][type]']         = 'notIn';
                 wp['where[' + whereIdx + '][attribute]']    = 'estado';
@@ -212,9 +173,7 @@ define([], function () {
                 wp['where[' + whereIdx + '][value][1]']     = 'cancelado';
                 whereIdx++;
             }
-            // Casa Nacional: ve todos los estados (sin filtro adicional de estado)
 
-            // Paso 1: obtener total real
             Espo.Ajax.getRequest('GesPlaAccPlanAccion', Object.assign({}, wp, { maxSize: 1, offset: 0, select: 'id' }))
                 .then(function (resp) {
                     var total        = resp.total || 0;
@@ -236,7 +195,6 @@ define([], function () {
                                        'asesorGeneradorId,asesorGeneradorName,itemEvaluado,subItemEvaluado,rolEjecutor,rolGenerador';
 
                     if (total <= 200) {
-                        // Traemos todo, ordenamos en cliente y paginamos en cliente
                         Espo.Ajax.getRequest('GesPlaAccPlanAccion', Object.assign({}, wp, {
                             select: selectFields, orderBy: 'createdAt', order: 'desc', maxSize: 200, offset: 0
                         })).then(function (r) {
@@ -256,7 +214,6 @@ define([], function () {
                             self.planes = []; self.cargandoPagina = false; self.render();
                         });
                     } else {
-                        // > 200: paginación server-side con offset
                         Espo.Ajax.getRequest('GesPlaAccPlanAccion', Object.assign({}, wp, {
                             select: selectFields, orderBy: 'createdAt', order: 'desc',
                             maxSize: porPagina, offset: (pagina - 1) * porPagina
@@ -276,9 +233,6 @@ define([], function () {
                 });
         },
 
-        // ──────────────────────────────────────────────────────
-        //  RENDER SECCIÓN
-        // ──────────────────────────────────────────────────────
         _renderCargando: function () {
             var $c = this.view.$el.find('#seccion-planes-accion');
             if (!$c.length) return;
@@ -290,10 +244,9 @@ define([], function () {
         },
 
         render: function () {
-            if (!this.puedeVer) return;  // Asesores: no renderizar nada
+            if (!this.puedeVer) return;
             var $c = this.view.$el.find('#seccion-planes-accion');
             if (!$c.length) return;
-            // Si paginacion aún no está inicializada, mostrar cargando
             if (!this.paginacion) {
                 this._renderCargando();
                 return;
@@ -332,7 +285,6 @@ define([], function () {
             var self   = this;
             var planes = this.planes;
 
-            // Contadores usando textos del rol actual
             var porRevCN  = planes.filter(function (p) { return p.estado === 'pendienteCN';  }).length;
             var espGDC    = planes.filter(function (p) { return p.estado === 'pendienteGDC'; }).length;
 
@@ -389,27 +341,18 @@ define([], function () {
                     '</table></div>';
             }
 
-            // ──────────────────────────────────────────────────────────
-            //  CONTADORES Y ETIQUETAS CORREGIDOS
-            // ──────────────────────────────────────────────────────────
             var etiqPorRev, etiqEspGDC, cntPorRev, cntEspGDC;
 
             if (this.esCasaNacional) {
-                // Para Casa Nacional:
-                // - 'pendienteCN' significa "Por revisar (por CN)"
-                // - 'pendienteGDC' significa "Esperando por Gerente/Director/Coordinador"
                 etiqPorRev = 'Por revisar';
                 etiqEspGDC = 'Esperando por Gerente/Director/Coordinador';
-                cntPorRev = porRevCN;   // Cuenta los planes con estado 'pendienteCN'
-                cntEspGDC = espGDC;     // Cuenta los planes con estado 'pendienteGDC'
+                cntPorRev = porRevCN;
+                cntEspGDC = espGDC;
             } else {
-                // Para Gerente/Director/Coordinador:
-                // - 'pendienteGDC' significa "Por revisar (por ellos)"
-                // - 'pendienteCN' significa "Esperando por Casa Nacional"
                 etiqPorRev = 'Por revisar';
                 etiqEspGDC = 'Esperando por Casa Nacional';
-                cntPorRev = espGDC;      // Lo que ellos ven como "Por revisar" son los planes 'pendienteGDC'
-                cntEspGDC = porRevCN;    // Lo que ven como "Esperando por CN" son los planes 'pendienteCN'
+                cntPorRev = espGDC;
+                cntEspGDC = porRevCN;
             }
 
             var paginacionHtml = this._buildPaginacion();
@@ -491,9 +434,6 @@ define([], function () {
             });
         },
 
-        // ──────────────────────────────────────────────────────
-        //  MODAL — NUEVO PLAN
-        // ──────────────────────────────────────────────────────
         _abrirModalNuevo: function () {
             var self  = this;
             this._cerrarModal();
@@ -592,7 +532,6 @@ define([], function () {
                 if ($(e.target).is('#gesplacc-modal-overlay')) self._cerrarModal();
             });
 
-            // Validar fecha fin >= fecha inicio en tiempo real
             $('#gpa-fechaInicio, #gpa-fechaFin').on('change', function () {
                 var ini = $('#gpa-fechaInicio').val();
                 var fin = $('#gpa-fechaFin').val();
@@ -606,7 +545,6 @@ define([], function () {
                 }
             });
 
-            // Sub-ítem dinámico
             $('#gpa-itemEvaluado').on('change', function () {
                 var itemSelec  = $(this).val();
                 var $sub       = $('#gpa-subItemEvaluado');
@@ -635,7 +573,6 @@ define([], function () {
             var subItem   = $('#gpa-subItemEvaluado').val();
             var mensaje   = $('#gpa-mensajeInicial').val().trim();
 
-            // Validar obligatorios
             var errores = [];
             if (!asesorId)  errores.push(self.etiquetaEjecutor);
             if (!titulo)    errores.push('Título del Plan');
@@ -650,7 +587,6 @@ define([], function () {
                 return;
             }
 
-            // Validar fechas
             if (fechaFin < fechaIni) {
                 Espo.Ui.warning('La fecha fin no puede ser anterior a la fecha inicio.');
                 return;
@@ -705,9 +641,6 @@ define([], function () {
             });
         },
 
-        // ──────────────────────────────────────────────────────
-        //  MODAL — VER PLAN / CHAT
-        // ──────────────────────────────────────────────────────
         _abrirModalVer: function (planId) {
             var self = this;
             this._cerrarModal();
@@ -736,7 +669,6 @@ define([], function () {
             var self  = this;
             var plan  = this.planActualData;
             var b     = this._badge(plan.estado);
-            // SOLO Casa Nacional puede gestionar (completar, pausar, cancelar) los planes
             var puedeGestionar = this.esCasaNacional;
 
             var chatHtml = this.chats.length === 0
@@ -758,7 +690,6 @@ define([], function () {
                     '</div>';
             }
 
-            // El input SOLO se muestra si el estado NO es 'completado' Y NO es 'cancelado'
             var mostrarInput = plan.estado !== 'completado' && plan.estado !== 'cancelado';
             var inputChat = mostrarInput
                 ? '<div style="display:flex;gap:10px;align-items:flex-end;">' +
@@ -823,7 +754,6 @@ define([], function () {
             $chat.scrollTop($chat[0].scrollHeight);
 
             $('#gpa-btn-cerrar-ver').on('click', function () {
-                // Al cerrar refrescamos la lista para reflejar cambios de estado
                 self._cerrarModalYRecargar();
             });
             $('#gesplacc-modal-overlay').on('click', function (e) {
@@ -842,16 +772,12 @@ define([], function () {
             }
         },
 
-        // ──────────────────────────────────────────────────────
-        //  CHAT
-        // ──────────────────────────────────────────────────────
         _enviarMensaje: function () {
             var self  = this;
             var texto = $('#gpa-chatTexto').val().trim();
             if (!texto) return;
 
             var now     = nowISO();
-            // El turno cambia: si soy supervisor (CN) dejo la pelota al asesor y viceversa
             var nuevoEstado = this.esCasaNacional ? 'pendienteGDC' : 'pendienteCN';
             var rolAutor    = this.usuarioRol;
 
@@ -865,7 +791,6 @@ define([], function () {
                     rolAutor:      rolAutor
                 });
                 model.save().then(function () {
-                    // Actualizar estado del plan (turno)
                     self.view.getModelFactory().create('GesPlaAccPlanAccion', function (planModel) {
                         planModel.id = self.planActualId;
                         planModel.fetch().then(function () {
@@ -877,13 +802,11 @@ define([], function () {
                         });
                     });
 
-                    // Actualizar el estado badge en el header del modal sin recargarlo
                     self.planActualData.estado = nuevoEstado;
                     var b = self._badge(nuevoEstado);
                     $('#gesplacc-modal-overlay .gpa-estado-badge')
                         .css({ background: b.bg, color: b.color }).text(b.texto);
 
-                    // Agregar mensaje al chat local
                     self.chats.push({
                         autorId:       self.usuarioId,
                         autorNombre:   self.usuarioNombre,
@@ -900,9 +823,6 @@ define([], function () {
             });
         },
 
-        // ──────────────────────────────────────────────────────
-        //  CAMBIO DE ESTADO
-        // ──────────────────────────────────────────────────────
         _cambiarEstado: function (nuevoEstado) {
             var self = this;
             var now  = nowISO();
@@ -923,12 +843,9 @@ define([], function () {
             });
         },
 
-        // ──────────────────────────────────────────────────────
-        //  UTILS
-        // ──────────────────────────────────────────────────────
         _cerrarModalYRecargar: function () {
             this._cerrarModal();
-            this.cargar();  // refresca la lista con el estado actual
+            this.cargar();
         },
 
         cerrarModal: function () { this._cerrarModal(); },

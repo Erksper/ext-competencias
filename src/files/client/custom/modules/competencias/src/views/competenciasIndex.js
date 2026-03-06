@@ -20,9 +20,6 @@ define(['view'], function (View) {
                 }
                 this.getRouter().navigate('#Competencias/reports', {trigger: true});
             },
-            'click [data-action="crearPreguntas"]': function () {
-                this.crearPreguntas();
-            },
             'click [data-action="activarEncuestas"]': function () {
                 this.activarEncuestas();
             },
@@ -46,25 +43,23 @@ define(['view'], function (View) {
         setup: function () {
             var user = this.getUser();
 
-            this.esAdmin    = this.getUser().isAdmin();
-            this.esCasaNacional       = false;
+            this.esAdmin = this.getUser().isAdmin();
+            this.esCasaNacional = false;
             this.puedeIniciarEncuesta = false;
-            this.tieneAccesoAlModulo  = false;
+            this.tieneAccesoAlModulo = false;
 
             this.encuestaActiva = false;
-            this.fechaInicio    = null;
-            this.fechaCierre    = null;
+            this.fechaInicio = null;
+            this.fechaCierre = null;
 
             this.mostrarBotonActivar = false;
             this.mostrarBotonIniciar = false;
 
-            this.mostrarBotonCrear      = false;
-            this.totalPreguntas         = 0;
-            this.entidadExiste          = false;
-            this.preguntasRecienCreadas = false;
+            this.totalPreguntas = 0;
+            this.entidadExiste = false;
 
-            this.periodos                 = [];
-            this.periodosInactivos         = [];
+            this.periodos = [];
+            this.periodosInactivos = [];
             this.mostrarBotonListaEdicion = false;
 
             this.wait(true);
@@ -103,8 +98,8 @@ define(['view'], function (View) {
                         if (fechaInicio && fechaCierre) {
                             var hoy = new Date().toISOString().split('T')[0];
                             this.encuestaActiva = (hoy >= fechaInicio && hoy <= fechaCierre);
-                            this.fechaInicio    = fechaInicio;
-                            this.fechaCierre    = this.getDateTime().toDisplayDate(fechaCierre);
+                            this.fechaInicio = fechaInicio;
+                            this.fechaCierre = this.getDateTime().toDisplayDate(fechaCierre);
                         }
 
                         var self = this;
@@ -114,7 +109,7 @@ define(['view'], function (View) {
                             var fi = m.get('fechaInicio') || '';
                             var fc = m.get('fechaCierre') || '';
                             return {
-                                id:    m.id,
+                                id: m.id,
                                 label: self._formatearFecha(fi) + ' – ' + self._formatearFecha(fc),
                                 fechaInicio: fi,
                                 fechaCierre: fc
@@ -151,22 +146,19 @@ define(['view'], function (View) {
                             where: [{ type: 'equals', attribute: 'estaActiva', value: 1 }]
                         },
                         success: function () {
-                            this.totalPreguntas    = collection.total || 0;
-                            this.mostrarBotonCrear = (this.totalPreguntas === 0 && this.esAdmin);
+                            this.totalPreguntas = collection.total || 0;
                             this.actualizarVisibilidadBotones();
                             this.wait(false);
                         }.bind(this),
                         error: function () {
-                            this.totalPreguntas    = 0;
-                            this.mostrarBotonCrear = this.esAdmin;
+                            this.totalPreguntas = 0;
                             this.actualizarVisibilidadBotones();
                             this.wait(false);
                         }.bind(this)
                     });
                 }.bind(this), function () {
-                    this.entidadExiste    = false;
-                    this.totalPreguntas   = -1;
-                    this.mostrarBotonCrear = false;
+                    this.entidadExiste = false;
+                    this.totalPreguntas = -1;
                     if (this.esAdmin) {
                         Espo.Ui.error('❌ Error accediendo a la entidad Pregunta. Verifica los permisos.');
                     }
@@ -175,9 +167,8 @@ define(['view'], function (View) {
                 }.bind(this));
 
             }.bind(this), function () {
-                this.entidadExiste    = false;
-                this.totalPreguntas   = -1;
-                this.mostrarBotonCrear = false;
+                this.entidadExiste = false;
+                this.totalPreguntas = -1;
                 if (this.esAdmin) {
                     Espo.Ui.error('❌ La entidad Pregunta no está disponible. Ejecuta un Rebuild.');
                 }
@@ -214,48 +205,10 @@ define(['view'], function (View) {
             }
         },
 
-        crearPreguntas: function () {
-            if (!this.entidadExiste) {
-                Espo.Ui.error('❌ La entidad Pregunta no existe. Ve a Admin Panel → Rebuild.');
-                return;
-            }
-
-            var mensaje = '¿Crear las preguntas por defecto del sistema?\n\n' +
-                '✅ Se crearán 65 preguntas\n' +
-                '📝 Organizadas por categorías\n' +
-                '👥 Para roles: Asesor y Gerente\n\n' +
-                '⚠️ Esta acción solo se puede hacer una vez.';
-
-            if (!confirm(mensaje)) return;
-
-            var $boton = this.$el.find('[data-action="crearPreguntas"]');
-            $boton.prop('disabled', true).addClass('disabled').text('Creando...');
-
-            Espo.Ui.notify('Creando preguntas...', 'info');
-
-            // Llamar al endpoint del backend
-            Espo.Ajax.postRequest('Pregunta/action/crearPreguntasPorDefecto').then(function (response) {
-                if (response.success) {
-                    Espo.Ui.success(response.message || '✅ Preguntas creadas exitosamente');
-                    this.totalPreguntas = response.totalCreadas || 65;
-                    this.mostrarBotonCrear = false;
-                    this.preguntasRecienCreadas = true;
-                    setTimeout(function () { window.location.reload(); }, 3000);
-                } else {
-                    Espo.Ui.error(response.error || '❌ Error al crear las preguntas');
-                    $boton.prop('disabled', false).removeClass('disabled').text('Inicializar Sistema');
-                }
-            }.bind(this)).catch(function (error) {
-                console.error('Error:', error);
-                Espo.Ui.error('❌ Error al crear las preguntas');
-                $boton.prop('disabled', false).removeClass('disabled').text('Inicializar Sistema');
-            });
-        },
-
         handleFechaCierreChange: function (e) {
             var fechaCierre = $(e.currentTarget).val();
-            var $button     = this.$el.find('[data-action="activarEncuestas"]');
-            var hoy         = new Date().toISOString().split('T')[0];
+            var $button = this.$el.find('[data-action="activarEncuestas"]');
+            var hoy = new Date().toISOString().split('T')[0];
 
             if (fechaCierre && fechaCierre > hoy) {
                 $button.prop('disabled', false).removeClass('disabled');
@@ -277,14 +230,13 @@ define(['view'], function (View) {
             }
 
             $boton.prop('disabled', true).addClass('disabled').html('<i class="fas fa-spinner fa-spin"></i> Creando...');
-
             this.wait(true);
 
             this.getModelFactory().create('Competencias', (newModel) => {
                 var nombrePeriodo = 'Período de Evaluación ' + this.getDateTime().toDisplayDate(fechaInicio) + ' - ' + this.getDateTime().toDisplayDate(fechaCierre);
 
                 newModel.set({
-                    name:        nombrePeriodo,
+                    name: nombrePeriodo,
                     fechaInicio: fechaInicio,
                     fechaCierre: fechaCierre
                 });
@@ -302,21 +254,19 @@ define(['view'], function (View) {
 
         data: function () {
             return {
-                esAdmin:               this.esAdmin,
-                esCasaNacional:        this.esCasaNacional,
-                mostrarBotonCrear:     this.mostrarBotonCrear,
-                totalPreguntas:        this.totalPreguntas,
-                sinPreguntas:          (this.totalPreguntas === 0),
-                errorEntidad:          (this.totalPreguntas === -1),
-                preguntasRecienCreadas: this.preguntasRecienCreadas,
-                entidadExiste:         this.entidadExiste,
-                puedeIniciarEncuesta:  this.puedeIniciarEncuesta,
-                encuestaActiva:        this.encuestaActiva,
-                mostrarBotonActivar:   this.mostrarBotonActivar,
-                mostrarBotonIniciar:   this.mostrarBotonIniciar,
-                fechaCierre:           this.fechaCierre,
-                tieneAccesoAlModulo:   this.tieneAccesoAlModulo,
-                periodos:              this.periodosInactivos, // Usamos los inactivos para el select
+                esAdmin: this.esAdmin,
+                esCasaNacional: this.esCasaNacional,
+                totalPreguntas: this.totalPreguntas,
+                sinPreguntas: (this.totalPreguntas === 0),
+                errorEntidad: (this.totalPreguntas === -1),
+                entidadExiste: this.entidadExiste,
+                puedeIniciarEncuesta: this.puedeIniciarEncuesta,
+                encuestaActiva: this.encuestaActiva,
+                mostrarBotonActivar: this.mostrarBotonActivar,
+                mostrarBotonIniciar: this.mostrarBotonIniciar,
+                fechaCierre: this.fechaCierre,
+                tieneAccesoAlModulo: this.tieneAccesoAlModulo,
+                periodos: this.periodosInactivos,
                 mostrarBotonListaEdicion: this.mostrarBotonListaEdicion
             };
         }

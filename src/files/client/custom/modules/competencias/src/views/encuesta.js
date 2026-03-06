@@ -36,13 +36,7 @@ define(['view'], function (View) {
                 this.mostrarInfoModal(e);
             },
             'click [data-action="back"]': function () {
-                console.log('*** EVENTO BACK DISPARADO ***');
-                console.log('Estado actual - fromListaEdicion:', this.fromListaEdicion);
-                console.log('Estado actual - retornoUrl:', this.retornoUrl);
-                console.log('Estado actual - from:', this.from);
-                
                 if (this.fromListaEdicion && this.retornoUrl) {
-                    console.log('Volviendo a listaEdicion:', this.retornoUrl);
                     var url = this.retornoUrl;
                     if (url.startsWith('#')) {
                         this.getRouter().navigate(url.substring(1), {trigger: true});
@@ -51,7 +45,6 @@ define(['view'], function (View) {
                     }
                 } 
                 else if (this.from === 'seleccion' && this.retornoUrl) {
-                    console.log('Volviendo a seleccionEvaluados:', this.retornoUrl);
                     var url = this.retornoUrl;
                     if (url.startsWith('#')) {
                         this.getRouter().navigate(url.substring(1), {trigger: true});
@@ -60,7 +53,6 @@ define(['view'], function (View) {
                     }
                 }
                 else {
-                    console.log('Volviendo a selección de usuario (ruta antigua)');
                     var backUrl = '#Competencias/userSelection?teamId=' + this.teamId + 
                                   '&teamName=' + encodeURIComponent(this.teamName || '') + 
                                   '&role=' + this.role;
@@ -73,14 +65,12 @@ define(['view'], function (View) {
         },
         
         setup: function () {
-            console.log('*** SETUP INICIADO ***');
-            
             this.respuestas = {};
             this.encuestaId = null;
             this.guardandoEncuesta = false;
             this.totalPreguntasDisponibles = 0;
             this.preguntas = {};
-            this.datosCargados = false; // Flag para saber si ya cargamos los datos
+            this.datosCargados = false;
             
             this.fechaInicio = null;
             this.fechaCierre = null;
@@ -100,16 +90,12 @@ define(['view'], function (View) {
             this.retornoUrl = null;
             
             this.parseURLParams();
-            
-            console.log('*** SETUP FINALIZADO - fromListaEdicion:', this.fromListaEdicion);
-            console.log('*** SETUP FINALIZADO - retornoUrl:', this.retornoUrl);
 
             this.wait(true);
             this.cargarDatosIniciales();
         },
 
         parseURLParams: function () {
-            console.log('*** parseURLParams INICIADO ***');
             var hash = window.location.hash;
             var params = {};
             
@@ -124,8 +110,6 @@ define(['view'], function (View) {
                     }
                 });
             }
-            
-            console.log('Raw params from URL:', params);
             
             this.from = params.from || 'normal';
             this.fromListaEdicion = params.from === 'listaEdicion';
@@ -173,31 +157,15 @@ define(['view'], function (View) {
                 this.role = params.role || null;
                 this.encuestaIdUrl = params.encuestaId || null;
             }
-            
-            console.log('URL params parsed:', { 
-                teamId: this.teamId, 
-                userId: this.userId, 
-                role: this.role,
-                from: this.from,
-                fromListaEdicion: this.fromListaEdicion,
-                encuestaIdUrl: this.encuestaIdUrl,
-                retornoUrl: this.retornoUrl
-            });
         },
 
         cargarDatosIniciales: function() {
-            console.log('*** cargarDatosIniciales INICIADO ***');
-            console.log('fromListaEdicion:', this.fromListaEdicion);
-            console.log('encuestaIdUrl:', this.encuestaIdUrl);
-            
             if (this.fromListaEdicion && this.encuestaIdUrl) {
-                console.log('Modo edición desde lista - cargando encuesta:', this.encuestaIdUrl);
                 this.encuestaId = this.encuestaIdUrl;
                 this._cargarEncuestaExistente();
                 return;
             }
             
-            console.log('Flujo normal - verificando permisos y período');
             this.getModelFactory().create('User', function (userModel) {
                 userModel.id = this.getUser().id;
                 userModel.fetch({ relations: { roles: true } }).then(function () {
@@ -256,11 +224,6 @@ define(['view'], function (View) {
         },
         
         _cargarEncuestaExistente: function() {
-            console.log('*** _cargarEncuestaExistente INICIADO ***');
-            console.log('encuestaId:', this.encuestaId);
-            console.log('retornoUrl preservado:', this.retornoUrl);
-            console.log('fromListaEdicion preservado:', this.fromListaEdicion);
-            
             this.getModelFactory().create('Encuesta', function (encuestaModel) {
                 encuestaModel.id = this.encuestaId;
                 encuestaModel.fetch().then(function () {
@@ -269,16 +232,6 @@ define(['view'], function (View) {
                     this.userId = this.userId || encuestaModel.get('usuarioEvaluadoId');
                     this.userName = this.userName || encuestaModel.get('usuarioEvaluadoName');
                     this.role = this.role || encuestaModel.get('rolUsuario');
-                    
-                    console.log('Datos de encuesta cargados:', {
-                        teamId: this.teamId,
-                        teamName: this.teamName,
-                        userId: this.userId,
-                        userName: this.userName,
-                        role: this.role,
-                        fromListaEdicion: this.fromListaEdicion,
-                        retornoUrl: this.retornoUrl
-                    });
                     
                     this.getModelFactory().create('User', function (userModel) {
                         userModel.id = this.getUser().id;
@@ -291,7 +244,6 @@ define(['view'], function (View) {
                     }.bind(this));
                     
                 }.bind(this)).catch(function (error) {
-                    console.error('Error cargando encuesta:', error);
                     Espo.Ui.error('No se pudo cargar la encuesta solicitada.');
                     this.wait(false);
                 }.bind(this));
@@ -299,29 +251,19 @@ define(['view'], function (View) {
         },
 
         afterRender: function () {
-            console.log('*** afterRender INICIADO ***');
-            console.log('fromListaEdicion en afterRender:', this.fromListaEdicion);
-            
-            // Inicializar tooltips si existen
             this.inicializarTooltips();
             
-            // Si ya tenemos datos cargados, renderizar las preguntas
             if (this.datosCargados) {
-                console.log('Datos ya cargados, renderizando preguntas');
                 this._renderizarPreguntas();
                 this._actualizarRespuestasUI();
             }
             
-            // Adaptar botones según el modo
             if (this.fromListaEdicion) {
-                console.log('Modo edición desde lista - adaptando botones');
                 this.$el.find('[data-action="saveSurvey"]').hide();
                 
                 var $completeBtn = this.$el.find('[data-action="completeSurvey"]');
                 $completeBtn.html('<i class="fas fa-save"></i> Guardar Cambios');
                 $completeBtn.removeClass('encuesta-btn-success').addClass('encuesta-btn-primary');
-            } else {
-                console.log('Modo normal - mostrando botones normales');
             }
         },
 
@@ -384,16 +326,6 @@ define(['view'], function (View) {
          },
         
         cargarPreguntas: function () {
-            console.log('*** cargarPreguntas INICIADO ***');
-            console.log('Cargando preguntas para rol:', this.role);
-            
-            if (!this.role) {
-                console.error('No se ha definido el rol para filtrar preguntas');
-                Espo.Ui.error('Error: No se pudo determinar el tipo de evaluación');
-                this.wait(false);
-                return;
-            }
-            
             $.ajax({
                 url: 'api/v1/Pregunta',
                 type: 'GET',
@@ -411,33 +343,24 @@ define(['view'], function (View) {
                     'Content-Type': 'application/json'
                 },
                 success: function (response) {
-                    console.log('Respuesta de preguntas:', response);
                     if (response.list && response.list.length > 0) {
                         var preguntasFiltradas = this.filtrarPreguntasPorRol(response.list);
-                        console.log('Preguntas filtradas para rol', this.role, ':', preguntasFiltradas.length);
                         
                         this.totalPreguntasDisponibles = preguntasFiltradas.length;
                         this.preguntas = this.procesarPreguntasAPI(preguntasFiltradas);
                         
-                        console.log('Preguntas agrupadas:', Object.keys(this.preguntas).length, 'categorías');
-                        
                         this.datosCargados = true;
                         
-                        // Si el DOM ya está renderizado, mostrar las preguntas
                         if (this.isRendered()) {
-                            console.log('DOM ya renderizado, mostrando preguntas ahora');
                             this._renderizarPreguntas();
                         }
                         
                         if (this.encuestaId) {
-                            console.log('Cargando respuestas para encuesta:', this.encuestaId);
                             this.cargarRespuestasGuardadas();
                         } else {
-                            console.log('Buscando encuesta existente');
                             this.buscarEncuestaExistente();
                         }
                     } else {
-                        console.log('No se recibieron preguntas');
                         this.preguntas = {};
                         this.datosCargados = true;
                         if (this.isRendered()) {
@@ -447,7 +370,6 @@ define(['view'], function (View) {
                     }
                 }.bind(this),
                 error: function (xhr, status, error) {
-                    console.error('Error cargando preguntas:', error);
                     Espo.Ui.error('Error al cargar las preguntas.');
                     this.wait(false);
                 }.bind(this)
@@ -455,11 +377,8 @@ define(['view'], function (View) {
         },
 
         _renderizarPreguntas: function() {
-            console.log('*** _renderizarPreguntas INICIADO ***');
-            
             var $container = this.$el.find('.encuesta-preguntas-container');
             if (!$container.length) {
-                console.error('No se encontró el contenedor de preguntas');
                 return;
             }
             
@@ -570,14 +489,10 @@ define(['view'], function (View) {
             
             $container.html(html);
             
-            // Vincular eventos después de renderizar
             this._bindToggleEvents();
             
-            // Actualizar indicadores después de renderizar
-            console.log('Actualizando indicadores de progreso después de renderizar');
             this.actualizarIndicadoresDeProgreso();
             
-            // Abrir primera categoría
             var $firstCategoriaHeader = this.$el.find('.encuesta-categoria-header').first();
             if ($firstCategoriaHeader.length) {
                 $firstCategoriaHeader.addClass('active');
@@ -596,14 +511,11 @@ define(['view'], function (View) {
                         .addClass('fa-chevron-up');
                 }
             }
-            
-            console.log('*** _renderizarPreguntas FINALIZADO ***');
         },
 
         _slugify: function(text) {
             if (!text) return '';
             
-            // Mapa de caracteres acentuados
             var map = {
                 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
                 'Á': 'a', 'É': 'e', 'Í': 'i', 'Ó': 'o', 'Ú': 'u',
@@ -652,16 +564,12 @@ define(['view'], function (View) {
                         this.wait(false);
                     }
                 }.bind(this)).catch(function(error) {
-                    console.error('Error buscando encuesta:', error);
                     this.wait(false);
                 }.bind(this));
             }.bind(this));
         },
 
         cargarRespuestasGuardadas: function() {
-            console.log('*** cargarRespuestasGuardadas INICIADO ***');
-            console.log('Cargando respuestas para encuesta:', this.encuestaId);
-            
             var preguntasActivasIds = new Set();
             Object.values(this.preguntas).forEach(categorias => {
                 Object.values(categorias).forEach(preguntas => {
@@ -676,8 +584,6 @@ define(['view'], function (View) {
                         where: [{ type: 'equals', attribute: 'encuestaId', value: this.encuestaId }]
                     }
                 }).then(function () {
-                    console.log('Respuestas guardadas recibidas:', respuestasGuardadasCollection.total);
-                    
                     this.respuestas = {};
                     
                     if (respuestasGuardadasCollection && Array.isArray(respuestasGuardadasCollection.models)) {
@@ -690,42 +596,31 @@ define(['view'], function (View) {
                         }, this);
                     }
                     
-                    // Actualizar UI con las respuestas seleccionadas
                     this._actualizarRespuestasUI();
                     
                     this.wait(false);
                 }.bind(this)).catch(function(xhr) {
-                    console.error('Error cargando respuestas:', xhr);
                     this.wait(false);
                 }.bind(this));
             }.bind(this));
         },
 
         _actualizarRespuestasUI: function() {
-            console.log('*** _actualizarRespuestasUI INICIADO ***');
-            
             if (!this.isRendered()) {
-                console.log('DOM no renderizado aún, esperando...');
                 return;
             }
             
-            // Limpiar selecciones previas
             this.$el.find('.encuesta-color-opcion').removeClass('selected');
             
-            // Aplicar selecciones actuales
             Object.keys(this.respuestas).forEach(function(preguntaId) {
                 var color = this.respuestas[preguntaId];
                 this.$el.find('[data-pregunta-id="' + preguntaId + '"][data-color="' + color + '"]').addClass('selected');
             }, this);
             
-            // Actualizar indicadores de progreso
-            console.log('Actualizando indicadores después de cambiar respuestas');
             this.actualizarIndicadoresDeProgreso();
         },
 
         _bindToggleEvents: function() {
-            console.log('Vinculando eventos de toggle');
-            
             this.$el.find('[data-action="toggleCategoria"]').off('click').on('click', function(e) {
                 this.toggleCategoria(e);
             }.bind(this));
@@ -736,11 +631,9 @@ define(['view'], function (View) {
         },
 
         filtrarPreguntasPorRol: function (todasLasPreguntas) {
-            console.log('Filtrando preguntas para rol:', this.role);
             var preguntasFiltradas = [];
             
             var rolBusqueda = this.role === 'asesor' ? 'asesor' : 'gerente';
-            console.log('Rol de búsqueda en BD:', rolBusqueda);
             
             todasLasPreguntas.forEach(function(pregunta) {
                 var rolObjetivo = pregunta.rolObjetivo || [];
@@ -764,8 +657,6 @@ define(['view'], function (View) {
                 }
             }.bind(this));
             
-            console.log('Preguntas filtradas:', preguntasFiltradas.length);
-            
             preguntasFiltradas.sort(function(a, b) {
                 return (a.orden || 0) - (b.orden || 0);
             });
@@ -774,8 +665,6 @@ define(['view'], function (View) {
         },
 
         procesarPreguntasAPI: function (preguntasArray) {
-            console.log('*** procesarPreguntasAPI INICIADO ***');
-            
             var preguntasAgrupadas = {};
             
             preguntasArray.forEach(function(pregunta) {
@@ -806,7 +695,6 @@ define(['view'], function (View) {
                 });
             });
             
-            console.log('*** procesarPreguntasAPI FINALIZADO ***');
             return preguntasAgrupadas;
         },
         
@@ -820,12 +708,10 @@ define(['view'], function (View) {
         },
 
         actualizarIndicadoresDeProgreso: function () {
-            console.log('*** actualizarIndicadoresDeProgreso INICIADO ***');
             var respuestas = this.respuestas;
             var preguntasAgrupadas = this.preguntas;
 
             if (!preguntasAgrupadas || Object.keys(preguntasAgrupadas).length === 0) {
-                console.log('No hay preguntas para actualizar indicadores');
                 return;
             }
 
@@ -853,14 +739,10 @@ define(['view'], function (View) {
                         if (totalPreguntasSubcat > 0) {
                             if (respondidasSubcat === totalPreguntasSubcat) {
                                 $indicadorSubcat.text('Completo').removeClass('incompleto').addClass('completo');
-                                console.log('Subcategoría ' + subcategoriaNombre + ': COMPLETO');
                             } else {
                                 $indicadorSubcat.text('Incompleto').removeClass('completo').addClass('incompleto');
-                                console.log('Subcategoría ' + subcategoriaNombre + ': INCOMPLETO (' + respondidasSubcat + '/' + totalPreguntasSubcat + ')');
                             }
                         }
-                    } else {
-                        console.log('No se encontró indicador para subcategoría:', subcategoriaId);
                     }
 
                     totalPreguntasCategoria += totalPreguntasSubcat;
@@ -873,25 +755,18 @@ define(['view'], function (View) {
                     if (totalPreguntasCategoria > 0) {
                         if (respondidasCategoria === totalPreguntasCategoria) {
                             $indicadorCat.text('Completo').removeClass('incompleto').addClass('completo');
-                            console.log('Categoría ' + categoriaNombre + ': COMPLETO');
                         } else {
                             $indicadorCat.text('Incompleto').removeClass('completo').addClass('incompleto');
-                            console.log('Categoría ' + categoriaNombre + ': INCOMPLETO (' + respondidasCategoria + '/' + totalPreguntasCategoria + ')');
                         }
                     }
-                } else {
-                    console.log('No se encontró indicador para categoría:', categoriaId);
                 }
             }.bind(this));
-            
-            console.log('*** actualizarIndicadoresDeProgreso FINALIZADO ***');
         },
 
         toggleCategoria: function (e) {
             e.preventDefault();
             e.stopPropagation();
             
-            console.log('Toggle categoría');
             var $header = $(e.currentTarget);
             var $content = $header.next('.encuesta-categoria-content');
             var wasActive = $header.hasClass('active');
@@ -936,7 +811,6 @@ define(['view'], function (View) {
             e.preventDefault();
             e.stopPropagation();
             
-            console.log('Toggle subcategoría');
             var $header = $(e.currentTarget);
             var $content = $header.next('.encuesta-subcategoria-content');
             var wasActive = $header.hasClass('active');
@@ -970,10 +844,6 @@ define(['view'], function (View) {
         },
 
         guardarEncuesta: function (completar) {
-            console.log('*** guardarEncuesta INICIADO ***');
-            console.log('fromListaEdicion:', this.fromListaEdicion);
-            console.log('completar:', completar);
-            
             completar = completar || false;
             const preguntasRespondidasCount = Object.keys(this.respuestas).length;
             const totalPreguntasDisponibles = this.totalPreguntasDisponibles || 0;
@@ -1164,10 +1034,6 @@ define(['view'], function (View) {
         },
 
         finalizarGuardado: function(creadas, errores, total, encuestaModel) {
-            console.log('*** finalizarGuardado INICIADO ***');
-            console.log('fromListaEdicion:', this.fromListaEdicion);
-            console.log('retornoUrl:', this.retornoUrl);
-            
             if (errores.length === 0) {
                 Espo.Ui.success(`Encuesta guardada exitosamente. ${creadas}/${total} respuestas procesadas.`);
             } else {
@@ -1190,7 +1056,6 @@ define(['view'], function (View) {
 
             setTimeout(function() {
                 if (this.fromListaEdicion && this.retornoUrl) {
-                    console.log('Redirigiendo a listaEdicion:', this.retornoUrl);
                     var url = this.retornoUrl;
                     if (url.startsWith('#')) {
                         this.getRouter().navigate(url.substring(1), {trigger: true});
@@ -1198,7 +1063,6 @@ define(['view'], function (View) {
                         this.getRouter().navigate(url, {trigger: true});
                     }
                 } else if (this.from === 'seleccion' && this.retornoUrl) {
-                    console.log('Redirigiendo a seleccionEvaluados:', this.retornoUrl);
                     var url = this.retornoUrl;
                     if (url.startsWith('#')) {
                         this.getRouter().navigate(url.substring(1), {trigger: true});
@@ -1206,7 +1070,6 @@ define(['view'], function (View) {
                         this.getRouter().navigate(url, {trigger: true});
                     }
                 } else {
-                    console.log('Redirigiendo a selección de usuario');
                     var backUrl = '#Competencias/userSelection?teamId=' + this.teamId + 
                                   '&teamName=' + encodeURIComponent(this.teamName || '') + 
                                   '&role=' + this.role;

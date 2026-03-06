@@ -1,9 +1,4 @@
-/**
- * reportes.js — Vista de selección de reportes de Competencias
- * ─────────────────────────────────────────────────────────────
- * Filtro CLA → Oficina via endpoints PHP dedicados
- * (mismo patrón que lista.js / CCustomerSurvey)
- */
+// client/custom/modules/competencias/src/views/reportes.js
 define(['view', 'jquery', 'lib!selectize'], function (View, $) {
 
     var CLA_PATTERN = /^CLA\d+$/i;
@@ -55,9 +50,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             this.cargarDatosIniciales();
         },
 
-        // ════════════════════════════════════════════════════════
-        //  CARGA INICIAL
-        // ════════════════════════════════════════════════════════
         cargarDatosIniciales: function () {
             var self = this;
 
@@ -86,7 +78,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 self.esAsesor           = roles.includes('asesor');
                 self.rolUsuario         = self._determinarRolFormateado(roles);
 
-                // Capturar la oficina real del gerente/director (ignorar equipos CLA)
                 if (self.esGerenteODirector && !self.esCasaNacional) {
                     var teamIds   = userModel.get('teamsIds')   || [];
                     var teamNames = userModel.get('teamsNames') || {};
@@ -127,7 +118,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 self.actualizarPeriodoSeleccionado();
 
             }).catch(function (err) {
-                console.error('Error en cargarDatosIniciales:', err);
                 Espo.Ui.error('Error al cargar datos iniciales.');
                 self.wait(false);
             });
@@ -151,9 +141,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             this.cargarDatosReportes(periodo.fechaInicio, periodo.fechaCierre);
         },
 
-        // ════════════════════════════════════════════════════════
-        //  CARGAR DATOS DE REPORTES
-        // ════════════════════════════════════════════════════════
         cargarDatosReportes: function (fechaInicio, fechaCierre) {
             var self = this;
             var fechaCierreCompleta = fechaCierre + ' 23:59:59';
@@ -171,11 +158,8 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 select: 'id', maxSize: 1
             }});
 
-            // Promesas base (índices 0 y 1)
             var promesas = [fetchGerentes, fetchAsesores];
 
-            // Casa Nacional: estadísticas de estado (índices 2, 3, 4)
-            // CLAs y oficinas se cargan APARTE en afterRender via _inicializarFiltroClasOficina
             if (this.esCasaNacional) {
                 promesas.push(
                     $.ajax({ url: 'api/v1/Encuesta', data: { where: [{ type: 'equals', attribute: 'estado', value: 'completada' }].concat(wherePeriodo), select: 'id', maxSize: 1 }}),
@@ -184,7 +168,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 );
             }
 
-            // Gerente/Director: encuestas de su oficina
             var fetchGerentesOficina, fetchAsesoresOficina;
             if (this.esGerenteODirector && !this.esCasaNacional && this.idOficinaUsuario) {
                 var whereOficina = { type: 'equals', attribute: 'equipoId', value: this.idOficinaUsuario };
@@ -214,8 +197,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 var encuestasGerente = results[0].total || 0;
                 var encuestasAsesor  = results[1].total || 0;
 
-                // Casa Nacional: índices 2,3,4 son estadísticas → oficina empieza en 5
-                // Otros roles: no hay extras → oficina empieza en 2
                 var idx = self.esCasaNacional ? 5 : 2;
                 var encuestasGerenteOficina = results[idx++].total || 0;
                 var encuestasAsesorOficina  = results[idx++].total || 0;
@@ -238,7 +219,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 self.reRender();
 
             }).catch(function (err) {
-                console.error('Error en cargarDatosReportes:', err);
                 Espo.Ui.error('Error al cargar los datos de los reportes.');
             }).finally(function () {
                 self.wait(false);
@@ -267,7 +247,7 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 this.sinReporteAsesor  = encAsesorOfi  === 0;
                 var nombre = this.nombreOficinaUsuario || 'Mi Oficina';
                 reportes = [
-                    base('gerentes', 'Reporte de Gerentes y Directores (' + nombre + ')', 'Matriz de competencias de su oficina.', 'fa-user-tie', encGerenteOfi > 0),
+                    base('gerentes', 'Reporte de Gerentes, Directores y Coordinadores (' + nombre + ')', 'Matriz de competencias de su oficina.', 'fa-user-tie', encGerenteOfi > 0),
                     base('asesores', 'Reporte de Asesores (' + nombre + ')',               'Matriz de competencias de su oficina.', 'fa-users',   encAsesorOfi  > 0)
                 ];
             }
@@ -281,9 +261,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             this.reportesDisponibles = reportes;
         },
 
-        // ════════════════════════════════════════════════════════
-        //  AFTER RENDER
-        // ════════════════════════════════════════════════════════
         afterRender: function () {
             var self = this;
 
@@ -310,12 +287,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             }
         },
 
-        // ════════════════════════════════════════════════════════
-        //  FILTRO CLA → OFICINA (solo Casa Nacional)
-        //  Mismo patrón que lista.js:
-        //    getCLAs          → Competencias/action/getCLAs
-        //    getOficinasByCLA → Competencias/action/getOficinasByCLA
-        // ════════════════════════════════════════════════════════
         _inicializarFiltroClasOficina: function () {
             var self       = this;
             var $filtroCla = this.$el.find('#filtro-cla-reportes');
@@ -339,7 +310,6 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                     }
                 })
                 .catch(function (err) {
-                    console.error('Error cargando CLAs:', err);
                     $filtroCla.empty().append('<option value="">— Error al cargar CLAs —</option>');
                 });
 
@@ -380,15 +350,11 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                     }
                 })
                 .catch(function (err) {
-                    console.error('Error cargando oficinas:', err);
                     $filtroOfi.empty().append('<option value="">— Error al cargar oficinas —</option>');
                     $filtroOfi.prop('disabled', true);
                 });
         },
 
-        // ════════════════════════════════════════════════════════
-        //  ACTUALIZAR REPORTES AL SELECCIONAR OFICINA
-        // ════════════════════════════════════════════════════════
         actualizarReportesOficinaById: function (oficinaId) {
             var self = this;
             var $cG = this.$el.find('.rep-card[data-report-type="oficinaGerentes"]');
@@ -422,7 +388,7 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 var nombre = self.$el.find('#filtro-oficina-reportes option:selected').text() || 'Oficina seleccionada';
 
                 if (gDis) {
-                    $cG.find('h4').text('Reporte de Gerentes y Directores (' + nombre + ')');
+                    $cG.find('h4').text('Reporte de Gerentes, Directores y Coordinadores (' + nombre + ')');
                     $cG.show();
                 } else {
                     $cG.hide();
@@ -445,15 +411,11 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 }
                 self.wait(false);
             }).catch(function (err) {
-                console.error('Error verificando reportes de oficina:', err);
                 Espo.Ui.error('Error al verificar los reportes de la oficina.');
                 self.wait(false);
             });
         },
 
-        // ════════════════════════════════════════════════════════
-        //  NAVEGACIÓN
-        // ════════════════════════════════════════════════════════
         verReportePorOficina: function (tipo) {
             var oficina = this.$el.find('#filtro-oficina-reportes').val();
             if (!oficina) {

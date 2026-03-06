@@ -17,7 +17,6 @@
         <button class="btn btn-primary" data-action="backToHome"><i class="fas fa-home"></i> Volver al Inicio</button>
     </div>
 {{else}}
-    <!-- Header modernizado -->
     <div class="encuesta-page-header">
         <div class="encuesta-header-icon">
             <i class="fas fa-clipboard-check"></i>
@@ -28,7 +27,6 @@
         </div>
     </div>
 
-    <!-- Tarjeta de información -->
     <div class="encuesta-info-card">
         <div class="encuesta-card-body">
             <div class="encuesta-info-grid">
@@ -54,13 +52,11 @@
         </div>
     </div>
 
-    <!-- Título de la sección -->
     <div class="encuesta-section-title">
         <i class="fas fa-tasks"></i>
         <h3>ANÁLISIS DE COMPETENCIAS</h3>
     </div>
 
-    <!-- Leyenda móvil -->
     <div class="encuesta-mobile-legend">
         <div class="encuesta-legend-item">
             <span class="encuesta-legend-dot completo"></span>
@@ -72,7 +68,6 @@
         </div>
     </div>
 
-    <!-- Contenedor de preguntas -->
     <div class="encuesta-preguntas-container">
         {{#each preguntas}}
         <div class="encuesta-categoria">
@@ -164,7 +159,6 @@
         {{/each}}
     </div>
 
-    <!-- Acciones -->
     <div class="encuesta-acciones">
         <div class="encuesta-acciones-grid">
             <div class="encuesta-acciones-izquierda">
@@ -190,7 +184,6 @@
     </div>
 {{/if}}
 
-<!-- Modal de información -->
 <div class="modal fade" id="infoModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content encuesta-modal-content">

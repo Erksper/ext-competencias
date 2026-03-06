@@ -1,8 +1,6 @@
-<!-- client/custom/modules/competencias/res/templates/seleccionEvaluados.tpl -->
 <link rel="stylesheet" type="text/css" href="client/custom/modules/competencias/res/css/estilos.css">
 
 <div class="container-fluid seleccion-evaluados-container">
-    <!-- Header principal -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="page-header-card">
@@ -34,7 +32,6 @@
     </div>
 
     {{#if periodoActivo}}
-    <!-- Filtros -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="filtro-card">
@@ -47,7 +44,6 @@
                 <div class="filtro-body">
                     <div class="filtros-grid">
                         {{#if esCasaNacional}}
-                        <!-- CLA - Solo visible para Casa Nacional -->
                         <div class="filter-group filtro-cla-row">
                             <label for="filtro-cla">CLA</label>
                             <select id="filtro-cla" class="form-control">
@@ -55,7 +51,6 @@
                             </select>
                         </div>
                         
-                        <!-- Oficina - Solo visible para Casa Nacional (se habilita al seleccionar CLA) -->
                         <div class="filter-group filtro-oficina-row">
                             <label for="filtro-oficina">Oficina</label>
                             <select id="filtro-oficina" class="form-control" disabled>
@@ -63,11 +58,9 @@
                             </select>
                         </div>
                         {{else}}
-                        <!-- Para Gerentes/Directores/Coordinadores, la oficina está fija pero no visible -->
                         <input type="hidden" id="filtro-oficina" value="{{oficinaUsuario}}">
                         {{/if}}
                         
-                        <!-- Tipo - Visible para todos (Casa Nacional y Gerentes) -->
                         <div class="filter-group filtro-tipo-row">
                             <label for="filtro-tipo">Tipo</label>
                             <select id="filtro-tipo" class="form-control">
@@ -77,7 +70,6 @@
                             </select>
                         </div>
                         
-                        <!-- Estado - Visible para todos -->
                         <div class="filter-group filtro-estado-row">
                             <label for="filtro-estado">Estado</label>
                             <select id="filtro-estado" class="form-control">
@@ -104,7 +96,6 @@
         </div>
     </div>
 
-    <!-- Contador -->
     <div class="row mb-3">
         <div class="col-md-12">
             <div class="contador-encuestas">
@@ -114,7 +105,6 @@
         </div>
     </div>
 
-    <!-- Leyenda de estados -->
     <div class="row mb-3">
         <div class="col-md-12">
             <div class="leyenda-estados">
@@ -132,7 +122,6 @@
         </div>
     </div>
 
-    <!-- Contenido dinámico -->
     <div id="lista-usuarios-container">
         <div class="text-center" style="padding: 80px 20px;">
             <div class="spinner-large"></div>
@@ -142,7 +131,6 @@
     </div>
 
     {{else}}
-    <!-- Mensaje de período inactivo -->
     <div class="row">
         <div class="col-md-12">
             <div class="no-data-card">

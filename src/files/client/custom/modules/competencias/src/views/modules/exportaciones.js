@@ -1,18 +1,3 @@
-/**
- * Módulo reutilizable: Exportaciones (Excel / CSV)
- * ──────────────────────────────────────────────────
- * Mixin que agrega capacidades de exportación a cualquier view.
- *
- * Requiere que la view host tenga disponibles:
- *   this.tituloReporte
- *   this.textoEncabezado
- *   this.preguntasAgrupadas
- *   this.usuariosData
- *   this.totalesPorPregunta
- *   this.totalesGenerales
- *   this.esReporteGeneralCasaNacional
- *   this.oficinas  (para reporte general)
- */
 define([], function () {
 
     function descargarArchivo(contenido, nombre, mime) {
@@ -40,9 +25,6 @@ define([], function () {
         obtenerColorHex: obtenerColorHex,
         descargarArchivo: descargarArchivo,
 
-        // ════════════════════════════════════════════════════════
-        //  EXPORTAR CSV
-        // ════════════════════════════════════════════════════════
         exportarCSV: function () {
             try {
                 var self = this;
@@ -84,7 +66,6 @@ define([], function () {
                     });
                 }
 
-                // Fila totales
                 var totalesRow = ['Totales'];
                 preguntasArray.forEach(function(p) {
                     var d = self.totalesPorPregunta[p.id] || {};
@@ -101,21 +82,16 @@ define([], function () {
                 descargarArchivo(csvContent, this.tituloReporte + '.csv', 'text/csv;charset=utf-8;');
                 Espo.Ui.success('Reporte CSV exportado exitosamente');
             } catch (e) {
-                console.error(e);
                 Espo.Ui.error('Error al exportar el reporte a CSV');
             }
         },
 
-        // ════════════════════════════════════════════════════════
-        //  EXPORTAR EXCEL (XLSX manual via XML SpreadsheetML)
-        // ════════════════════════════════════════════════════════
         exportarExcel: function () {
             try {
                 var self          = this;
                 var preguntasArray = this._getPreguntasArray();
                 var esGeneral     = this.esReporteGeneralCasaNacional;
 
-                // ── Helpers de celda ──────────────────────────────
                 function celda(valor, tipo, bgColorARGB, bold) {
                     tipo    = tipo    || 'String';
                     bgColorARGB = bgColorARGB || null;
@@ -132,11 +108,9 @@ define([], function () {
                 function celdaColor(color) {
                     var hex = obtenerColorHex(color);
                     var texto = traducirColor(color);
-                    // Celda con background
                     return '<Cell ss:StyleID="color_' + color + '"><Data ss:Type="String">' + texto + '</Data></Cell>';
                 }
 
-                // ── Estilos ───────────────────────────────────────
                 var estilos = '<Styles>' +
                     '<Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#B8A279" ss:Pattern="Solid"/><Font ss:Color="#FFFFFF" ss:Bold="1"/></Style>' +
                     '<Style ss:ID="totales"><Font ss:Bold="1"/><Interior ss:Color="#f5f5f5" ss:Pattern="Solid"/></Style>' +
@@ -147,14 +121,11 @@ define([], function () {
                     '<Style ss:ID="color_gris"><Interior ss:Color="#E0E0E0" ss:Pattern="Solid"/></Style>' +
                     '</Styles>';
 
-                // ── Construir filas ───────────────────────────────
                 var filas = '';
 
-                // Título
                 filas += '<Row><Cell ss:StyleID="titulo"><Data ss:Type="String">' + this.tituloReporte + '</Data></Cell></Row>';
                 filas += '<Row></Row>';
 
-                // Criterios
                 filas += '<Row>' +
                     '<Cell><Data ss:Type="String">Criterio:</Data></Cell>' +
                     '<Cell ss:StyleID="color_verde"><Data ss:Type="String">Verde &gt;= 80%</Data></Cell>' +
@@ -162,7 +133,6 @@ define([], function () {
                     '<Cell ss:StyleID="color_rojo"><Data ss:Type="String">Rojo &lt; 60%</Data></Cell>' +
                     '</Row><Row></Row>';
 
-                // Headers columnas
                 var headerRow = '<Row><Cell ss:StyleID="header"><Data ss:Type="String">' + this.textoEncabezado + '</Data></Cell>';
                 preguntasArray.forEach(function(p) {
                     headerRow += '<Cell ss:StyleID="header"><Data ss:Type="String">' +
@@ -172,7 +142,6 @@ define([], function () {
                 headerRow += '<Cell ss:StyleID="header"><Data ss:Type="String">Sumatoria</Data></Cell></Row>';
                 filas += headerRow;
 
-                // Filas de datos
                 if (esGeneral) {
                     this.oficinas.forEach(function(o) {
                         if (!o.totalesOficina || o.totalesOficina.total === 0) return;
@@ -202,7 +171,6 @@ define([], function () {
                     });
                 }
 
-                // Fila totales
                 var totalFila = '<Row><Cell ss:StyleID="totales"><Data ss:Type="String">Totales</Data></Cell>';
                 preguntasArray.forEach(function(p) {
                     var d = self.totalesPorPregunta[p.id] || {};
@@ -219,7 +187,6 @@ define([], function () {
                 totalFila += '</Row>';
                 filas += totalFila;
 
-                // ── Ensamblar XML ─────────────────────────────────
                 var xml = '<?xml version="1.0" encoding="UTF-8"?>' +
                     '<?mso-application progid="Excel.Sheet"?>' +
                     '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" ' +
@@ -234,12 +201,10 @@ define([], function () {
                 descargarArchivo(xml, this.tituloReporte + '.xls', 'application/vnd.ms-excel;charset=utf-8;');
                 Espo.Ui.success('Reporte Excel exportado exitosamente');
             } catch (e) {
-                console.error(e);
                 Espo.Ui.error('Error al exportar el reporte a Excel');
             }
         },
 
-        // ── Helper interno: aplanar preguntas en array ──
         _getPreguntasArray: function () {
             var arr = [];
             var agrupadas = this.preguntasAgrupadas || {};

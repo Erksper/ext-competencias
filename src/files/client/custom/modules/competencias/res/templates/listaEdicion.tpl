@@ -1,7 +1,6 @@
 <link rel="stylesheet" type="text/css" href="client/custom/modules/competencias/res/css/estilos.css">
 
 <div class="container-fluid lista-edicion-container">
-    <!-- Header principal -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="page-header-card">
@@ -28,7 +27,6 @@
         </div>
     </div>
 
-    <!-- Filtros -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="filtro-card">
@@ -91,7 +89,6 @@
         </div>
     </div>
 
-    <!-- Contador -->
     <div class="row mb-3">
         <div class="col-md-12">
             <div class="contador-encuestas">
@@ -101,7 +98,6 @@
         </div>
     </div>
 
-    <!-- Leyenda de estados -->
     <div class="row mb-3">
         <div class="col-md-12">
             <div class="leyenda-estados">
@@ -118,7 +114,6 @@
         </div>
     </div>
 
-    <!-- Contenido dinámico -->
     <div id="lista-edicion-container">
         <div class="text-center" style="padding: 80px 20px;">
             <div class="spinner-large"></div>

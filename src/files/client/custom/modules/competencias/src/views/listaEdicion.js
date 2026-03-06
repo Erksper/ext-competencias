@@ -6,11 +6,8 @@ define(['view'], function (View) {
         template: 'competencias:listaEdicion',
 
         setup: function () {
-            console.log('=== SETUP LISTA EDICION INICIADO ===');
-            
-            // Leer params de opciones (controller los pasa) y también de URL
             this.periodoId   = this.options.periodoId || null;
-            this.periodoInfo = null; // { fechaInicio, fechaCierre, label }
+            this.periodoInfo = null;
 
             this.filtrosDesdeUrl = this._parseQueryParams();
 
@@ -21,8 +18,6 @@ define(['view'], function (View) {
                 tipo:    this.filtrosDesdeUrl.tipo    || null,
                 estado:  this.filtrosDesdeUrl.estado  || null
             };
-            
-            console.log('Filtros iniciales desde URL:', this.filtros);
 
             this.paginacion = {
                 pagina:       parseInt(this.filtrosDesdeUrl.pagina || 1),
@@ -35,18 +30,15 @@ define(['view'], function (View) {
             this.cargandoPagina     = false;
             this.permisos           = null;
             
-            // Para manejar el filtro por CLA
             this.oficinasDelCLA = [];
             this.filtroClaEnProceso = false;
             
-            // Cache de usuarios por oficina
             this.cacheUsuarios = {};
 
             this.wait(true);
             this._cargarPermisos();
         },
 
-        // ── Parseo de URL ────────────────────────────────────────
         _parseQueryParams: function () {
             var result = { cla: null, oficina: null, usuario: null, tipo: null, estado: null, pagina: 1, periodoId: null };
             var hash = window.location.hash;
@@ -61,11 +53,9 @@ define(['view'], function (View) {
                 result.pagina   = params.get('pagina')   ? parseInt(params.get('pagina'), 10) : 1;
                 result.periodoId = params.get('periodoId') || null;
             }
-            // periodoId puede venir por options O por URL
             if (!this.periodoId && result.periodoId) {
                 this.periodoId = result.periodoId;
             }
-            console.log('URL parseada:', result);
             return result;
         },
 
@@ -79,13 +69,10 @@ define(['view'], function (View) {
             if (this.filtros.estado) qp.push('estado='    + encodeURIComponent(this.filtros.estado));
             if (this.paginacion.pagina > 1) qp.push('pagina=' + this.paginacion.pagina);
             var qs = qp.length > 0 ? '?' + qp.join('&') : '';
-            console.log('Actualizando URL con filtros:', this.filtros, 'QS:', qs);
             this.getRouter().navigate('#Competencias/listaEdicion' + qs, { trigger: false });
         },
 
-        // ── Permisos ─────────────────────────────────────────────
         _cargarPermisos: function () {
-            console.log('Cargando permisos...');
             var self = this;
             var user = this.getUser();
 
@@ -93,7 +80,6 @@ define(['view'], function (View) {
                 userModel.id = user.id;
                 userModel.fetch({ relations: { roles: true, teams: true } }).then(function () {
                     var roles = Object.values(userModel.get('rolesNames') || {}).map(function (r) { return r.toLowerCase(); });
-                    console.log('Roles del usuario:', roles);
 
                     self.permisos = {
                         esCasaNacional:        roles.includes('casa nacional'),
@@ -103,18 +89,13 @@ define(['view'], function (View) {
                         teamIds:               userModel.get('teamsIds')   || [],
                         teamNames:             userModel.get('teamsNames') || {}
                     };
-                    
-                    console.log('Permisos calculados:', self.permisos);
 
-                    // Resolver claUsuario y oficinaUsuario para Gerente/Director/Coord
                     if (self.permisos.esGerenteDirectorCoord && !self.permisos.esCasaNacional) {
                         var teamIds   = self.permisos.teamIds;
                         var teamNames = self.permisos.teamNames;
                         var claPattern = /^CLA\d+$/i;
 
-                        // CLA = teams cuyo id empieza con CLA
                         var claTeams = teamIds.filter(function (id) { return claPattern.test(id); });
-                        // Oficina = teams que NO son CLA y NO son "Venezuela"
                         var oficTeams = teamIds.filter(function (id) {
                             return !claPattern.test(id) && (teamNames[id] || '').toLowerCase() !== 'venezuela';
                         });
@@ -122,24 +103,18 @@ define(['view'], function (View) {
                         self.permisos.claUsuario    = claTeams.length > 0 ? claTeams[0] : null;
                         self.permisos.claNombre     = self.permisos.claUsuario ? (teamNames[self.permisos.claUsuario] || self.permisos.claUsuario) : null;
                         self.permisos.oficinaUsuario = oficTeams.length > 0 ? oficTeams[0] : null;
-                        
-                        console.log('Para GDC - CLA:', self.permisos.claUsuario, 'Oficina:', self.permisos.oficinaUsuario);
                     }
 
-                    // Cargar período
                     self._cargarPeriodo();
 
                 }.bind(self));
             });
         },
 
-        // ── Período ──────────────────────────────────────────────
         _cargarPeriodo: function () {
-            console.log('Cargando período:', this.periodoId);
             var self = this;
 
             if (!this.periodoId) {
-                // Si no hay periodoId, redirigir al index
                 Espo.Ui.warning('No se seleccionó un período.');
                 this.getRouter().navigate('#Competencias', { trigger: true });
                 return;
@@ -155,10 +130,8 @@ define(['view'], function (View) {
                         fechaCierre: fc,
                         label: self._formatearFecha(fi) + ' – ' + self._formatearFecha(fc)
                     };
-                    console.log('Período cargado:', self.periodoInfo);
                     self.wait(false);
                 }).catch(function () {
-                    console.error('Error al cargar período');
                     Espo.Ui.error('Error al cargar el período.');
                     self.wait(false);
                 });
@@ -171,10 +144,7 @@ define(['view'], function (View) {
             return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
         },
 
-        // ── Render ───────────────────────────────────────────────
         afterRender: function () {
-            console.log('afterRender ejecutado');
-            // Mostrar subtítulo con el período
             if (this.periodoInfo) {
                 this.$el.find('#periodo-subtitulo').text('Período: ' + this.periodoInfo.label);
             }
@@ -183,14 +153,11 @@ define(['view'], function (View) {
             this._cargarFiltros()
                 .then(this._aplicarValoresFiltrosDesdeUrl.bind(this))
                 .then(() => {
-                    console.log('Filtros restaurados desde URL, ejecutando búsqueda...');
-                    // SIEMPRE ejecutar la búsqueda después de restaurar filtros
                     this._fetchEncuestas();
                 });
         },
 
         _setupEventListeners: function () {
-            console.log('Configurando event listeners');
             var self = this;
 
             this.$el.find('[data-action="volver"]').on('click', function () {
@@ -198,60 +165,47 @@ define(['view'], function (View) {
             });
 
             this.$el.find('[data-action="aplicar-filtros"]').on('click', function () {
-                console.log('Click en aplicar filtros');
                 self._aplicarFiltros();
             });
 
             this.$el.find('[data-action="limpiar-filtros"]').on('click', function () {
-                console.log('Click en limpiar filtros');
                 self._limpiarFiltros();
             });
 
-            // Estos eventos SOLO cargan las opciones de los selects, NO aplican filtros
             this.$el.find('#filtro-cla').on('change', function (e) {
                 var claId = $(e.currentTarget).val();
-                console.log('Cambio en filtro CLA:', claId);
                 self._cargarOficinasPorCLA(claId);
             });
 
             this.$el.find('#filtro-oficina').on('change', function (e) {
                 var oficinaId = $(e.currentTarget).val();
                 var tipo = self.$el.find('#filtro-tipo').val();
-                console.log('Cambio en filtro oficina:', oficinaId, 'tipo actual:', tipo);
                 self._cargarUsuariosPorOficinaYTipo(oficinaId, tipo);
             });
 
             this.$el.find('#filtro-tipo').on('change', function (e) {
                 var tipo = $(e.currentTarget).val();
                 var oficinaId = self.$el.find('#filtro-oficina').val();
-                console.log('Cambio en filtro tipo:', tipo, 'oficina actual:', oficinaId);
                 if (oficinaId) {
                     self._cargarUsuariosPorOficinaYTipo(oficinaId, tipo);
                 }
             });
         },
 
-        // ── Filtros en cascada ──
         _cargarFiltros: function () {
-            console.log('Cargando filtros iniciales...');
             var self     = this;
             var permisos = this.permisos;
 
             return new Promise(function (resolve) {
                 if (!permisos) { 
-                    console.log('No hay permisos aún');
                     resolve(); 
                     return; 
                 }
 
                 if (permisos.esCasaNacional) {
-                    console.log('Usuario es Casa Nacional - cargando CLAs');
-                    // Casa Nacional: ve todos los CLAs
                     self._cargarTodosCLAs().then(resolve);
 
                 } else if (permisos.esGerenteDirectorCoord) {
-                    console.log('Usuario es Gerente/Director/Coordinador');
-                    // Bloquear CLA y oficina, cargar usuarios de su oficina
                     if (permisos.claUsuario) {
                         self.$el.find('#filtro-cla')
                             .html('<option value="' + permisos.claUsuario + '">' + (permisos.claNombre || permisos.claUsuario) + '</option>')
@@ -265,7 +219,6 @@ define(['view'], function (View) {
                             .prop('disabled', true);
 
                         self.filtros.oficina = permisos.oficinaUsuario;
-                        // Cargar usuarios según tipo actual
                         var tipoActual = self.$el.find('#filtro-tipo').val();
                         self._cargarUsuariosPorOficinaYTipo(permisos.oficinaUsuario, tipoActual).then(resolve);
                     } else {
@@ -273,31 +226,26 @@ define(['view'], function (View) {
                     }
 
                 } else {
-                    console.log('Usuario sin permisos especiales');
                     resolve();
                 }
             });
         },
 
         _cargarTodosCLAs: function () {
-            console.log('Cargando todos los CLAs...');
             var self = this;
             return new Promise(function (resolve) {
                 Espo.Ajax.getRequest('Competencias/action/getCLAs')
                     .then(function (response) {
-                        console.log('CLAs recibidos:', response);
                         if (response.success) self._poblarSelectCLAs(response.data);
                         resolve();
                     })
                     .catch(function (err) {
-                        console.error('Error cargando CLAs:', err);
                         resolve();
                     });
             });
         },
 
         _poblarSelectCLAs: function (clas) {
-            console.log('Poblando select de CLAs con:', clas);
             var select = this.$el.find('#filtro-cla');
             select.empty().append('<option value="">Todos los CLAs</option>');
             clas.forEach(function (cla) {
@@ -305,9 +253,7 @@ define(['view'], function (View) {
             });
         },
 
-        // ── CORREGIDO: Cargar oficinas por CLA (AHORA RETORNA PROMESA) ──
         _cargarOficinasPorCLA: function (claId) {
-            console.log('Cargando oficinas para CLA:', claId);
             var self = this;
             
             return new Promise(function (resolve) {
@@ -324,21 +270,16 @@ define(['view'], function (View) {
                 $of.html('<option value="">Cargando oficinas...</option>').prop('disabled', true);
                 $us.html('<option value="">Seleccione una oficina primero</option>').prop('disabled', true);
 
-                // Obtener oficinas del CLA
                 Espo.Ajax.getRequest('Competencias/action/getOficinasByCLA', { claId: claId })
                     .then(function (response) {
-                        console.log('Oficinas del CLA recibidas:', response);
-                        
                         if (response.success && response.data && response.data.length > 0) {
                             self._poblarSelectOficinas(response.data);
                         } else {
-                            console.log('No hay oficinas en este CLA');
                             $of.html('<option value="">No hay oficinas en este CLA</option>').prop('disabled', true);
                         }
                         resolve();
                     })
                     .catch(function (err) {
-                        console.error('Error cargando oficinas del CLA:', err);
                         $of.html('<option value="">Error al cargar oficinas</option>').prop('disabled', true);
                         resolve();
                     });
@@ -346,7 +287,6 @@ define(['view'], function (View) {
         },
 
         _poblarSelectOficinas: function (oficinas) {
-            console.log('Poblando select de oficinas con:', oficinas);
             var select = this.$el.find('#filtro-oficina');
             select.empty().append('<option value="">Todas las oficinas</option>');
             
@@ -360,9 +300,7 @@ define(['view'], function (View) {
             }
         },
 
-        // ── CORREGIDO: Cargar usuarios con paginación (maxSize=200) ──
         _cargarUsuariosPorOficinaYTipo: function (oficinaId, tipo) {
-            console.log('Cargando usuarios para oficina:', oficinaId, 'tipo:', tipo);
             var self = this;
             
             var $us = this.$el.find('#filtro-usuario');
@@ -372,13 +310,11 @@ define(['view'], function (View) {
                 return Promise.resolve();
             }
 
-            // Mostrar loading
             $us.html('<option value="">Cargando usuarios...</option>').prop('disabled', true);
             
             return new Promise(function (resolve) {
                 var pi = self.periodoInfo;
                 if (!pi) {
-                    console.log('No hay info de período');
                     self._poblarSelectUsuarios([]);
                     resolve();
                     return;
@@ -389,7 +325,6 @@ define(['view'], function (View) {
                 var offset = 0;
                 var todasLasEncuestas = [];
                 
-                // Función recursiva para paginar encuestas
                 var fetchEncuestasPage = function() {
                     Espo.Ajax.getRequest('Encuesta', {
                         where: [
@@ -402,30 +337,22 @@ define(['view'], function (View) {
                         offset: offset
                     }).then(function(response) {
                         var encuestas = response.list || [];
-                        console.log(`Página ${offset/maxSize + 1}: ${encuestas.length} encuestas recibidas`);
-                        
                         todasLasEncuestas = todasLasEncuestas.concat(encuestas);
                         
                         if (encuestas.length < maxSize) {
-                            // No hay más páginas - procesar resultados
-                            console.log('Total encuestas procesadas:', todasLasEncuestas.length);
-                            
-                            // Crear un mapa de usuarios únicos
                             var usuariosMap = {};
                             
                             todasLasEncuestas.forEach(function(e) {
                                 if (e.usuarioEvaluadoId && e.usuarioEvaluadoName) {
-                                    // Si hay filtro de tipo, verificar que coincida
                                     if (tipo && tipo !== '') {
                                         var tipoEncuesta = e.rolUsuario || '';
                                         var tipoBuscado = tipo === 'gerente-director-coordinador' ? 'gerente' : tipo;
                                         
                                         if (tipoEncuesta !== tipoBuscado) {
-                                            return; // No coincide el tipo, saltar
+                                            return;
                                         }
                                     }
                                     
-                                    // Guardar usuario en el mapa (para evitar duplicados)
                                     usuariosMap[e.usuarioEvaluadoId] = {
                                         id: e.usuarioEvaluadoId,
                                         name: e.usuarioEvaluadoName,
@@ -434,11 +361,8 @@ define(['view'], function (View) {
                                 }
                             });
                             
-                            // Convertir mapa a array
                             var usuarios = Object.values(usuariosMap);
-                            console.log('Usuarios únicos encontrados:', usuarios.length);
                             
-                            // Ordenar alfabéticamente
                             usuarios.sort(function(a, b) {
                                 return (a.name || '').localeCompare(b.name || '');
                             });
@@ -447,12 +371,10 @@ define(['view'], function (View) {
                             resolve();
                             
                         } else {
-                            // Ir a la siguiente página
                             offset += maxSize;
                             fetchEncuestasPage();
                         }
                     }).catch(function(error) {
-                        console.error('Error cargando encuestas:', error);
                         self._poblarSelectUsuarios([]);
                         resolve();
                     });
@@ -463,7 +385,6 @@ define(['view'], function (View) {
         },
 
         _poblarSelectUsuarios: function (usuarios) {
-            console.log('Poblando select de usuarios con:', usuarios.length, 'usuarios');
             var self = this;
             var select = this.$el.find('#filtro-usuario');
             select.empty().append('<option value="">Todos los usuarios</option>');
@@ -474,35 +395,25 @@ define(['view'], function (View) {
                     select.append('<option value="' + u.id + '">' + nombre + '</option>');
                 });
                 select.prop('disabled', false);
-                console.log('Select de usuarios poblado con', usuarios.length, 'opciones');
             } else {
-                console.log('No hay usuarios para esta combinación');
                 select.html('<option value="">No hay usuarios disponibles</option>').prop('disabled', true);
             }
         },
 
-        // ── Restaurar filtros desde URL ──────────────────────────
         _aplicarValoresFiltrosDesdeUrl: function () {
-            console.log('Aplicando valores de filtros desde URL:', this.filtros);
             var self = this;
             
             return new Promise(function (resolve) {
-                // Si hay filtros en la URL, aplicarlos
                 if (self.filtros.cla || self.filtros.oficina || self.filtros.usuario || self.filtros.tipo || self.filtros.estado) {
-                    console.log('Hay filtros en URL, aplicándolos...');
                     
-                    // Primero restaurar CLA si existe
                     if (self.filtros.cla && !self.$el.find('#filtro-cla').prop('disabled')) {
                         var $cla = self.$el.find('#filtro-cla');
                         
                         var esperarCLA = function() {
                             if ($cla.find('option[value="' + self.filtros.cla + '"]').length) {
-                                console.log('Aplicando CLA desde URL:', self.filtros.cla);
                                 $cla.val(self.filtros.cla);
                                 
-                                // Cargar oficinas para este CLA
                                 self._cargarOficinasPorCLA(self.filtros.cla).then(function() {
-                                    // Luego restaurar oficina
                                     self._restaurarOficinaDesdeUrl().then(resolve);
                                 });
                             } else {
@@ -511,10 +422,8 @@ define(['view'], function (View) {
                         };
                         esperarCLA();
                     } else if (self.filtros.oficina && !self.$el.find('#filtro-oficina').prop('disabled')) {
-                        // Si no hay CLA pero sí oficina
                         self._restaurarOficinaDesdeUrl().then(resolve);
                     } else {
-                        // Restaurar tipo y estado (estos no dependen de otros selects)
                         if (self.filtros.tipo) {
                             self.$el.find('#filtro-tipo').val(self.filtros.tipo);
                         }
@@ -524,8 +433,6 @@ define(['view'], function (View) {
                         resolve();
                     }
                 } else {
-                    // No hay filtros en URL, resolver inmediatamente
-                    console.log('No hay filtros en URL');
                     resolve();
                 }
             });
@@ -543,18 +450,14 @@ define(['view'], function (View) {
                 
                 var esperarOficina = function() {
                     if ($of.find('option[value="' + self.filtros.oficina + '"]').length) {
-                        console.log('Aplicando oficina desde URL:', self.filtros.oficina);
                         $of.val(self.filtros.oficina);
                         
-                        // Restaurar tipo
                         if (self.filtros.tipo) {
                             self.$el.find('#filtro-tipo').val(self.filtros.tipo);
                         }
                         
-                        // Cargar usuarios con la oficina y tipo actual
                         var tipoActual = self.filtros.tipo || '';
                         self._cargarUsuariosPorOficinaYTipo(self.filtros.oficina, tipoActual).then(function() {
-                            // Restaurar usuario si existe
                             if (self.filtros.usuario) {
                                 self._restaurarUsuarioDesdeUrl();
                             }
@@ -575,7 +478,6 @@ define(['view'], function (View) {
             var $us = self.$el.find('#filtro-usuario');
             var esperarUsuario = function() {
                 if ($us.find('option[value="' + self.filtros.usuario + '"]').length) {
-                    console.log('Aplicando usuario desde URL:', self.filtros.usuario);
                     $us.val(self.filtros.usuario);
                 } else {
                     setTimeout(esperarUsuario, 100);
@@ -584,10 +486,7 @@ define(['view'], function (View) {
             esperarUsuario();
         },
 
-        // ── Aplicar filtros (solo aquí se ejecuta la búsqueda) ──
         _aplicarFiltros: function () {
-            console.log('Aplicando filtros manualmente');
-            
             this.filtros = {
                 cla:     this.$el.find('#filtro-cla').val()     || null,
                 oficina: this.$el.find('#filtro-oficina').val() || null,
@@ -595,19 +494,14 @@ define(['view'], function (View) {
                 tipo:    this.$el.find('#filtro-tipo').val()    || null,
                 estado:  this.$el.find('#filtro-estado').val()  || null
             };
-            
-            console.log('Filtros a aplicar:', this.filtros);
 
-            // Forzar restricciones de rol
             var p = this.permisos;
             if (p && p.esGerenteDirectorCoord && !p.esCasaNacional) {
                 this.filtros.oficina = p.oficinaUsuario;
                 this.filtros.cla     = null;
             }
 
-            // Preparar filtro de oficinas para CLA
             if (this.filtros.cla && !this.filtros.oficina && this.permisos && this.permisos.esCasaNacional) {
-                console.log('Preparando filtro por CLA');
                 this.wait(true);
                 
                 var self = this;
@@ -616,7 +510,6 @@ define(['view'], function (View) {
                         if (response.success && response.data && response.data.length > 0) {
                             self.oficinasDelCLA = response.data.map(function(o) { return o.id; });
                         } else {
-                            // Si no hay oficinas, forzar a que no encuentre nada
                             self.oficinasDelCLA = ['NO_OFC'];
                         }
                         self.paginacion.pagina = 1;
@@ -625,7 +518,6 @@ define(['view'], function (View) {
                         self.wait(false);
                     })
                     .catch(function (err) {
-                        console.error('Error obteniendo oficinas del CLA:', err);
                         self.oficinasDelCLA = [];
                         self.paginacion.pagina = 1;
                         self._actualizarUrlConFiltros();
@@ -641,10 +533,8 @@ define(['view'], function (View) {
         },
 
         _limpiarFiltros: function () {
-            console.log('Limpiando filtros');
             var p = this.permisos;
 
-            // Solo limpiar los que no están bloqueados por rol
             if (!this.$el.find('#filtro-cla').prop('disabled')) {
                 this.$el.find('#filtro-cla').val('');
                 this.$el.find('#filtro-oficina')
@@ -658,15 +548,13 @@ define(['view'], function (View) {
             }
 
             this.$el.find('#filtro-tipo').val('');
-            // No limpiar estado - mantener filtro de completadas
-            // this.$el.find('#filtro-estado').val('');
 
             this.filtros = {
                 cla:     null,
                 oficina: (p && p.esGerenteDirectorCoord && !p.esCasaNacional) ? p.oficinaUsuario : null,
                 usuario: null,
                 tipo:    null,
-                estado:  'completada' // Forzar filtro de completadas
+                estado:  'completada'
             };
 
             this.oficinasDelCLA = [];
@@ -676,14 +564,8 @@ define(['view'], function (View) {
             Espo.Ui.info('Filtros limpiados');
         },
 
-        // ── Fetch encuestas del período ──
         _fetchEncuestas: function () {
-            console.log('=== INICIO _fetchEncuestas ===');
-            console.log('Filtros actuales:', this.filtros);
-            console.log('oficinasDelCLA:', this.oficinasDelCLA);
-            
             if (this.cargandoPagina) {
-                console.log('Ya hay una carga en progreso');
                 return;
             }
             this.cargandoPagina = true;
@@ -706,24 +588,19 @@ define(['view'], function (View) {
 
             var fechaCierreMax = pi.fechaCierre ? pi.fechaCierre + ' 23:59:59' : null;
 
-            // Construir where para la colección de Encuesta
             var where = [
                 { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: pi.fechaInicio },
                 { type: 'lessThanOrEquals',    attribute: 'fechaCreacion', value: fechaCierreMax },
-                { type: 'equals', attribute: 'estado', value: 'completada' } // SOLO COMPLETADAS
+                { type: 'equals', attribute: 'estado', value: 'completada' }
             ];
 
-            // --- MODIFICADO: Filtro de oficina / CLA ---
-            // Si hay filtro de CLA activo y tenemos oficinasDelCLA, filtrar por esas oficinas
             if (this.oficinasDelCLA && this.oficinasDelCLA.length > 0) {
                 where.push({ 
                     type: 'in', 
                     attribute: 'equipoId', 
                     value: this.oficinasDelCLA 
                 });
-            }
-            // Si no, usar el filtro de oficina normal
-            else {
+            } else {
                 var oficinaFiltro = this.filtros.oficina;
                 if (!oficinaFiltro && permisos && permisos.esGerenteDirectorCoord && !permisos.esCasaNacional) {
                     oficinaFiltro = permisos.oficinaUsuario;
@@ -733,21 +610,15 @@ define(['view'], function (View) {
                 }
             }
 
-            // Filtro de usuario
             if (this.filtros.usuario) {
                 where.push({ attribute: 'usuarioEvaluadoId', type: 'equals', value: this.filtros.usuario });
             }
 
-            // Filtro de tipo (rol)
             if (this.filtros.tipo) {
-                // Mapear valor del select al valor real en BD
                 var tipoValue = this.filtros.tipo === 'gerente-director-coordinador' ? 'gerente' : this.filtros.tipo;
                 where.push({ attribute: 'rolUsuario', type: 'equals', value: tipoValue });
             }
 
-            console.log('Where final para la consulta:', JSON.stringify(where, null, 2));
-
-            // --- INICIO: PAGINACIÓN POR LOTES ---
             var maxSize = 200;
             var offset = 0;
             var todasLasEncuestas = [];
@@ -772,12 +643,9 @@ define(['view'], function (View) {
                     order: 'desc'
                 }).then(function(response) {
                     var encuestas = response.list || [];
-                    console.log(`Página ${offset/maxSize + 1}: ${encuestas.length} encuestas recibidas`);
-                    
                     todasLasEncuestas = todasLasEncuestas.concat(encuestas);
 
                     if (encuestas.length < maxSize) {
-                        console.log(`Total de encuestas cargadas: ${todasLasEncuestas.length}`);
                         self.cargandoPagina = false;
                         self.encuestasFiltradas = todasLasEncuestas;
                         self.paginacion.total = todasLasEncuestas.length;
@@ -793,14 +661,12 @@ define(['view'], function (View) {
                         fetchNextPage();
                     }
                 }).catch(function(error) {
-                    console.error('Error cargando página de encuestas:', error);
                     self.cargandoPagina = false;
                     container.html('<div class="alert alert-danger">Error al cargar encuestas: ' + (error.message || 'desconocido') + '</div>');
                 });
             };
 
             fetchNextPage();
-            // --- FIN: PAGINACIÓN POR LOTES ---
         },
 
         _irAPagina: function (pagina) {
@@ -810,9 +676,7 @@ define(['view'], function (View) {
             this._renderizarTabla();
         },
 
-        // ── Render tabla ─────────────────────────────────────────
         _renderizarTabla: function () {
-            console.log('Renderizando tabla con', this.encuestasFiltradas.length, 'encuestas');
             var container = this.$el.find('#lista-edicion-container');
             var pag       = this.paginacion;
             var self      = this;
@@ -960,23 +824,15 @@ define(['view'], function (View) {
         },
         
         _irAEncuesta: function (encuestaId) {
-            console.log('Navegando a encuesta:', encuestaId);
-            
-            // Buscar la encuesta en los datos para obtener sus detalles
             var encuesta = this.encuestasFiltradas.find(function(e) {
                 return e.id === encuestaId;
             });
             
             if (!encuesta) {
-                console.error('No se encontraron datos de la encuesta');
                 Espo.Ui.error('Error al cargar los datos de la encuesta');
                 return;
             }
             
-            console.log('Datos de encuesta:', encuesta);
-            
-            // Construir un solo string con todos los datos de la encuesta
-            // Formato: key1:value1|key2:value2|key3:value3
             var dataParts = [
                 'encuestaId:' + encuestaId,
                 'userId:' + (encuesta.usuarioEvaluadoId || ''),
@@ -988,7 +844,6 @@ define(['view'], function (View) {
             
             var dataString = encodeURIComponent(dataParts.join('|'));
             
-            // Construir retorno con los filtros actuales
             var retornoParts = ['periodoId=' + this.periodoId];
             if (this.filtros.cla) retornoParts.push('cla=' + this.filtros.cla);
             if (this.filtros.oficina) retornoParts.push('oficina=' + this.filtros.oficina);
@@ -999,12 +854,9 @@ define(['view'], function (View) {
             
             var retornoString = encodeURIComponent('#Competencias/listaEdicion?' + retornoParts.join('&'));
             
-            // Construir URL final con solo 3 parámetros
             var url = '#Competencias/survey?data=' + dataString + 
                     '&from=listaEdicion' + 
                     '&retorno=' + retornoString;
-            
-            console.log('Navegando a:', url);
             
             this.getRouter().navigate(url, { trigger: true });
         },

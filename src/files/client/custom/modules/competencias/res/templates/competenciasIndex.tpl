@@ -1,4 +1,3 @@
-<!-- client/custom/modules/competencias/res/templates/competenciasIndex.tpl -->
 <link rel="stylesheet" type="text/css" href="client/custom/modules/competencias/res/css/estilos.css">
 <div class="ci-page-header">
     <div class="ci-header-icon">
@@ -17,29 +16,13 @@
             {{#if tieneAccesoAlModulo}}
 
                 {{#if esAdmin}}
-                    {{#if mostrarBotonCrear}}
-                    <div class="ci-alert-card ci-alert-warning">
-                        <div class="ci-alert-body">
-                            <div class="ci-alert-text">
-                                <h4><i class="fas fa-exclamation-triangle"></i> Sistema no inicializado</h4>
-                                <p><strong>No hay preguntas configuradas.</strong> Para usar el sistema de competencias, primero debes crear las preguntas predeterminadas.</p>
-                            </div>
-                            <div class="ci-alert-action">
-                                <button class="ci-btn ci-btn-warning" data-action="crearPreguntas">
-                                    <i class="fas fa-magic"></i> Inicializar Sistema
-                                </button>
-                            </div>
+                    {{#if preguntasRecienCreadas}}
+                    <div class="ci-alert-card ci-alert-success">
+                        <div class="ci-alert-body ci-alert-center">
+                            <h4><i class="fas fa-check-circle"></i> Sistema Listo</h4>
+                            <p>El sistema tiene <strong>{{totalPreguntas}} preguntas configuradas</strong> y está listo para realizar evaluaciones.</p>
                         </div>
                     </div>
-                    {{else}}
-                        {{#if preguntasRecienCreadas}}
-                        <div class="ci-alert-card ci-alert-success">
-                            <div class="ci-alert-body ci-alert-center">
-                                <h4><i class="fas fa-check-circle"></i> Sistema Listo</h4>
-                                <p>El sistema tiene <strong>{{totalPreguntas}} preguntas configuradas</strong> y está listo para realizar evaluaciones.</p>
-                            </div>
-                        </div>
-                        {{/if}}
                     {{/if}}
                 {{else}}
                     {{#if sinPreguntas}}

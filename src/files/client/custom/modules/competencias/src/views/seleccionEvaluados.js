@@ -24,8 +24,6 @@ define(['view'], function (View) {
         },
 
         setup: function () {
-            console.log('=== SETUP SELECCION EVALUADOS INICIADO ===');
-            
             this.permisos = null;
             this.periodoInfo = {
                 activo: false,
@@ -34,7 +32,6 @@ define(['view'], function (View) {
                 id: null
             };
             
-            // Filtros desde URL
             this.filtrosDesdeUrl = this._parseQueryParams();
             
             this.filtros = {
@@ -70,7 +67,6 @@ define(['view'], function (View) {
                 result.estado = params.get('estado') || null;
                 result.pagina = params.get('pagina') ? parseInt(params.get('pagina'), 10) : 1;
             }
-            console.log('URL parseada:', result);
             return result;
         },
 
@@ -83,33 +79,27 @@ define(['view'], function (View) {
             if (this.paginacion.pagina > 1) qp.push('pagina=' + this.paginacion.pagina);
             
             var qs = qp.length > 0 ? '?' + qp.join('&') : '';
-            console.log('Actualizando URL con filtros:', this.filtros, 'QS:', qs);
             this.getRouter().navigate('#Competencias/seleccionEvaluados' + qs, { trigger: false });
         },
 
         _cargarDatosIniciales: function () {
             var self = this;
             
-            // Cargar usuario actual y sus permisos
             Espo.Ajax.getRequest('Competencias/action/getUserInfo')
                 .then(function (response) {
                     if (response.success) {
                         self.permisos = response.data;
-                        console.log('Permisos cargados:', self.permisos);
                         
-                        // Si es asesor, no tiene acceso
                         if (self.permisos.esAsesor && !self.permisos.esGerente && !self.permisos.esCasaNacional) {
                             Espo.Ui.warning('No tiene permisos para acceder a esta página');
                             self.getRouter().navigate('#Competencias', { trigger: true });
                             return;
                         }
                         
-                        // Si es gerente, fijar su oficina
                         if (self.permisos.esGerente && !self.permisos.esCasaNacional && self.permisos.oficinaId) {
                             self.filtros.oficina = self.permisos.oficinaId;
                         }
                         
-                        // Cargar período activo
                         return self._cargarPeriodoActivo();
                     } else {
                         throw new Error('Error al cargar permisos');
@@ -117,7 +107,6 @@ define(['view'], function (View) {
                 })
                 .then(function (periodo) {
                     self.periodoInfo = periodo;
-                    console.log('Período cargado:', self.periodoInfo);
                     
                     if (!periodo.activo) {
                         self.wait(false);
@@ -128,7 +117,6 @@ define(['view'], function (View) {
                     self.wait(false);
                 })
                 .catch(function (error) {
-                    console.error('Error:', error);
                     Espo.Ui.error('Error al cargar datos iniciales');
                     self.wait(false);
                 });
@@ -170,11 +158,8 @@ define(['view'], function (View) {
         },
 
         afterRender: function () {
-            console.log('afterRender ejecutado');
-            
             if (!this.permisos) return;
             
-            // Configurar visibilidad de filtros según permisos
             this._configurarVisibilidadFiltros();
             
             if (!this.periodoInfo || !this.periodoInfo.activo) {
@@ -183,27 +168,21 @@ define(['view'], function (View) {
             
             this._setupEventListeners();
             
-            // Cargar filtros iniciales según permisos
             if (this.permisos.esCasaNacional) {
                 this._cargarCLAs();
             }
             
-            // Restaurar filtros desde URL y buscar
             this._restaurarFiltrosDesdeUrl();
         },
 
         _configurarVisibilidadFiltros: function () {
-            // Solo Casa Nacional ve CLA y Oficina
             if (!this.permisos.esCasaNacional) {
-                // Ocultar fila de CLA y Oficina
                 this.$el.find('.filtro-cla-row, .filtro-oficina-row').hide();
                 
-                // Si es gerente, mostrar solo Tipo y Estado
                 if (this.permisos.esGerente) {
                     this.$el.find('.filtro-tipo-row, .filtro-estado-row').show();
                 }
             } else {
-                // Casa Nacional ve todos los filtros
                 this.$el.find('.filtro-cla-row, .filtro-oficina-row, .filtro-tipo-row, .filtro-estado-row').show();
             }
         },
@@ -267,14 +246,12 @@ define(['view'], function (View) {
         _restaurarFiltrosDesdeUrl: function () {
             var self = this;
             
-            // Para Casa Nacional, restaurar CLA y oficina
             if (this.permisos.esCasaNacional && this.filtros.cla) {
                 var $cla = this.$el.find('#filtro-cla');
                 var checkCLA = function () {
                     if ($cla.find('option[value="' + self.filtros.cla + '"]').length) {
                         $cla.val(self.filtros.cla);
                         self._onCLAChange(self.filtros.cla).then(function () {
-                            // Después de cargar oficinas, restaurar la oficina seleccionada
                             if (self.filtros.oficina) {
                                 self._restaurarOficinaYBuscar();
                             } else {
@@ -289,7 +266,6 @@ define(['view'], function (View) {
             } else if (this.filtros.oficina) {
                 this._restaurarOficinaYBuscar();
             } else {
-                // Carga inicial: mostrar usuarios según permisos
                 this._cargarUsuariosIniciales();
             }
         },
@@ -302,7 +278,6 @@ define(['view'], function (View) {
                 return;
             }
             
-            // Si es gerente y no hay select de oficina visible, buscar directamente
             if (!this.permisos.esCasaNacional) {
                 if (self.filtros.tipo) self.$el.find('#filtro-tipo').val(self.filtros.tipo);
                 if (self.filtros.estado) self.$el.find('#filtro-estado').val(self.filtros.estado);
@@ -310,7 +285,6 @@ define(['view'], function (View) {
                 return;
             }
             
-            // Para Casa Nacional, esperar a que el select de oficina tenga la opción
             var $oficina = this.$el.find('#filtro-oficina');
             var checkOficina = function () {
                 if ($oficina.find('option[value="' + self.filtros.oficina + '"]').length) {
@@ -326,11 +300,7 @@ define(['view'], function (View) {
         },
 
         _cargarUsuariosIniciales: function () {
-            console.log('Cargando usuarios iniciales según permisos');
-            
-            // Si es Casa Nacional, mostrar todos (sin filtro de oficina)
             if (this.permisos.esCasaNacional) {
-                // Por ahora, no cargamos nada hasta que seleccione filtros
                 this.$el.find('#lista-usuarios-container').html(
                     '<div class="no-data-card">' +
                     '<div class="no-data-icon"><i class="fas fa-filter"></i></div>' +
@@ -341,7 +311,6 @@ define(['view'], function (View) {
                 return;
             }
             
-            // Si es gerente, mostrar usuarios de su oficina
             if (this.permisos.esGerente && this.permisos.oficinaId) {
                 this.filtros.oficina = this.permisos.oficinaId;
                 this._fetchUsuarios();
@@ -356,14 +325,10 @@ define(['view'], function (View) {
                 estado: this.$el.find('#filtro-estado').val() || null
             };
             
-            console.log('Aplicando filtros:', this.filtros);
-            
-            // Si es gerente, forzar su oficina
             if (this.permisos.esGerente && !this.permisos.esCasaNacional && this.permisos.oficinaId) {
                 this.filtros.oficina = this.permisos.oficinaId;
             }
             
-            // Validar que haya al menos una oficina seleccionada para no-Casa Nacional
             if (!this.permisos.esCasaNacional && !this.filtros.oficina) {
                 Espo.Ui.warning('No se pudo determinar su oficina');
                 return;
@@ -375,8 +340,6 @@ define(['view'], function (View) {
         },
 
         _limpiarFiltros: function () {
-            console.log('Limpiando filtros');
-            
             if (this.permisos.esCasaNacional) {
                 this.$el.find('#filtro-cla').val('');
                 this.$el.find('#filtro-oficina').empty()
@@ -398,18 +361,12 @@ define(['view'], function (View) {
             
             this.paginacion.pagina = 1;
             this._actualizarUrlConFiltros();
-            
-            // Recargar usuarios iniciales según permisos
             this._cargarUsuariosIniciales();
         },
 
         _fetchUsuarios: function () {
-            console.log('=== INICIO _fetchUsuarios ===');
-            console.log('Filtros actuales:', this.filtros);
-            
             if (this.cargando) return;
             
-            // Para Casa Nacional, si no hay oficina seleccionada, no buscar
             if (this.permisos.esCasaNacional && !this.filtros.oficina) {
                 this.$el.find('#lista-usuarios-container').html(
                     '<div class="no-data-card">' +
@@ -421,7 +378,6 @@ define(['view'], function (View) {
                 return;
             }
             
-            // Para gerentes, asegurar que tienen oficina
             if (!this.permisos.esCasaNacional && !this.filtros.oficina) {
                 Espo.Ui.warning('No se pudo determinar su oficina');
                 return;
@@ -440,24 +396,18 @@ define(['view'], function (View) {
             
             var self = this;
             
-            // Obtener usuarios de la oficina
             Espo.Ajax.getRequest('Competencias/action/getAsesoresByOficina', {
                 oficinaId: this.filtros.oficina
             }).then(function (response) {
                 if (response.success) {
                     var usuarios = response.data || [];
-                    console.log('Usuarios encontrados:', usuarios.length);
-                    
-                    // Obtener encuestas del período
                     return self._cargarEncuestas(usuarios);
                 } else {
                     throw new Error(response.error || 'Error al cargar usuarios');
                 }
             }).then(function (usuariosEnriquecidos) {
-                console.log('Usuarios enriquecidos:', usuariosEnriquecidos.length);
                 self._procesarResultados(usuariosEnriquecidos);
             }).catch(function (error) {
-                console.error('Error:', error);
                 self.cargando = false;
                 container.html('<div class="alert alert-danger">Error al cargar usuarios: ' + (error.message || 'desconocido') + '</div>');
             });
@@ -491,9 +441,7 @@ define(['view'], function (View) {
                 }).then(function (response) {
                     if (response.success) {
                         var encuestas = response.data || [];
-                        console.log('Encuestas encontradas:', encuestas.length);
                         
-                        // Crear mapa de encuestas por usuario
                         var encuestasPorUsuario = {};
                         encuestas.forEach(function (e) {
                             if (!encuestasPorUsuario[e.usuarioEvaluadoId] ||
@@ -502,7 +450,6 @@ define(['view'], function (View) {
                             }
                         });
                         
-                        // Enriquecer usuarios
                         var usuariosEnriquecidos = usuarios.map(function (u) {
                             var encuesta = encuestasPorUsuario[u.id];
                             return {
@@ -555,12 +502,9 @@ define(['view'], function (View) {
         _procesarResultados: function (usuarios) {
             var self = this;
             
-            // Aplicar filtros de tipo y estado
             var filtrados = usuarios;
             
-            // Para gerentes, filtrar usuarios que NO tienen encuesta o tienen encuesta incompleta
             if (this.permisos.esGerente && !this.permisos.esCasaNacional) {
-                console.log('Filtrando para gerente - mostrando solo usuarios sin evaluación o con evaluación incompleta');
                 filtrados = filtrados.filter(function (u) {
                     return u.estado === 'sin_evaluacion' || u.estado === 'incompleta';
                 });
@@ -619,7 +563,6 @@ define(['view'], function (View) {
             var html = '';
             var inicioGlobal = inicio;
             
-            // Grupos de 25
             var grupos = [];
             for (var g = 0; g < datos.length; g += 25) {
                 grupos.push(datos.slice(g, g + 25));
@@ -645,7 +588,6 @@ define(['view'], function (View) {
                 grupo.forEach(function (usuario, idx) {
                     var numItem = inicioGlobal + gi * 25 + idx + 1;
                     
-                    // Determinar tipo a mostrar
                     var tipoTexto = '';
                     if (usuario.roles.includes('asesor')) {
                         tipoTexto = 'Asesor';
@@ -678,7 +620,6 @@ define(['view'], function (View) {
             html += self._renderPaginacion();
             container.html(html);
             
-            // Eventos click en filas
             container.find('tr[data-usuario-id]').on('click', function () {
                 var usuarioId = $(this).data('usuario-id');
                 var tieneEncuesta = $(this).data('tiene-encuesta') === 'true';
@@ -737,17 +678,11 @@ define(['view'], function (View) {
         },
 
         _irAEncuesta: function (usuarioId, tieneEncuesta, encuestaId) {
-            console.log('Navegando a usuario:', usuarioId, 'tieneEncuesta:', tieneEncuesta);
-            
-            var usuario = this.usuarios.find(function (u) { return u.id == usuarioId; }); // Usar == para comparar string con número
+            var usuario = this.usuarios.find(function (u) { return u.id == usuarioId; });
             if (!usuario) {
-                console.error('Usuario no encontrado en lista:', usuarioId);
-                console.log('Usuarios disponibles:', this.usuarios.map(u => ({ id: u.id, name: u.name })));
                 Espo.Ui.error('Error al obtener datos del usuario');
                 return;
             }
-            
-            console.log('Usuario encontrado:', usuario);
             
             var dataParts = [
                 'userId:' + usuarioId,
@@ -763,7 +698,6 @@ define(['view'], function (View) {
             
             var dataString = encodeURIComponent(dataParts.join('|'));
             
-            // Construir retorno
             var retornoParts = [];
             if (this.permisos.esCasaNacional && this.filtros.cla) retornoParts.push('cla=' + this.filtros.cla);
             if (this.filtros.oficina) retornoParts.push('oficina=' + this.filtros.oficina);
@@ -780,7 +714,6 @@ define(['view'], function (View) {
                 url = '#Competencias/survey?data=' + dataString + '&from=seleccion&retorno=' + retornoString;
             }
             
-            console.log('Navegando a URL:', url);
             this.getRouter().navigate(url, { trigger: true });
         },
 

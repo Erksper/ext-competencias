@@ -40,7 +40,6 @@
 
 <div class="reporte-matrix-wrapper">
     <div class="reporte-matrix-scroll">
-        <!-- La tabla se renderizará aquí desde JavaScript -->
     </div>
 </div>
 
@@ -71,7 +70,7 @@
 <div class="reporte-sin-datos">
     <i class="fas fa-clipboard-list"></i>
     <h4>No hay datos para mostrar</h4>
-    <p>No se encontraron encuestas de {{#if (eq rolObjetivo 'asesor')}}asesores{{else}}gerentes y directores{{/if}}.</p>
+    <p>No se encontraron encuestas de {{#if (eq rolObjetivo 'asesor')}}asesores{{else}}gerentes, directores y coordinadores{{/if}}.</p>
 </div>
 
 {{/if}}

@@ -1,12 +1,4 @@
-/* ============================================================
-   GESPLACC - COMPETENCIAS — ESTILOS UNIFICADOS
-   Estilo alineado con inv-propiedades (Century 21).
-   Archivo autónomo: no requiere CSS externo.
-   ============================================================ */
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   VARIABLES
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* client/custom/modules/competencias/res/css/estilos.css */
 :root {
     --color-primary:         #B8A279;
     --color-primary-dark:    #9D8B5F;
@@ -27,7 +19,6 @@
     --color-danger:          #e74c3c;
     --color-info:            #3498db;
 
-    /* Colores de competencias */
     --color-competencia-verde:    #4CAF50;
     --color-competencia-amarillo: #FFC107;
     --color-competencia-rojo:     #F44336;
@@ -45,9 +36,6 @@
     --transition: 0.3s ease;
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SPINNER
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .spinner-large {
     width: 56px;
     height: 56px;
@@ -57,6 +45,7 @@
     animation: spin 1s linear infinite;
     margin: 0 auto;
 }
+
 .spinner-small {
     width: 30px;
     height: 30px;
@@ -66,9 +55,9 @@
     animation: spin 1s linear infinite;
     margin: 0 auto 10px;
 }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Badge genérico */
 .comp-badge {
     color: #fff;
     padding: 4px 10px;
@@ -79,11 +68,6 @@
     display: inline-block;
 }
 
-/* ══════════════════════════════════════════════════════════
-   VISTA LISTA DE REPORTES  (reportes.tpl)
-   ══════════════════════════════════════════════════════════ */
-
-/* Encabezado de página */
 .rep-page-header {
     display: flex;
     align-items: center;
@@ -122,7 +106,6 @@
     margin: 0;
 }
 
-/* Panel info usuario */
 .rep-info-card {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -141,7 +124,6 @@
     font-size: 15px;
 }
 
-/* Banda período */
 .rep-periodo-band {
     display: flex;
     align-items: center;
@@ -158,7 +140,6 @@
 
 .rep-periodo-band i { color: var(--color-primary); }
 
-/* Estadísticas */
 .rep-estadisticas {
     background: #fff;
     border: 1px solid var(--color-gray-light);
@@ -204,11 +185,11 @@
     min-width: 150px;
     text-align: center;
 }
+
 .rep-badge-stat.completadas { background: var(--color-success); }
 .rep-badge-stat.revision    { background: var(--color-warning); color: #333; }
 .rep-badge-stat.incompletas { background: var(--color-danger); }
 
-/* Form group selector */
 .rep-form-group { margin-top: 16px; }
 
 .rep-form-group label {
@@ -236,7 +217,6 @@
     box-shadow: 0 0 0 3px rgba(184,162,121,0.12);
 }
 
-/* Título sección */
 .rep-section-title {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -259,7 +239,6 @@
 
 .rep-section-title i { color: var(--color-primary); font-size: 18px; }
 
-/* Avisos sin datos */
 .rep-aviso {
     background: #fff3cd;
     border: 1px solid var(--color-warning);
@@ -271,7 +250,6 @@
     color: #856404;
 }
 
-/* Grid de tarjetas */
 .rep-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -330,7 +308,6 @@
     line-height: 1.5;
 }
 
-/* Sin reportes */
 .rep-empty {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -345,7 +322,6 @@
 .rep-empty h4   { font-size: 20px; font-weight: 700; color: var(--color-dark); margin-bottom: 8px; }
 .rep-empty p    { color: var(--color-gray-medium); font-size: 14px; }
 
-/* Sin períodos */
 .rep-no-periodos {
     background: #fff3cd;
     border: 1px solid var(--color-warning);
@@ -354,10 +330,10 @@
     text-align: center;
     margin-bottom: 20px;
 }
+
 .rep-no-periodos h4 { color: #856404; font-size: 18px; margin-bottom: 8px; }
 .rep-no-periodos p  { color: #856404; margin: 0; font-size: 14px; }
 
-/* Botones volver/acción */
 .rep-actions { text-align: center; margin-top: 24px; }
 
 .rep-btn-back {
@@ -374,17 +350,12 @@
     gap: 8px;
     transition: all var(--transition);
 }
+
 .rep-btn-back:hover {
     background: var(--color-secondary-dark);
     transform: translateY(-1px);
 }
 
-
-/* ══════════════════════════════════════════════════════════
-   VISTA DETALLE DE REPORTE  (reporteBase.tpl)
-   ══════════════════════════════════════════════════════════ */
-
-/* Header del reporte */
 .reporte-header {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -409,7 +380,6 @@
     margin: 0;
 }
 
-/* Barra de acciones */
 .reporte-acciones {
     display: flex;
     align-items: center;
@@ -434,6 +404,7 @@
     transition: all var(--transition);
     text-decoration: none;
 }
+
 .btn-volver:hover {
     background: var(--color-primary-dark);
     box-shadow: var(--shadow-primary);
@@ -454,6 +425,7 @@
     gap: 7px;
     transition: all var(--transition);
 }
+
 .btn-exportar:hover {
     background: var(--color-primary-dark);
     box-shadow: var(--shadow-primary);
@@ -466,7 +438,6 @@
     flex-wrap: wrap;
 }
 
-/* Banda informativa */
 .reporte-info-band {
     display: flex;
     align-items: center;
@@ -481,9 +452,9 @@
     color: var(--color-secondary);
     flex-wrap: wrap;
 }
+
 .reporte-info-band i { color: var(--color-primary); font-size: 15px; }
 
-/* Wrapper tabla */
 .reporte-matrix-wrapper {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -498,7 +469,6 @@
     -webkit-overflow-scrolling: touch;
 }
 
-/* Tabla de matriz */
 .report-matrix {
     width: 100%;
     border-collapse: collapse;
@@ -506,7 +476,6 @@
     min-width: 1200px;
 }
 
-/* Nivel 1 - categorías: gradiente dorado */
 .report-matrix thead .categoria-row th {
     background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
     color: #fff;
@@ -518,7 +487,6 @@
     font-size: 12px;
 }
 
-/* Nivel 2 - subcategorías: gris claro */
 .report-matrix thead .subcategoria-row th {
     background: #9E9B9C;
     color: #fff;
@@ -530,7 +498,6 @@
     font-weight: 500;
 }
 
-/* Nivel 3 - preguntas: texto vertical */
 .report-matrix thead .preguntas-row th {
     background: var(--color-gray-very-light);
     color: var(--color-dark);
@@ -552,7 +519,6 @@
     color: var(--color-dark);
 }
 
-/* Celda header con logo: gradiente dorado como nivel 1 */
 .th-main-header {
     width: 250px;
     min-width: 200px;
@@ -589,7 +555,6 @@
     font-size: 12px;
 }
 
-/* Celda sumatoria: gris claro (igual que subcategorías) */
 .th-sumatoria {
     width: 100px;
     background: #9E9B9C !important;
@@ -606,11 +571,11 @@
     line-height: 1.4;
 }
 
-/* Filas cuerpo */
 .report-matrix tbody .usuario-row {
     border-bottom: 1px solid #F0F0F0;
     transition: background 0.15s;
 }
+
 .report-matrix tbody .usuario-row:hover { background: rgba(184,162,121,0.06); }
 .report-matrix tbody .usuario-row:nth-child(even) { background: var(--color-gray-very-light); }
 .report-matrix tbody .usuario-row:nth-child(even):hover { background: rgba(184,162,121,0.08); }
@@ -645,7 +610,6 @@
     white-space: nowrap;
 }
 
-/* Colores de competencia */
 .color-verde    { background-color: var(--color-competencia-verde)    !important; }
 .color-amarillo { background-color: var(--color-competencia-amarillo) !important; }
 .color-rojo     { background-color: var(--color-competencia-rojo)     !important; }
@@ -656,7 +620,6 @@
 .celda-total.color-rojo     { color: #fff; }
 .celda-total.color-gris     { color: #fff; }
 
-/* Tfoot totales */
 .report-matrix tfoot .totales-row td {
     background: var(--color-gray-very-light);
     border-top: 2px solid var(--color-primary) !important;
@@ -671,7 +634,6 @@
     font-size: 13px;
 }
 
-/* Leyenda */
 .reporte-leyenda {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -716,7 +678,6 @@
     display: inline-block;
 }
 
-/* ── Panel de filtro CLA / Oficina (pantalla de reportes - Casa Nacional) ── */
 .rep-filtro-oficina-panel {
     background: var(--color-gray-very-light);
     border: 1px solid var(--color-gray-light);
@@ -734,6 +695,7 @@
     align-items: center;
     gap: 7px;
 }
+
 .rep-filtro-titulo i { color: var(--color-primary); }
 
 .rep-filtro-campos {
@@ -771,11 +733,13 @@
     transition: border-color var(--transition);
     appearance: auto;
 }
+
 .rep-filtro-select:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(184,162,121,0.18);
 }
+
 .rep-filtro-select:disabled {
     background: #f0f0f0;
     color: #aaa;
@@ -787,6 +751,7 @@
     color: #999;
     margin: 10px 0 0;
 }
+
 .rep-filtro-hint i { color: var(--color-primary); }
 
 @media (max-width: 768px) {
@@ -794,7 +759,6 @@
     .rep-filtro-grupo  { min-width: 100%; }
 }
 
-/* Sin datos */
 .reporte-sin-datos {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -809,9 +773,6 @@
 .reporte-sin-datos h4 { color: var(--color-gray-medium); font-size: 20px; font-weight: 700; margin-bottom: 8px; }
 .reporte-sin-datos p  { color: var(--color-gray-medium); font-size: 14px; margin: 0; }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   RESPONSIVE (original)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 @media (max-width: 768px) {
     .rep-page-header { padding: 16px 18px; }
     .rep-page-title  { font-size: 22px; }
@@ -843,12 +804,6 @@
     .rep-page-title    { font-size: 18px; }
 }
 
-
-/* ══════════════════════════════════════════════════════════
-   VISTA INDEX — competenciasIndex.tpl
-   ══════════════════════════════════════════════════════════ */
-
-/* ── Header de página ── */
 .ci-page-header {
     display: flex;
     align-items: center;
@@ -887,7 +842,6 @@
     margin: 0;
 }
 
-/* ── Banda período activo ── */
 .ci-periodo-band {
     display: flex;
     align-items: center;
@@ -901,9 +855,9 @@
     font-size: 14px;
     color: var(--color-secondary);
 }
+
 .ci-periodo-band i { color: var(--color-primary); }
 
-/* ── Cards de alerta ── */
 .ci-alert-card {
     border-radius: var(--radius-xl);
     margin-bottom: 20px;
@@ -958,7 +912,6 @@
 
 .ci-alert-action { flex-shrink: 0; }
 
-/* ── Card principal con botones ── */
 .ci-main-card {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -975,7 +928,6 @@
     gap: 14px;
 }
 
-/* ── Fila Activar Período (botón + input fecha) ── */
 .ci-activar-row {
     display: flex;
     gap: 10px;
@@ -998,13 +950,13 @@
     transition: border-color var(--transition), box-shadow var(--transition);
     min-width: 160px;
 }
+
 .ci-date-input:focus {
     border-color: var(--color-primary);
     outline: none;
     box-shadow: 0 0 0 3px rgba(184,162,121,0.12);
 }
 
-/* ── Selector período + botón Lista de Encuestas ── */
 .ci-lista-edicion-row {
     display: flex;
     flex-direction: column;
@@ -1026,13 +978,13 @@
     transition: border-color var(--transition), box-shadow var(--transition);
     cursor: pointer;
 }
+
 .ci-periodo-select:focus {
     border-color: var(--color-primary);
     outline: none;
     box-shadow: 0 0 0 3px rgba(184,162,121,0.12);
 }
 
-/* ── Nuevo Grupo: Editar Encuestas Anteriores ── */
 .ci-edicion-group {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -1076,7 +1028,6 @@
     pointer-events: none;
 }
 
-/* ── Acceso denegado ── */
 .ci-acceso-denegado {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -1107,7 +1058,6 @@
     margin: 0;
 }
 
-/* ── Responsive index ── */
 @media (max-width: 768px) {
     .ci-page-header    { padding: 16px 18px; flex-wrap: wrap; }
     .ci-page-title     { font-size: 20px; }
@@ -1121,12 +1071,6 @@
     .ci-page-title  { font-size: 17px; }
 }
 
-
-/* ============================================================
-   ENCUESTA - ESTILOS UNIFICADOS
-   ============================================================ */
-
-/* Header de encuesta */
 .encuesta-page-header {
     display: flex;
     align-items: center;
@@ -1165,7 +1109,6 @@
     margin: 0;
 }
 
-/* Tarjeta de información de encuesta */
 .encuesta-info-card {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -1204,7 +1147,6 @@
     font-weight: 500;
 }
 
-/* Título de sección de encuesta */
 .encuesta-section-title {
     background: #fff;
     border-radius: var(--radius-xl);
@@ -1230,7 +1172,6 @@
     font-size: 18px;
 }
 
-/* Leyenda móvil para encuesta */
 .encuesta-mobile-legend {
     display: none;
     background: #fff;
@@ -1264,7 +1205,6 @@
     background-color: var(--color-competencia-amarillo);
 }
 
-/* Categorías de encuesta */
 .encuesta-categoria {
     margin-bottom: 15px;
     background: #fff;
@@ -1317,7 +1257,6 @@
     background: #fafafa;
 }
 
-/* Subcategorías de encuesta */
 .encuesta-subcategoria {
     margin-bottom: 10px;
     background: #fff;
@@ -1374,7 +1313,6 @@
     padding: 15px;
 }
 
-/* Tabla de encuesta */
 .encuesta-tabla-container {
     overflow-x: auto;
     border-radius: var(--radius-lg);
@@ -1386,6 +1324,7 @@
     border-collapse: collapse;
     font-size: 13px;
     min-width: 600px;
+    table-layout: fixed !important;
 }
 
 .encuesta-tabla thead {
@@ -1405,9 +1344,14 @@
 }
 
 .encuesta-tabla tbody td {
-    padding: 12px 10px;
+    padding: 8px 10px;
     border: 1px solid #E6E6E6;
     vertical-align: middle;
+    text-align: center;
+}
+
+.encuesta-tabla tbody td:first-child {
+    text-align: left;
 }
 
 .encuesta-tabla tbody tr:hover {
@@ -1418,7 +1362,25 @@
     background: #fafafa;
 }
 
-/* Color badges en header de tabla */
+.encuesta-tabla th:first-child,
+.encuesta-tabla td:first-child {
+    width: 60% !important;
+    min-width: 250px !important;
+}
+
+.encuesta-tabla th:nth-child(2),
+.encuesta-tabla td:nth-child(2),
+.encuesta-tabla th:nth-child(3),
+.encuesta-tabla td:nth-child(3),
+.encuesta-tabla th:nth-child(4),
+.encuesta-tabla td:nth-child(4) {
+    width: 13.33% !important;
+    min-width: 60px !important;
+    max-width: 80px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
 .encuesta-color-badge {
     display: inline-block;
     padding: 4px 8px;
@@ -1432,7 +1394,6 @@
 .encuesta-color-badge.amarillo { background: var(--color-competencia-amarillo); color: #333; }
 .encuesta-color-badge.rojo { background: var(--color-competencia-rojo); }
 
-/* Contenedor de pregunta */
 .encuesta-pregunta-container {
     display: flex;
     align-items: flex-start;
@@ -1458,17 +1419,22 @@
     line-height: 1.4;
 }
 
-/* Opciones de color en encuesta */
 .encuesta-color-opcion {
-    width: 28px;
-    height: 28px;
-    margin: 0 auto;
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    max-width: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    margin: 0 auto !important;
     border-radius: 6px;
     border: 2px solid transparent;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     background-color: transparent;
     position: relative;
+    box-sizing: border-box;
+    display: inline-block !important;
 }
 
 .encuesta-color-opcion:hover {
@@ -1502,18 +1468,21 @@
     left: 50%;
     transform: translate(-50%, -50%);
     color: white;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: bold;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    line-height: 1;
 }
 
-/* Estado de completitud */
 .estado-completitud {
     font-size: 11px;
     font-weight: 600;
     padding: 3px 8px;
     border-radius: 12px;
     color: #fff;
+    display: inline-block;
+    min-width: 65px;
+    text-align: center;
 }
 
 .estado-completitud.completo {
@@ -1525,7 +1494,6 @@
     color: #333;
 }
 
-/* Acciones de encuesta */
 .encuesta-acciones {
     margin-top: 30px;
     background: #fff;
@@ -1554,11 +1522,6 @@
     flex-wrap: wrap;
 }
 
-/* ============================================================
-   BOTONES UNIFICADOS PARA TODO EL MÓDULO
-   ============================================================ */
-
-/* Botón primario - usado para acciones principales */
 .btn-primary,
 .encuesta-btn-primary,
 .ci-btn-primary,
@@ -1588,7 +1551,6 @@
     box-shadow: 0 4px 12px rgba(184,162,121,0.3);
 }
 
-/* Botón secundario - usado para volver, cancelar */
 .btn-secondary,
 .encuesta-btn-secondary,
 .ci-btn-secondary,
@@ -1620,7 +1582,6 @@
     box-shadow: 0 4px 12px rgba(54,52,56,0.3);
 }
 
-/* Botón éxito (para compatibilidad) */
 .btn-success,
 .encuesta-btn-success {
     background: var(--color-primary);
@@ -1633,7 +1594,6 @@
     background: var(--color-primary-dark);
 }
 
-/* Botones de acción en paneles */
 .btn-action {
     padding: 10px 20px;
     border-radius: var(--radius-lg);
@@ -1646,7 +1606,6 @@
     gap: 7px;
 }
 
-/* Estado deshabilitado para botones */
 .btn-primary:disabled,
 .btn-secondary:disabled,
 .btn-success:disabled,
@@ -1657,10 +1616,6 @@
     transform: none !important;
     box-shadow: none !important;
 }
-
-/* ============================================================
-   MODAL DE INFORMACIÓN PARA ENCUESTA
-   ============================================================ */
 
 .encuesta-modal-content {
     border-radius: var(--radius-xl);
@@ -1720,10 +1675,6 @@
     padding: 15px 20px;
 }
 
-/* ============================================================
-   RESPONSIVE PARA ENCUESTA
-   ============================================================ */
-
 @media (max-width: 768px) {
     .encuesta-page-header {
         padding: 16px 18px;
@@ -1739,6 +1690,7 @@
     }
     
     .estado-completitud {
+        min-width: auto;
         width: 12px;
         height: 12px;
         padding: 0;
@@ -1784,6 +1736,36 @@
         width: 100%;
         min-width: auto;
     }
+
+    .encuesta-tabla th:first-child,
+    .encuesta-tabla td:first-child {
+        width: 50% !important;
+        min-width: 150px !important;
+    }
+    
+    .encuesta-tabla th:nth-child(2),
+    .encuesta-tabla td:nth-child(2),
+    .encuesta-tabla th:nth-child(3),
+    .encuesta-tabla td:nth-child(3),
+    .encuesta-tabla th:nth-child(4),
+    .encuesta-tabla td:nth-child(4) {
+        width: 16.66% !important;
+        min-width: 45px !important;
+        max-width: 60px !important;
+    }
+    
+    .encuesta-color-opcion {
+        width: 24px !important;
+        height: 24px !important;
+        min-width: 24px !important;
+        max-width: 24px !important;
+        min-height: 24px !important;
+        max-height: 24px !important;
+    }
+    
+    .encuesta-color-opcion.selected::after {
+        font-size: 14px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1795,16 +1777,7 @@
         font-size: 12px;
         padding: 8px 5px;
     }
-    
-    .encuesta-color-opcion {
-        width: 24px;
-        height: 24px;
-    }
 }
-
-/* ============================================================
-   LISTA EDICIÓN - ESTILOS UNIFICADOS
-   ============================================================ */
 
 .lista-edicion-container {
     padding: 30px;
@@ -1812,7 +1785,6 @@
     min-height: 100vh;
 }
 
-/* Header cards reutilizando estilos existentes */
 .lista-edicion-container .page-header-card {
     background: #FFFFFF;
     border-radius: var(--radius-xl);
@@ -1860,7 +1832,6 @@
     align-items: center;
 }
 
-/* Filtro card */
 .lista-edicion-container .filtro-card {
     background: #FFFFFF;
     border-radius: var(--radius-xl);
@@ -1954,7 +1925,6 @@
     gap: 8px;
 }
 
-/* Contador de encuestas */
 .lista-edicion-container .contador-encuestas {
     background: white;
     padding: 15px 20px;
@@ -1973,7 +1943,6 @@
     margin: 0 5px;
 }
 
-/* Leyenda de estados */
 .lista-edicion-container .leyenda-estados {
     background: white;
     padding: 15px 20px;
@@ -2010,7 +1979,6 @@
     transform: scale(1.05);
 }
 
-/* Grupos de encuestas */
 .lista-edicion-container .grupo-encuestas {
     margin-bottom: 28px;
 }
@@ -2026,7 +1994,6 @@
     align-items: center;
 }
 
-/* Tabla de encuestas */
 .lista-edicion-container .tabla-encuestas {
     background: white;
     border-radius: 0 0 var(--radius-xl) var(--radius-xl);
@@ -2070,7 +2037,6 @@
     vertical-align: middle;
 }
 
-/* Botón editar encuesta */
 .lista-edicion-container .btn-editar-enc {
     background: var(--color-primary);
     color: #fff;
@@ -2086,7 +2052,6 @@
     background: var(--color-primary-dark);
 }
 
-/* Paginación */
 .lista-edicion-container .paginacion-container {
     display: flex;
     align-items: center;
@@ -2148,7 +2113,6 @@
     padding: 0 4px;
 }
 
-/* Loading states */
 .lista-edicion-container .loading-title {
     color: var(--color-dark);
     font-weight: 600;
@@ -2161,7 +2125,6 @@
     margin: 0;
 }
 
-/* No data card */
 .lista-edicion-container .no-data-card {
     background: white;
     border-radius: var(--radius-xl);
@@ -2189,7 +2152,6 @@
     font-size: 16px;
 }
 
-/* Badge de estado en tabla */
 .lista-edicion-container .estado-badge {
     display: inline-block;
     padding: 4px 8px;
@@ -2198,10 +2160,6 @@
     font-weight: 600;
     color: #fff;
 }
-
-/* ============================================================
-   RESPONSIVE PARA LISTA EDICIÓN
-   ============================================================ */
 
 @media (max-width: 768px) {
     .lista-edicion-container {
@@ -2271,17 +2229,12 @@
     }
 }
 
-/* ============================================================
-   SELECCION EVALUADOS - ESTILOS UNIFICADOS
-   ============================================================ */
-
 .seleccion-evaluados-container {
     padding: 30px;
     background-color: var(--color-gray-very-light);
     min-height: 100vh;
 }
 
-/* Header cards - reutilizando estilos existentes */
 .seleccion-evaluados-container .page-header-card {
     background: #FFFFFF;
     border-radius: var(--radius-xl);
@@ -2333,7 +2286,6 @@
     align-items: center;
 }
 
-/* Filtro card - reutilizando de listaEdicion */
 .seleccion-evaluados-container .filtro-card {
     background: #FFFFFF;
     border-radius: var(--radius-xl);
@@ -2427,7 +2379,6 @@
     gap: 8px;
 }
 
-/* Contador de usuarios */
 .seleccion-evaluados-container .contador-encuestas {
     background: white;
     padding: 15px 20px;
@@ -2446,7 +2397,6 @@
     margin: 0 5px;
 }
 
-/* Leyenda de estados */
 .seleccion-evaluados-container .leyenda-estados {
     background: white;
     padding: 15px 20px;
@@ -2483,7 +2433,6 @@
     transform: scale(1.05);
 }
 
-/* Grupos de usuarios */
 .seleccion-evaluados-container .grupo-encuestas {
     margin-bottom: 28px;
 }
@@ -2499,7 +2448,6 @@
     align-items: center;
 }
 
-/* Tabla de usuarios */
 .seleccion-evaluados-container .tabla-encuestas {
     background: white;
     border-radius: 0 0 var(--radius-xl) var(--radius-xl);
@@ -2543,7 +2491,6 @@
     vertical-align: middle;
 }
 
-/* Badge de estado */
 .seleccion-evaluados-container .badge {
     display: inline-block;
     padding: 4px 8px;
@@ -2554,7 +2501,6 @@
     text-align: center;
 }
 
-/* Paginación - reutilizando de listaEdicion */
 .seleccion-evaluados-container .paginacion-container {
     display: flex;
     align-items: center;
@@ -2616,7 +2562,6 @@
     padding: 0 4px;
 }
 
-/* No data card */
 .seleccion-evaluados-container .no-data-card {
     background: white;
     border-radius: var(--radius-xl);
@@ -2644,7 +2589,6 @@
     font-size: 16px;
 }
 
-/* Loading states */
 .seleccion-evaluados-container .loading-title {
     color: var(--color-dark);
     font-weight: 600;
@@ -2656,10 +2600,6 @@
     font-size: 14px;
     margin: 0;
 }
-
-/* ============================================================
-   RESPONSIVE PARA SELECCION EVALUADOS
-   ============================================================ */
 
 @media (max-width: 768px) {
     .seleccion-evaluados-container {
@@ -2721,211 +2661,5 @@
     .seleccion-evaluados-container .tabla-encuestas td {
         font-size: 12px;
         padding: 8px 6px;
-    }
-}
-
-/* ============================================================
-   UNIFICAR TAMAÑO DE BOTONES DE SEMÁFORO
-   ============================================================ */
-
-.encuesta-color-opcion {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
-    max-width: 28px !important;
-    min-height: 28px !important;
-    max-height: 28px !important;
-    margin: 0 auto;
-    border-radius: 6px;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    background-color: transparent;
-    position: relative;
-    box-sizing: border-box;
-}
-
-.encuesta-color-opcion:hover {
-    transform: scale(1.1);
-    border-color: #999;
-}
-
-.encuesta-color-opcion.color-verde {
-    background-color: var(--color-competencia-verde);
-}
-
-.encuesta-color-opcion.color-amarillo {
-    background-color: var(--color-competencia-amarillo);
-}
-
-.encuesta-color-opcion.color-rojo {
-    background-color: var(--color-competencia-rojo);
-}
-
-.encuesta-color-opcion.selected {
-    border-color: #000 !important;
-    border-width: 3px !important;
-    transform: scale(1.15);
-    box-shadow: 0 0 0 1px #fff, 0 0 0 3px #000;
-}
-
-.encuesta-color-opcion.selected::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    line-height: 1;
-}
-
-/* Asegurar que las celdas de la tabla tengan el mismo tamaño */
-.encuesta-tabla td {
-    padding: 8px 10px;
-    vertical-align: middle;
-    text-align: center;
-}
-
-.encuesta-tabla td:first-child {
-    text-align: left;
-}
-
-/* Para móviles, un poco más pequeños pero consistentes */
-@media (max-width: 768px) {
-    .encuesta-color-opcion {
-        width: 24px !important;
-        height: 24px !important;
-        min-width: 24px !important;
-        max-width: 24px !important;
-        min-height: 24px !important;
-        max-height: 24px !important;
-    }
-    
-    .encuesta-color-opcion.selected::after {
-        font-size: 14px;
-    }
-}
-
-/* ============================================================
-   FORZAR TAMAÑO UNIFORME DE BOTONES DE SEMÁFORO
-   ============================================================ */
-
-.encuesta-tabla {
-    table-layout: fixed !important;
-    width: 100% !important;
-}
-
-.encuesta-tabla th,
-.encuesta-tabla td {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-wrap: break-word;
-}
-
-/* Primera columna (Competencia) - ancho flexible */
-.encuesta-tabla th:first-child,
-.encuesta-tabla td:first-child {
-    width: 60% !important;
-    min-width: 250px !important;
-}
-
-/* Columnas de botones (Verde, Amarillo, Rojo) - ancho fijo */
-.encuesta-tabla th:nth-child(2),
-.encuesta-tabla td:nth-child(2),
-.encuesta-tabla th:nth-child(3),
-.encuesta-tabla td:nth-child(3),
-.encuesta-tabla th:nth-child(4),
-.encuesta-tabla td:nth-child(4) {
-    width: 13.33% !important; /* (100% - 60%) / 3 = 13.33% */
-    min-width: 60px !important;
-    max-width: 80px !important;
-    text-align: center !important;
-    vertical-align: middle !important;
-}
-
-/* Asegurar que los botones tengan el mismo tamaño */
-.encuesta-color-opcion {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
-    max-width: 28px !important;
-    min-height: 28px !important;
-    max-height: 28px !important;
-    margin: 0 auto !important;
-    border-radius: 6px;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    background-color: transparent;
-    position: relative;
-    box-sizing: border-box;
-    display: inline-block !important;
-}
-
-/* Para móviles */
-@media (max-width: 768px) {
-    .encuesta-tabla th:first-child,
-    .encuesta-tabla td:first-child {
-        width: 50% !important;
-        min-width: 150px !important;
-    }
-    
-    .encuesta-tabla th:nth-child(2),
-    .encuesta-tabla td:nth-child(2),
-    .encuesta-tabla th:nth-child(3),
-    .encuesta-tabla td:nth-child(3),
-    .encuesta-tabla th:nth-child(4),
-    .encuesta-tabla td:nth-child(4) {
-        width: 16.66% !important; /* (100% - 50%) / 3 = 16.66% */
-        min-width: 45px !important;
-        max-width: 60px !important;
-    }
-    
-    .encuesta-color-opcion {
-        width: 24px !important;
-        height: 24px !important;
-        min-width: 24px !important;
-        max-width: 24px !important;
-        min-height: 24px !important;
-        max-height: 24px !important;
-    }
-}
-
-/* ============================================================
-   INDICADORES DE ESTADO
-   ============================================================ */
-
-.estado-completitud {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 12px;
-    color: #fff;
-    display: inline-block;
-    min-width: 65px;
-    text-align: center;
-}
-
-.estado-completitud.completo {
-    background-color: var(--color-competencia-verde);
-}
-
-.estado-completitud.incompleto {
-    background-color: var(--color-competencia-amarillo);
-    color: #333;
-}
-
-/* Para móviles, convertir en puntos */
-@media (max-width: 768px) {
-    .estado-completitud {
-        min-width: auto;
-        width: 12px;
-        height: 12px;
-        padding: 0;
-        border-radius: 50%;
-        font-size: 0;
     }
 }

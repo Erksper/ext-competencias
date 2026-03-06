@@ -7,7 +7,6 @@
 </div>
 {{else}}
 
-<!-- Header de página -->
 <div class="rep-page-header">
     <div class="rep-header-icon"><i class="fas fa-chart-bar"></i></div>
     <div>
@@ -16,7 +15,6 @@
     </div>
 </div>
 
-<!-- Panel info del usuario -->
 <div class="rep-info-card">
     <div class="rep-card-body">
         <div class="row">
@@ -64,7 +62,6 @@
             </div>
         </div>
 
-        <!-- ── Filtro CLA → Oficina ── -->
         <div class="rep-filtro-oficina-panel">
             <div class="rep-filtro-titulo">
                 <i class="fas fa-filter"></i> Buscar reporte por oficina
@@ -113,23 +110,20 @@
     </div>
 </div>
 
-<!-- Título sección -->
 <div class="rep-section-title">
     <i class="fas fa-th-large"></i>
     <h3>SELECCIONAR REPORTE A VISUALIZAR</h3>
 </div>
 
-<!-- Avisos sin datos -->
 {{#if tieneReportes}}{{#unless esAsesor}}
     {{#if sinReporteGerente}}
-    <div class="rep-aviso"><i class="fas fa-info-circle"></i> No se encontraron datos para generar reportes de <strong>Gerentes</strong> en el período evaluado.</div>
+    <div class="rep-aviso"><i class="fas fa-info-circle"></i> No se encontraron datos para generar reportes de <strong>Gerentes, Directores y Coordinadores</strong> en el período evaluado.</div>
     {{/if}}
     {{#if sinReporteAsesor}}
     <div class="rep-aviso"><i class="fas fa-info-circle"></i> No se encontraron datos para generar reportes de <strong>Asesores</strong> en el período evaluado.</div>
     {{/if}}
 {{/unless}}{{/if}}
 
-<!-- Grid de tarjetas -->
 {{#if tieneReportes}}
 <div class="rep-grid">
     {{#each reportes}}
