@@ -29,159 +29,33 @@ define([], function () {
         // ════════════════════════════════════════════════════════
         cargarDatosReporteGeneral: function () {
             var self = this;
-            var wherePeriodo = [
-                { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: this.fechaInicio },
-                { type: 'lessThanOrEquals',    attribute: 'fechaCreacion', value: this.fechaCierre + ' 23:59:59' }
-            ];
-            var whereEncuestas = [
-                { type: 'equals', attribute: 'rolUsuario', value: this.rolObjetivo }
-            ].concat(wherePeriodo);
-
-            // 1. Cargar preguntas activas del rol objetivo usando Espo.Ajax
-            var cargarPreguntas = Espo.Ajax.getRequest('Pregunta', {
-                where: [
-                    {
-                        type: 'and',
-                        value: [
-                            {
-                                type: 'or',
-                                value: [
-                                    { type: 'equals', attribute: 'rolObjetivo', value: this.rolObjetivo },
-                                    { type: 'contains', attribute: 'rolObjetivo', value: this.rolObjetivo }
-                                ]
-                            },
-                            { type: 'equals', attribute: 'estaActiva', value: 1 }
-                        ]
-                    }
-                ],
-                orderBy: 'orden',
-                maxSize: 200
-            });
-
-            // 2. Cargar todas las oficinas (excluyendo CLAs y Venezuela)
-            var cargarOficinas = function () {
-                return new Promise(function (resolve, reject) {
-                    var maxSize = 200;
-                    var allTeams = [];
-                    
-                    var fetchPage = function (offset) {
-                        self.getCollectionFactory().create('Team', function (col) {
-                            col.fetch({ 
-                                data: { 
-                                    maxSize: maxSize, 
-                                    offset: offset,
-                                    select: 'id,name'
-                                } 
-                            }).then(function () {
-                                allTeams = allTeams.concat(col.models);
-                                if (col.models.length < maxSize) {
-                                    resolve(allTeams);
-                                } else {
-                                    fetchPage(offset + maxSize);
-                                }
-                            }).catch(reject);
-                        });
+            
+            Espo.Ajax.getRequest('Competencias/action/getReporteGeneral', {
+                periodoId: this.periodoId,
+                rolObjetivo: this.rolObjetivo
+            }).then(function (response) {
+                if (response.success) {
+                    self.preguntasAgrupadas = response.preguntas || {};
+                    self.oficinas = response.oficinas || [];
+                    self.totalesPorPregunta = response.totalesPorPregunta || {};
+                    self.totalesGenerales = response.totalesGenerales || {
+                        verdes: 0, amarillos: 0, rojos: 0, total: 0, porcentaje: 0, color: 'gris'
                     };
-                    fetchPage(0);
-                });
-            };
-
-            // 3. Cargar todas las encuestas del período para el rol objetivo usando Espo.Ajax
-            var cargarEncuestas = Espo.Ajax.getRequest('Encuesta', {
-                where: whereEncuestas,
-                select: 'id,equipoId,equipoName,usuarioEvaluadoId',
-                maxSize: 1000
-            });
-
-            Promise.all([cargarPreguntas, cargarOficinas(), cargarEncuestas]).then(function (results) {
-                var preguntas = results[0] && results[0].list ? results[0].list : [];
-                var allTeamsModels = results[1];
-                var encuestas = results[2] && results[2].list ? results[2].list : [];
-
-                console.log('📊 Reporte General - Datos cargados:', {
-                    totalPreguntas: preguntas.length,
-                    totalOficinas: allTeamsModels.length,
-                    totalEncuestas: encuestas.length,
-                    rolObjetivo: self.rolObjetivo,
-                    fechaInicio: self.fechaInicio,
-                    fechaCierre: self.fechaCierre
-                });
-
-                // Procesar preguntas (agrupar por categoría/subcategoría)
-                self.procesarPreguntas(preguntas);
-
-                // Filtrar oficinas: excluir CLAs y Venezuela
-                var claPattern = /^CLA\d+$/i;
-                var todasLasOficinas = allTeamsModels
-                    .filter(function(team) {
-                        var teamId = team.id;
-                        var teamName = (team.get('name') || '').toLowerCase();
-                        return !claPattern.test(teamId) && teamName !== 'venezuela';
-                    })
-                    .map(function(team) { 
-                        return { 
-                            id: team.id, 
-                            name: team.get('name') 
-                        }; 
-                    });
-
-                console.log('🏢 Oficinas filtradas:', todasLasOficinas.length);
-
-                if (encuestas.length === 0) {
-                    console.log('⚠️ No hay encuestas para el período');
-                    self.oficinas = [];
-                    self.procesarRespuestasGenerales([]);
+                    
+                    console.log('✅ Reporte general cargado desde backend');
+                    console.log('Oficinas:', self.oficinas.length);
+                    console.log('Totales generales:', self.totalesGenerales);
+                    
                     self.wait(false);
                     self.reRender();
-                    return;
-                }
-
-                // Agrupar encuestas por oficina
-                var oficinasConEncuestas = new Set();
-                var encuestasPorOficina = {};
-
-                encuestas.forEach(function(e) {
-                    if (e.id && e.equipoId) {
-                        oficinasConEncuestas.add(e.equipoId);
-                        
-                        if (!encuestasPorOficina[e.equipoId]) {
-                            encuestasPorOficina[e.equipoId] = [];
-                        }
-                        encuestasPorOficina[e.equipoId].push({
-                            id: e.id,
-                            oficinaId: e.equipoId,
-                            oficinaName: e.equipoName || 'Sin nombre',
-                            usuarioEvaluadoId: e.usuarioEvaluadoId
-                        });
-                    }
-                });
-
-                console.log('🏢 Oficinas con encuestas:', oficinasConEncuestas.size);
-
-                // Filtrar solo oficinas que tienen encuestas
-                self.oficinas = todasLasOficinas
-                    .filter(function(o) { 
-                        return oficinasConEncuestas.has(o.id); 
-                    })
-                    .sort(function(a, b) { 
-                        return a.name.localeCompare(b.name); 
-                    });
-
-                console.log('📋 Oficinas a mostrar:', self.oficinas.map(o => o.name));
-
-                if (self.oficinas.length === 0) {
-                    console.log('⚠️ No hay oficinas con encuestas para mostrar');
-                    self.procesarRespuestasGenerales([]);
+                    self.cargarPlanesAccion();
+                } else {
+                    Espo.Ui.error(response.error || 'Error al cargar reporte general');
                     self.wait(false);
-                    self.reRender();
-                    return;
                 }
-
-                // Cargar respuestas para todas las encuestas
-                self.cargarRespuestasParaEncuestasGeneral(encuestas);
             }).catch(function (error) {
-                console.error('❌ Error al cargar datos del reporte general:', error);
-                Espo.Ui.error('Error al cargar los datos del reporte general.');
+                console.error('❌ Error al cargar reporte general:', error);
+                Espo.Ui.error('Error al cargar los datos del reporte general');
                 self.wait(false);
             });
         },

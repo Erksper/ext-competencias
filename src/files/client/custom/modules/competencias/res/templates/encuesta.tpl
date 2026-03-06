@@ -1,10 +1,12 @@
+<link rel="stylesheet" type="text/css" href="client/custom/modules/competencias/res/css/estilos.css">
+
 {{#if accesoDenegado}}
     <div class="alert alert-danger text-center">
         <h4 style="margin-bottom: 15px;"><i class="fas fa-ban"></i> Acceso Denegado</h4>
         <p>No tienes los permisos necesarios para acceder a esta página.</p>
     </div>
     <div class="text-center">
-        <button class="btn btn-default" data-action="backToHome"><i class="fas fa-home"></i> Volver al Inicio</button>
+        <button class="btn btn-primary" data-action="backToHome"><i class="fas fa-home"></i> Volver al Inicio</button>
     </div>
 {{else if encuestaInactiva}}
     <div class="alert alert-warning text-center">
@@ -12,780 +14,207 @@
         <p>Actualmente no hay un período de evaluación activo. No se pueden crear ni modificar encuestas.</p>
     </div>
     <div class="text-center">
-        <button class="btn btn-default" data-action="backToHome"><i class="fas fa-home"></i> Volver al Inicio</button>
+        <button class="btn btn-primary" data-action="backToHome"><i class="fas fa-home"></i> Volver al Inicio</button>
     </div>
 {{else}}
-    <div class="century21-header text-center">
+    <!-- Header modernizado -->
+    <div class="encuesta-page-header">
+        <div class="encuesta-header-icon">
+            <i class="fas fa-clipboard-check"></i>
+        </div>
+        <div>
+            <h2 class="encuesta-page-title">Evaluación de Competencias</h2>
+            <p class="encuesta-page-sub">Complete la evaluación del usuario seleccionado</p>
+        </div>
     </div>
 
-    <div class="survey-info panel panel-default">
-        <div class="panel-body">
-            <div class="row">
-                <div class="col-md-6 col-xs-12">
-                    <h3><strong>Oficina:</strong> {{teamName}}</h3>
+    <!-- Tarjeta de información -->
+    <div class="encuesta-info-card">
+        <div class="encuesta-card-body">
+            <div class="encuesta-info-grid">
+                <div class="encuesta-info-item">
+                    <span class="encuesta-info-label">Oficina:</span>
+                    <span class="encuesta-info-value">{{teamName}}</span>
                 </div>
-                <div class="col-md-6 col-xs-12">
-                    <h3><strong>Usuario evaluado:</strong> {{userName}}</h3>
+                <div class="encuesta-info-item">
+                    <span class="encuesta-info-label">Usuario evaluado:</span>
+                    <span class="encuesta-info-value">{{userName}}</span>
+                </div>
+                <div class="encuesta-info-item">
+                    <span class="encuesta-info-label">Tipo:</span>
+                    <span class="encuesta-info-value">
+                        {{#if (eq role 'asesor')}}
+                            Asesor
+                        {{else}}
+                            Gerente / Director / Coordinador
+                        {{/if}}
+                    </span>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="survey-title text-center">
-        <h3>
-            ANÁLISIS DE COMPETENCIAS
-        </h3>
+    <!-- Título de la sección -->
+    <div class="encuesta-section-title">
+        <i class="fas fa-tasks"></i>
+        <h3>ANÁLISIS DE COMPETENCIAS</h3>
     </div>
 
-    <!-- Leyenda solo visible en móviles -->
-    <div class="mobile-legend-container">
-        <div class="mobile-legend-item">
-            <span class="mobile-legend-dot completo"></span>
+    <!-- Leyenda móvil -->
+    <div class="encuesta-mobile-legend">
+        <div class="encuesta-legend-item">
+            <span class="encuesta-legend-dot completo"></span>
             <span>Completo</span>
         </div>
-        <div class="mobile-legend-item">
-            <span class="mobile-legend-dot incompleto"></span>
+        <div class="encuesta-legend-item">
+            <span class="encuesta-legend-dot incompleto"></span>
             <span>Incompleto</span>
         </div>
     </div>
 
-    {{#each preguntas}}
-    <div class="categoria-principal">
-        <h3 class="categoria-header" data-action="toggleCategoria" data-categoria-nombre="{{@key}}">
-            <span class="categoria-title">{{@key}}</span>
-            <span class="estado-completitud"></span>
-            <i class="fas fa-chevron-down categoria-chevron"></i>
-        </h3>
-        
-        <div class="categoria-content" data-categoria-nombre="{{@key}}">
-            {{#each this}}
-            <div class="subcategoria-section">
-                <h3 class="subcategoria-header" data-action="toggleSubcategoria" data-subcategoria-nombre="{{@key}}">
-                    <span class="subcategoria-title"><i class="fas fa-folder-open"></i> {{@key}}</span>
+    <!-- Contenedor de preguntas -->
+    <div class="encuesta-preguntas-container">
+        {{#each preguntas}}
+        <div class="encuesta-categoria">
+            <div class="encuesta-categoria-header" data-action="toggleCategoria" data-categoria-nombre="{{@key}}">
+                <div class="encuesta-categoria-titulo">
+                    <i class="fas fa-folder"></i>
+                    <span>{{@key}}</span>
+                </div>
+                <div class="encuesta-categoria-estado">
                     <span class="estado-completitud"></span>
-                    <i class="fas fa-chevron-down subcategoria-chevron"></i>
-                </h3>
-                
-                <div class="subcategoria-content" data-subcategoria-nombre="{{@key}}">
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Competencia</th>
-                                    <th><i class="fas fa-circle icon-verde"></i>Verde</th>
-                                    <th><i class="fas fa-circle icon-amarillo"></i>Amarillo</th>
-                                    <th><i class="fas fa-circle icon-rojo"></i>Rojo</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {{#each this}}
-                                <tr class="pregunta-row">
-                                    <td>
-                                        <div class="pregunta-texto-container">
-                                            <span class="pregunta-icon-space">
-                                                {{#if info}}
-                                                <i class="fas fa-info-circle info-icon" 
-                                                   data-action="showInfo"
-                                                   data-toggle="tooltip" 
-                                                   data-html="true"
-                                                   data-info="{{info}}"
-                                                   data-pregunta-texto="{{orden}}. {{texto}}"
-                                                   title="<small>Click para ver información completa</small>"></i>
-                                                {{/if}}
-                                            </span>
-                                            <h4>{{orden}}. {{texto}}</h4>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="color-option color-verde"
-                                            data-action="selectColor" 
-                                            data-pregunta-id="{{id}}" 
-                                            data-color="verde">
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="color-option color-amarillo"
-                                            data-action="selectColor" 
-                                            data-pregunta-id="{{id}}" 
-                                            data-color="amarillo">
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="color-option color-rojo"
-                                            data-action="selectColor" 
-                                            data-pregunta-id="{{id}}" 
-                                            data-color="rojo">
-                                        </div>
-                                    </td>
-                                </tr>
-                                {{/each}}
-                            </tbody>
-                        </table>
-                    </div>
+                    <i class="fas fa-chevron-down encuesta-categoria-chevron"></i>
                 </div>
             </div>
-            {{/each}}
+            
+            <div class="encuesta-categoria-content" data-categoria-nombre="{{@key}}">
+                {{#each this}}
+                <div class="encuesta-subcategoria">
+                    <div class="encuesta-subcategoria-header" data-action="toggleSubcategoria" data-subcategoria-nombre="{{@key}}">
+                        <div class="encuesta-subcategoria-titulo">
+                            <i class="fas fa-folder-open"></i>
+                            <span>{{@key}}</span>
+                        </div>
+                        <div class="encuesta-subcategoria-estado">
+                            <span class="estado-completitud"></span>
+                            <i class="fas fa-chevron-down encuesta-subcategoria-chevron"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="encuesta-subcategoria-content" data-subcategoria-nombre="{{@key}}">
+                        <div class="encuesta-tabla-container">
+                            <table class="encuesta-tabla">
+                                <thead>
+                                    <tr>
+                                        <th>Competencia</th>
+                                        <th><span class="encuesta-color-badge verde">Verde</span></th>
+                                        <th><span class="encuesta-color-badge amarillo">Amarillo</span></th>
+                                        <th><span class="encuesta-color-badge rojo">Rojo</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{#each this}}
+                                    <tr class="encuesta-pregunta-row">
+                                        <td>
+                                            <div class="encuesta-pregunta-container">
+                                                {{#if info}}
+                                                <i class="fas fa-info-circle encuesta-info-icon" 
+                                                   data-action="showInfo"
+                                                   data-info="{{info}}"
+                                                   data-pregunta-texto="{{orden}}. {{texto}}"
+                                                   title="Ver información adicional"></i>
+                                                {{/if}}
+                                                <span class="encuesta-pregunta-texto">{{orden}}. {{texto}}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="encuesta-color-opcion color-verde"
+                                                data-action="selectColor" 
+                                                data-pregunta-id="{{id}}" 
+                                                data-color="verde"
+                                                title="Verde - Competente">
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="encuesta-color-opcion color-amarillo"
+                                                data-action="selectColor" 
+                                                data-pregunta-id="{{id}}" 
+                                                data-color="amarillo"
+                                                title="Amarillo - En desarrollo">
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="encuesta-color-opcion color-rojo"
+                                                data-action="selectColor" 
+                                                data-pregunta-id="{{id}}" 
+                                                data-color="rojo"
+                                                title="Rojo - Requiere mejora">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {{/each}}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
         </div>
+        {{/each}}
     </div>
-    {{/each}}
 
-    <div class="survey-actions">
-        <div class="row">
-            <div class="col-md-6 col-xs-12">
-                <button class="btn btn-default btn-block-mobile" data-action="back">
+    <!-- Acciones -->
+    <div class="encuesta-acciones">
+        <div class="encuesta-acciones-grid">
+            <div class="encuesta-acciones-izquierda">
+                <button class="btn-primary" data-action="back">
                     <i class="fas fa-arrow-left"></i> Volver
                 </button>
             </div>
-            <div class="col-md-6 col-xs-12 text-right-desktop">
-                <div class="action-buttons-container">
-                    <button class="btn btn-success btn-lg btn-action" data-action="saveSurvey">
-                        <i class="fas fa-save"></i> Guardar Encuesta
-                    </button>
-                    {{#if esCasaNacional}}
-                    <button class="btn btn-success btn-lg btn-action" data-action="completeSurvey">
+            <div class="encuesta-acciones-derecha">
+                {{#unless fromListaEdicion}}
+                <button class="btn-primary" data-action="saveSurvey">
+                    <i class="fas fa-save"></i> Guardar Encuesta
+                </button>
+                {{/unless}}
+                <button class="btn-primary" data-action="completeSurvey">
+                    {{#if fromListaEdicion}}
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    {{else}}
                         <i class="fas fa-check-circle"></i> Completar Encuesta
-                    </button>
                     {{/if}}
-                </div>
+                </button>
             </div>
         </div>
     </div>
 {{/if}}
-<style>
-.century21-header {
-    margin-bottom: 30px;
-}
 
-.survey-info {
-    margin-bottom: 20px;
-}
-
-.survey-title {
-    margin-bottom: 20px;
-}
-
-.survey-title h3 {
-    background: #333;
-    color: white;
-    padding: 15px;
-    margin: 0;
-    border-radius: 8px;
-}
-
-.categoria-principal {
-    margin-bottom: 15px;
-}
-
-.subcategoria-section {
-    margin-bottom: 15px;
-}
-
-.subcategoria-content .table {
-    border: 2px solid #000;
-    margin-top: 5px;
-}
-
-.subcategoria-content table thead tr {
-    background: #f5f5f5;
-}
-
-.subcategoria-content table thead th {
-    border: 1px solid #000;
-    color: black;
-    text-align: center;
-    font-size: 15px;
-    width: 10%;
-}
-
-.subcategoria-content table thead th:first-child {
-    width: 70%;
-    text-align: left;
-}
-
-.subcategoria-content table thead th .fa-circle {
-    margin-right: 5px;
-}
-
-.subcategoria-content table thead th .icon-verde {
-    color: #4CAF50;
-}
-
-.subcategoria-content table thead th .icon-amarillo {
-    color: #FFC107;
-}
-
-.subcategoria-content table thead th .icon-rojo {
-    color: #F44336;
-}
-
-.subcategoria-content table tbody td {
-    border: 1px solid #000;
-    padding: 10px;
-    text-align: center;
-}
-
-.subcategoria-content table tbody .pregunta-row td:first-child {
-    padding: 15px;
-    font-weight: 500;
-    text-align: left;
-}
-
-.pregunta-texto-container {
-    display: flex;
-    align-items: flex-start;
-}
-
-.pregunta-icon-space {
-    display: inline-block;
-    width: 25px;
-    flex-shrink: 0;
-    text-align: left;
-}
-
-.info-icon {
-    color: #17a2b8;
-    font-size: 16px;
-    cursor: pointer;
-    margin-right: 5px;
-    transition: color 0.2s ease, transform 0.2s ease;
-}
-
-.info-icon:hover {
-    color: #138496;
-    transform: scale(1.1);
-}
-
-.pregunta-row h4 {
-    font-size: 16px;
-    margin: 0;
-    flex: 1;
-}
-
-.survey-actions {
-    margin-top: 30px;
-}
-
-.action-buttons-container {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-}
-
-.btn-action {
-    min-width: 200px;
-}
-
-.survey-actions .btn-success[data-action="saveSurvey"] {
-    background-color: #666;
-    border-color: #555;
-}
-
-.survey-actions .btn-success[data-action="saveSurvey"]:hover,
-.survey-actions .btn-success[data-action="saveSurvey"]:focus {
-    background-color: #555;
-    border-color: #444;
-}
-
-/* Leyenda móvil - solo visible en pantallas pequeñas */
-.mobile-legend-container {
-    display: none;
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 10px 15px;
-    margin-bottom: 15px;
-}
-
-.mobile-legend-item {
-    display: inline-flex;
-    align-items: center;
-    margin-right: 15px;
-    font-size: 0.9em;
-}
-
-.mobile-legend-dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 5px;
-}
-
-.mobile-legend-dot.completo {
-    background-color: #4CAF50;
-}
-
-.mobile-legend-dot.incompleto {
-    background-color: #FFC107;
-}
-
-.estado-completitud {
-    font-size: 11px;
-    font-weight: bold;
-    padding: 3px 8px;
-    border-radius: 10px;
-    margin-left: 15px;
-    color: white;
-    vertical-align: middle;
-}
-
-.categoria-header .estado-completitud,
-.subcategoria-header .estado-completitud {
-    position: absolute;
-    right: 40px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.estado-completitud.completo {
-    background-color: #4CAF50;
-}
-
-.estado-completitud.incompleto {
-    background-color: #FFC107;
-    color: #333;
-}
-
-.categoria-header {
-    background: #666;
-    color: white;
-    padding: 15px;
-    margin: 0;
-    cursor: pointer;
-    position: relative;
-    border-radius: 6px;
-    transition: background-color 0.2s ease-in-out;
-    font-size: 1.2em;
-    font-weight: bold;
-}
-
-.categoria-header:hover {
-    background-color: #555;
-}
-
-.categoria-title {
-    display: inline-block;
-    max-width: calc(100% - 100px);
-    word-wrap: break-word;
-}
-
-.categoria-chevron {
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%) rotate(0deg);
-    transition: transform 0.3s ease;
-}
-
-.categoria-header.active .categoria-chevron {
-    transform: translateY(-50%) rotate(180deg);
-}
-
-.subcategoria-header {
-    background: #f8f9fa;
-    color: #333;
-    padding: 12px 15px;
-    margin: 10px 0 0 0;
-    cursor: pointer;
-    position: relative;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    transition: background-color 0.2s ease-in-out;
-    font-size: 1.1em;
-    font-weight: 600;
-}
-
-.subcategoria-header:hover {
-    background-color: #e9ecef;
-}
-
-.subcategoria-title {
-    display: inline-block;
-    max-width: calc(100% - 100px);
-    word-wrap: break-word;
-}
-
-.subcategoria-chevron {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%) rotate(0deg);
-    transition: transform 0.3s ease;
-    font-size: 0.8em;
-}
-
-.subcategoria-header.active .subcategoria-chevron {
-    transform: translateY(-50%) rotate(180deg);
-}
-
-.survey-actions .btn-success[data-action="saveSurvey"] {
-    background-color: #666;
-    border-color: #555;
-}
-
-.survey-actions .btn-success[data-action="saveSurvey"]:hover,
-.survey-actions .btn-success[data-action="saveSurvey"]:focus {
-    background-color: #555;
-    border-color: #444;
-}
-
-.survey-actions .btn-success[data-action="completeSurvey"] {
-    background-color: #666;
-    border-color: #555;
-}
-
-.survey-actions .btn-success[data-action="completeSurvey"]:hover,
-.survey-actions .btn-success[data-action="completeSurvey"]:focus {
-    background-color: #555;
-    border-color: #444;
-}
-
-.color-option {
-    position: relative;
-    width: 25px;
-    height: 25px;
-    margin: 0 auto;
-    border-radius: 6px;
-    border: 2px solid #ddd;
-    cursor: pointer;
-    background-color: transparent;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.color-option:hover {
-    transform: scale(1.1);
-    border-color: #999 !important;
-}
-
-.table-responsive .color-option.selected {
-    border-color: #000 !important;
-    border-width: 3px !important;
-    transform: scale(1.15);
-    box-shadow: 0 0 0 1px #fff, 0 0 0 3px #000;
-    animation: pulse 0.4s ease-in-out;
-}
-
-.table-responsive .color-option.color-verde.selected {
-    background-color: #4CAF50 !important;
-}
-
-.table-responsive .color-option.color-amarillo.selected {
-    background-color: #FFC107 !important;
-}
-
-.table-responsive .color-option.color-rojo.selected {
-    background-color: #F44336 !important;
-}
-
-.table-responsive .color-option.selected::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 14px;
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
-
-@keyframes pulse {
-    0% { transform: scale(1.15); }
-    50% { transform: scale(1.25); }
-    100% { transform: scale(1.15); }
-}
-
-.categoria-content {
-    display: none;
-    padding: 15px;
-    background: #fafafa;
-    border: 1px solid #ddd;
-    border-top: none;
-    border-radius: 0 0 6px 6px;
-}
-
-.subcategoria-content {
-    display: none;
-    margin: 5px 0 10px 0;
-}
-
-.tooltip-inner {
-    max-width: 350px;
-    text-align: left;
-    padding: 10px 15px;
-    background-color: #333;
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-.tooltip.top .tooltip-arrow {
-    border-top-color: #333;
-}
-
-.tooltip.bottom .tooltip-arrow {
-    border-bottom-color: #333;
-}
-
-.tooltip.left .tooltip-arrow {
-    border-left-color: #333;
-}
-
-.tooltip.right .tooltip-arrow {
-    border-right-color: #333;
-}
-
-#infoModal .modal-dialog {
-    margin: 50px auto !important;
-}
-
-#infoModal .modal-content {
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-#infoModal .modal-header {
-    background-color: var(--btn-primary-bg);
-    color: white;
-    border-radius: 0;
-    position: relative;
-    padding: 15px 20px;
-}
-
-#infoModal .modal-header .close {
-    color: white;
-    opacity: 0.8;
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    font-size: 28px;
-    font-weight: 300;
-    line-height: 1;
-    margin: 0;
-    padding: 0;
-    background: transparent;
-    border: 0;
-}
-
-#infoModal .modal-header .close:hover {
-    opacity: 1;
-}
-
-#infoModal .modal-header .modal-title {
-    font-weight: bold;
-    padding-right: 30px;
-}
-
-#infoModal .modal-body {
-    max-height: 60vh;
-    overflow-y: auto;
-    padding: 20px;
-}
-
-#infoModal .info-pregunta-container {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 6px;
-    margin-bottom: 20px;
-    border-left: 4px solid var(--btn-primary-bg);
-}
-
-#infoModal .info-pregunta-titulo {
-    color: var(--btn-primary-bg);
-    font-weight: bold;
-    margin-bottom: 10px;
-    font-size: 14px;
-    text-transform: uppercase;
-}
-
-#infoModal .info-pregunta-texto {
-    color: #333;
-    font-size: 15px;
-    margin: 0;
-    line-height: 1.6;
-}
-
-#infoModal .info-contenido-container {
-    padding: 15px;
-    background-color: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-}
-
-#infoModal .info-contenido-titulo {
-    color: #495057;
-    font-weight: bold;
-    margin-bottom: 15px;
-    font-size: 14px;
-    text-transform: uppercase;
-}
-
-#infoModal .info-contenido-texto {
-    color: #333;
-    font-size: 14px;
-    line-height: 1.8;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-
-#infoModal .modal-footer {
-    border-top: 1px solid #dee2e6;
-}
-
-#infoModal .modal-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-#infoModal .modal-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-#infoModal .modal-body::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 10px;
-}
-
-#infoModal .modal-body::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
-/* Media queries para responsive */
-@media (max-width: 768px) {
-    /* Mostrar leyenda solo en móviles */
-    .mobile-legend-container {
-        display: block;
-    }
-
-    /* Convertir badges de texto en puntos en móviles */
-    .estado-completitud {
-        width: 12px;
-        height: 12px;
-        padding: 0;
-        border-radius: 50%;
-        font-size: 0;
-        margin-left: 10px;
-        right: 35px;
-    }
-
-    .estado-completitud.completo {
-        background-color: #4CAF50;
-    }
-
-    .estado-completitud.incompleto {
-        background-color: #FFC107;
-    }
-
-    /* Ajustar títulos para que no choquen con los puntos */
-    .categoria-title,
-    .subcategoria-title {
-        max-width: calc(100% - 65px);
-        padding-right: 5px;
-    }
-
-    .categoria-header {
-        font-size: 1em;
-        padding: 12px 10px;
-    }
-
-    .subcategoria-header {
-        font-size: 0.95em;
-        padding: 10px;
-    }
-
-    .categoria-chevron {
-        right: 15px;
-        font-size: 0.9em;
-    }
-
-    .subcategoria-chevron {
-        right: 12px;
-        font-size: 0.75em;
-    }
-
-    .survey-info h3 {
-        font-size: 1.2em;
-    }
-
-    .survey-title h3 {
-        font-size: 1.3em;
-        padding: 10px;
-    }
-
-    .survey-actions {
-        margin-top: 20px;
-    }
-
-    .action-buttons-container {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .btn-action {
-        width: 100%;
-        min-width: auto;
-    }
-
-    .btn-block-mobile {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-
-    .text-right-desktop {
-        text-align: left !important;
-    }
-
-    .survey-actions .btn-success[data-action="completeSurvey"] {
-        margin-left: 0 !important;
-    }
-
-    /* Ajustar tabla para móviles */
-    .subcategoria-content table thead th {
-        font-size: 12px;
-        padding: 8px 4px;
-    }
-
-    .subcategoria-content table tbody td {
-        padding: 8px 4px;
-    }
-
-    .pregunta-row h4 {
-        font-size: 14px;
-    }
-
-    .color-option {
-        width: 22px;
-        height: 22px;
-    }
-}
-
-@media (max-width: 480px) {
-    .categoria-header {
-        font-size: 0.9em;
-        padding: 10px 8px;
-    }
-
-    .subcategoria-header {
-        font-size: 0.85em;
-        padding: 8px;
-    }
-
-    .survey-info h3 {
-        font-size: 1em;
-    }
-
-    .pregunta-row h4 {
-        font-size: 13px;
-    }
-
-    .subcategoria-content table thead th {
-        font-size: 11px;
-        padding: 6px 2px;
-    }
-
-    .color-option {
-        width: 20px;
-        height: 20px;
-    }
-}
-</style>
+<!-- Modal de información -->
+<div class="modal fade" id="infoModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content encuesta-modal-content">
+            <div class="modal-header encuesta-modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">
+                    <i class="fas fa-info-circle"></i> Información de la Pregunta
+                </h4>
+            </div>
+            <div class="modal-body encuesta-modal-body">
+                <div class="encuesta-modal-pregunta">
+                    <h5>Pregunta:</h5>
+                    <p class="info-pregunta-texto"></p>
+                </div>
+                <div class="encuesta-modal-info">
+                    <h5>Información adicional:</h5>
+                    <div class="info-contenido-texto"></div>
+                </div>
+            </div>
+            <div class="modal-footer encuesta-modal-footer">
+                <button type="button" class="btn-primary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>

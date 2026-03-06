@@ -9,7 +9,21 @@ define(['view'], function (View) {
                 var userId = $(e.currentTarget).data('user-id');
                 var userName = $(e.currentTarget).data('user-name');
                 
-                this.getRouter().navigate('#Competencias/survey?teamId=' + this.options.teamId + '&teamName=' + encodeURIComponent(this.options.teamName) + '&userId=' + userId + '&userName=' + encodeURIComponent(userName) + '&role=' + this.options.role, {trigger: true});
+                // Construir dataString para el flujo normal
+                var dataParts = [
+                    'userId:' + userId,
+                    'userName:' + encodeURIComponent(userName),
+                    'teamId:' + this.options.teamId,
+                    'teamName:' + encodeURIComponent(this.options.teamName),
+                    'role:' + this.options.role
+                ];
+                
+                var dataString = encodeURIComponent(dataParts.join('|'));
+                
+                this.getRouter().navigate(
+                    '#Competencias/survey?data=' + dataString + '&from=normal', 
+                    {trigger: true}
+                );
             },
             'click [data-action="back"]': function () {
                 this.getRouter().navigate('#Competencias/roleSelection?teamId=' + this.options.teamId + '&teamName=' + encodeURIComponent(this.options.teamName), {trigger: true});

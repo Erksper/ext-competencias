@@ -151,7 +151,7 @@
 {{/if}}
 
 <div class="rep-actions">
-    <button class="rep-btn-back" data-action="back">
+    <button class="btn-primary" data-action="back">
         <i class="fas fa-arrow-left"></i> Volver al Inicio
     </button>
 </div>

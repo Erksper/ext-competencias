@@ -11,7 +11,7 @@
 </div>
 
 <div class="reporte-acciones">
-    <button class="btn-volver" data-action="back">
+    <button class="btn-primary" data-action="back">
         <i class="fas fa-arrow-left"></i> Volver a Reportes
     </button>
     {{#if tienedatos}}
@@ -40,101 +40,7 @@
 
 <div class="reporte-matrix-wrapper">
     <div class="reporte-matrix-scroll">
-        <table class="report-matrix">
-            <thead>
-                <tr class="categoria-row">
-                    <th class="th-main-header" rowspan="3">
-                        <div class="header-content">
-                            {{#if logoOficina}}
-                            <div class="logo-expanded">
-                                <img src="{{logoOficina}}" alt="Logo" onerror="this.style.display='none'">
-                            </div>
-                            {{/if}}
-                            <div class="header-text"><strong>{{textoEncabezado}}</strong></div>
-                        </div>
-                    </th>
-                    {{#each @root.preguntas}}
-                    <th colspan="{{getColumnCount this}}"><strong>{{@key}}</strong></th>
-                    {{/each}}
-                    <th class="th-sumatoria" rowspan="3">
-                        <div class="sumatoria-content">
-                            <strong>
-                                {{#if esReporteGeneralCasaNacional}}Sumatoria<br>del equipo
-                                {{else}}Sumatoria<br>del usuario{{/if}}
-                            </strong>
-                        </div>
-                    </th>
-                </tr>
-
-                <tr class="subcategoria-row">
-                    {{#each @root.preguntas}}{{#each this}}
-                    <th colspan="{{this.length}}">{{@key}}</th>
-                    {{/each}}{{/each}}
-                </tr>
-
-                <tr class="preguntas-row">
-                    {{#each @root.preguntas}}{{#each this}}{{#each this}}
-                    <th><div>{{texto}}</div></th>
-                    {{/each}}{{/each}}{{/each}}
-                </tr>
-            </thead>
-
-            {{#if esReporteGeneralCasaNacional}}
-            <tbody>
-                {{#each oficinas}}{{#if totalesOficina.total}}
-                <tr class="usuario-row">
-                    <td class="td-user-name"><strong>{{name}}</strong></td>
-                    {{#each @root.preguntas}}{{#each this}}{{#each this}}
-                    <td class="celda-respuesta color-{{lookupColor ../../../totalesPorPregunta id}}"></td>
-                    {{/each}}{{/each}}{{/each}}
-                    <td class="celda-total color-{{totalesOficina.color}}">
-                        {{totalesOficina.verdes}}/{{totalesOficina.total}}<br>
-                        <small>{{formatPorcentaje totalesOficina.porcentaje}}%</small>
-                    </td>
-                </tr>
-                {{/if}}{{/each}}
-            </tbody>
-            {{else}}
-            <tbody>
-                {{#each usuarios}}
-                <tr class="usuario-row">
-                    <td class="td-user-name">{{userName}}</td>
-                    {{#each @root.preguntas}}{{#each this}}{{#each this}}
-                    <td class="celda-respuesta color-{{getCeldaColor ../../../userId id}}"></td>
-                    {{/each}}{{/each}}{{/each}}
-                    <td class="celda-total color-{{totales.color}}">
-                        {{totales.verdes}}/{{totales.total}}<br>
-                        <small>{{formatPorcentaje totales.porcentaje}}%</small>
-                    </td>
-                </tr>
-                {{/each}}
-            </tbody>
-            {{/if}}
-
-            {{#unless mostrarSoloGerentes}}
-            <tfoot>
-                <tr class="totales-row">
-                    <td><strong>Totales</strong></td>
-                    {{#each @root.preguntas}}{{#each this}}{{#each this}}
-                    {{#withLookup @root.totalesPorPregunta id}}
-                    <td class="celda-total color-{{color}}">
-                        {{verdes}}/{{total}}<br>
-                        <small>{{formatPorcentaje porcentaje}}%</small>
-                    </td>
-                    {{/withLookup}}
-                    {{/each}}{{/each}}{{/each}}
-                    {{#if esReporteGeneralCasaNacional}}
-                    <td class="celda-total color-{{totalesGenerales.color}}">
-                        {{totalesGenerales.verdes}}/{{totalesGenerales.total}}<br>
-                        <small>{{formatPorcentaje totalesGenerales.porcentaje}}%</small>
-                    </td>
-                    {{else}}
-                    <td></td>
-                    {{/if}}
-                </tr>
-            </tfoot>
-            {{/unless}}
-        </table>
+        <!-- La tabla se renderizará aquí desde JavaScript -->
     </div>
 </div>
 

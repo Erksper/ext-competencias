@@ -1,75 +1,44 @@
-{
-    "routes": [
-        {
-            "route": "Competencias",
+[
+    {
+        "route": "#Competencias",
+        "params": {
             "controller": "Competencias",
             "action": "index"
-        },
-        {
-            "route": "Competencias/teamSelection",
-            "controller": "Competencias", 
-            "action": "teamSelection"
-        },
-        {
-            "route": "Competencias/roleSelection",
+        }
+    },
+    {
+        "route": "#Competencias/seleccionEvaluados",
+        "params": {
             "controller": "Competencias",
-            "action": "roleSelection"
-        },
-        {
-            "route": "Competencias/userSelection", 
-            "controller": "Competencias",
-            "action": "userSelection"
-        },
-        {
-            "route": "Competencias/survey",
+            "action": "seleccionEvaluados"
+        }
+    },
+    {
+        "route": "#Competencias/survey",
+        "params": {
             "controller": "Competencias",
             "action": "survey"
-        },
-        {
-            "route": "Competencias/reports",
+        }
+    },
+    {
+        "route": "#Competencias/reports",
+        "params": {
             "controller": "Competencias",
             "action": "reports"
-        },
-        {
-            "route": "Competencias/reporteBase",
+        }
+    },
+    {
+        "route": "#Competencias/reporteBase",
+        "params": {
             "controller": "Competencias",
             "action": "reporteBase"
-        },
-        {
-            "route": "Competencias/action/verificarEntidades",
-            "controller": "Competencias",
-            "action": "verificarEntidades",
-            "method": "POST"
-        },
-        {
-            "route": "Competencias/action/obtenerEquipos",
-            "controller": "Competencias", 
-            "action": "obtenerEquipos",
-            "method": "GET"
-        },
-        {
-            "route": "Competencias/action/obtenerUsuariosEquipo",
-            "controller": "Competencias",
-            "action": "obtenerUsuariosEquipo", 
-            "method": "POST"
-        },
-        {
-            "route": "Competencias/action/obtenerPreguntasPorRol",
-            "controller": "Competencias",
-            "action": "obtenerPreguntasPorRol",
-            "method": "POST"
-        },
-        {
-            "route": "Competencias/action/guardarEncuesta",
-            "controller": "Competencias",
-            "action": "guardarEncuesta",
-            "method": "POST"
-        },
-        {
-            "route": "Competencias/action/verificarReportesDisponibles",
-            "controller": "Competencias",
-            "action": "verificarReportesDisponibles",
-            "method": "POST"
         }
-    ]
-}
+    },
+    {
+        "route": "#Competencias/listaEdicion",
+        "params": {
+            "controller": "Competencias",
+            "action": "listaEdicion"
+        }
+    }
+]

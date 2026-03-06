@@ -10,33 +10,12 @@ define('competencias:controllers/competencias', ['controllers/base'], function (
             this.main('competencias:views/competenciasIndex', {}, view => view.render());
         },
 
-        actionTeamSelection: function () {
-            this.main('competencias:views/seleccionEquipo', {}, view => view.render());
-        },
-
-        actionRoleSelection: function (params) {
-            this.main('competencias:views/seleccionRol', {
-                teamId: params.teamId,
-                teamName: params.teamName
-            }, view => view.render());
-        },
-
-        actionUserSelection: function (params) {
-            this.main('competencias:views/seleccionUsuario', {
-                teamId: params.teamId,
-                teamName: params.teamName,
-                role: params.role
-            }, view => view.render());
+        actionSeleccionEvaluados: function () {
+            this.main('competencias:views/seleccionEvaluados', {}, view => view.render());
         },
 
         actionSurvey: function (params) {
-            this.main('competencias:views/encuesta', {
-                teamId: params.teamId,
-                teamName: params.teamName,
-                role: params.role,
-                userId: params.userId,
-                userName: params.userName
-            }, view => view.render());
+            this.main('competencias:views/encuesta', params, view => view.render());
         },
 
         actionReports: function () {
@@ -47,9 +26,17 @@ define('competencias:controllers/competencias', ['controllers/base'], function (
 
         actionReporteBase: function (params) {
             this.main('competencias:views/reporteBase', {
-                tipo: params.tipo,
-                oficinaId: params.oficinaId,
+                tipo:        params.tipo,
+                oficinaId:   params.oficinaId,
                 oficinaName: params.oficinaName
+            }, function (view) {
+                view.render();
+            });
+        },
+
+        actionListaEdicion: function (params) {
+            this.main('competencias:views/listaEdicion', {
+                periodoId: params.periodoId || null
             }, function (view) {
                 view.render();
             });

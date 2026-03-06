@@ -5,13 +5,12 @@
 define([
     'view',
     'competencias:views/modules/planesAccionManager',
-    'competencias:views/modules/cargaDatos',
     'competencias:views/modules/exportaciones'
-], function (Dep, PlanesAccionManager, CargaDatos, Exportaciones) {
+], function (Dep, PlanesAccionManager, Exportaciones) {
 
     return Dep.extend(
 
-        _.extend({}, CargaDatos, Exportaciones, {
+        _.extend({}, Exportaciones, {
 
         template: 'competencias:reporteBase',
 
@@ -19,7 +18,6 @@ define([
             'click [data-action="back"]':          function () { this.getRouter().navigate('#Competencias/reports', {trigger: true}); },
             'click [data-action="exportarExcel"]': function () { this.exportarExcel(); },
             'click [data-action="exportarCSV"]':   function () { this.exportarCSV(); }
-            // Los eventos del modal de planes se registran directamente dentro del manager
         },
 
         setup: function () {
@@ -36,16 +34,18 @@ define([
             this.oficinaIdParaFiltrar = this.oficinaId;
 
             this.rolObjetivo     = this.tipoReporte.toLowerCase().includes('gerente') ? 'gerente' : 'asesor';
-            this.textoEncabezado = this.rolObjetivo === 'gerente' ? 'Directores y/o Gerentes' : 'Asesores';
-            this.tituloReporte   = 'Reporte de ' + (this.rolObjetivo === 'gerente' ? 'Gerentes y Directores' : 'Asesores');
+            this.textoEncabezado = this.rolObjetivo === 'gerente' ? 'Gerentes, Directores y/o Coordinadores' : 'Asesores';
+            this.tituloReporte   = 'Reporte de ' + (this.rolObjetivo === 'gerente' ? 'Gerentes, Directores y Coordinadores' : 'Asesores');
 
             this.esCasaNacional              = false;
             this.esGerenteODirector          = false;
             this.esAsesor                    = false;
             this.esReporteGeneralCasaNacional = false;
+            this.esReporteOficinaAsesores     = false;
+            this.esReporteAsesorUnico         = false;
             this.oficinas                    = [];
             this.totalesPorOficina           = {};
-            this.totalesGenerales            = { verdes: 0, total: 0, porcentaje: 0, color: 'gris' };
+            this.totalesGenerales            = { verde: 0, amarillo: 0, rojo: 0, total: 0, porcentaje: 0, color: 'gris' };
             this.preguntasAgrupadas          = {};
             this.usuariosData                = [];
             this.usuariosMap                 = {};
@@ -53,10 +53,7 @@ define([
             this.logoOficina                 = null;
             this.nombreOficina               = null;
 
-            // Instanciar el manager — config real se pasa en cargarDatosIniciales
-            // tras resolver usuarios y categorías del reporte
-            // etiquetaEjecutor: "Asesor evaluado" para reportes de asesores,
-            //                   "Gerente, Director o Coordinador evaluado" para reportes de gerentes
+            // Instanciar el manager
             var etiquetaEjecutor = this.rolObjetivo === 'gerente'
                 ? 'Gerente, Director o Coordinador evaluado'
                 : 'Asesor evaluado';
@@ -104,10 +101,9 @@ define([
 
                 var roles = Object.values(userModel.get('rolesNames') || {}).map(function (r) { return r.toLowerCase(); });
                 self.esCasaNacional     = roles.includes('casa nacional');
-                // Coordinador equivale a gerente/director
                 self.esGerenteODirector = roles.includes('gerente') || roles.includes('director') || roles.includes('coordinador');
                 self.esAsesor           = roles.includes('asesor');
-                // Rol formateado para planesAccionManager
+                
                 if      (roles.includes('casa nacional'))  self.rolUsuario = 'Casa Nacional';
                 else if (roles.includes('director'))       self.rolUsuario = 'Director';
                 else if (roles.includes('gerente'))        self.rolUsuario = 'Gerente';
@@ -115,7 +111,6 @@ define([
                 else if (roles.includes('asesor'))         self.rolUsuario = 'Asesor';
                 else                                       self.rolUsuario = 'Usuario';
 
-                // Exponer datos de usuario para que PlanesAccionManager los lea
                 self.usuarioActualId     = self.getUser().id;
                 self.usuarioActualNombre = self.getUser().get('name');
 
@@ -131,12 +126,22 @@ define([
                 }
 
                 self.configurarLogoYTitulo(userModel);
-
-                // Actualizar el manager con rol resuelto
-                // usuarios e items se completan en cargarDatosReporte -> cargarPlanesAccion
                 self.planesManager.actualizarConfig({ modulo: 'Competencias' });
 
-                self.cargarDatosReporte();
+                // Determinar el tipo de reporte exacto
+                if (self.tipoReporte === 'generalGerentes' || self.tipoReporte === 'generalAsesores') {
+                    self.esReporteGeneralCasaNacional = true;
+                    self.cargarDatosReporteGeneral();
+                } else if (self.tipoReporte === 'asesor') {
+                    self.esReporteAsesorUnico = true;
+                    self.cargarDatosReporteDetallado();
+                } else if (self.tipoReporte === 'oficinaAsesores') {
+                    self.esReporteOficinaAsesores = true;
+                    self.cargarDatosReporteDetallado();
+                } else {
+                    // 'gerentes', 'asesores', 'oficinaGerentes'
+                    self.cargarDatosReporteDetallado();
+                }
 
             }).catch(function () {
                 Espo.Ui.error('Error al cargar el período de evaluación.');
@@ -158,6 +163,704 @@ define([
         },
 
         // ════════════════════════════════════════════════════════
+        //  CARGAR REPORTE GENERAL DESDE BACKEND
+        // ════════════════════════════════════════════════════════
+        cargarDatosReporteGeneral: function () {
+            var self = this;
+            
+            console.log('📊 Cargando reporte general desde backend');
+            
+            Espo.Ajax.getRequest('Competencias/action/getReporteGeneral', {
+                periodoId: this.periodoId,
+                rolObjetivo: this.rolObjetivo
+            }).then(function (response) {
+                if (response.success) {
+                    self.preguntasAgrupadas = response.preguntas || {};
+                    self.oficinas = response.oficinas || [];
+                    self.totalesPorPregunta = response.totalesPorPregunta || {};
+                    self.totalesGenerales = response.totalesGenerales || {
+                        verde: 0, amarillo: 0, rojo: 0, total: 0, porcentaje: 0, color: 'gris'
+                    };
+                    
+                    self.wait(false);
+                    
+                    if (self.isRendered()) {
+                        self._renderizarTablaGeneral();
+                    }
+                    
+                    self.cargarPlanesAccion();
+                } else {
+                    Espo.Ui.error(response.error || 'Error al cargar reporte general');
+                    self.wait(false);
+                }
+            }).catch(function (error) {
+                console.error('❌ Error al cargar reporte general:', error);
+                Espo.Ui.error('Error al cargar los datos del reporte general');
+                self.wait(false);
+            });
+        },
+
+        // ════════════════════════════════════════════════════════
+        //  RENDERIZAR TABLA GENERAL MANUALMENTE
+        // ════════════════════════════════════════════════════════
+        _renderizarTablaGeneral: function() {
+            console.log('*** _renderizarTablaGeneral INICIADO ***');
+            
+            if (!this.isRendered()) {
+                console.log('DOM no renderizado aún, esperando...');
+                setTimeout(this._renderizarTablaGeneral.bind(this), 100);
+                return;
+            }
+            
+            var $container = this.$el.find('.reporte-matrix-scroll');
+            if (!$container.length) {
+                $container = this.$el.find('.reporte-matrix-wrapper .reporte-matrix-scroll');
+                if (!$container.length) {
+                    console.error('No se encontró el contenedor .reporte-matrix-scroll');
+                    return;
+                }
+            }
+            
+            if (!this.preguntasAgrupadas || !this.oficinas || this.oficinas.length === 0) {
+                $container.html('<div class="alert alert-info">No hay datos para mostrar</div>');
+                return;
+            }
+            
+            var html = '';
+            var self = this;
+            
+            // Construir headers de categorías
+            var categoriaRow = '<tr class="categoria-row">';
+            categoriaRow += '<th class="th-main-header" rowspan="3">';
+            categoriaRow += '<div class="header-content">';
+            if (this.logoOficina) {
+                categoriaRow += '<div class="logo-expanded"><img src="' + this.logoOficina + '" alt="Logo" onerror="this.style.display=\'none\'"></div>';
+            }
+            categoriaRow += '<div class="header-text"><strong>' + this.textoEncabezado + '</strong></div>';
+            categoriaRow += '</div></th>';
+            
+            Object.keys(this.preguntasAgrupadas).forEach(function(categoria) {
+                var count = 0;
+                Object.keys(self.preguntasAgrupadas[categoria]).forEach(function(sub) {
+                    count += self.preguntasAgrupadas[categoria][sub].length;
+                });
+                categoriaRow += '<th colspan="' + count + '"><strong>' + self.escapeHtml(categoria) + '</strong></th>';
+            });
+            
+            categoriaRow += '<th class="th-sumatoria" rowspan="3">';
+            categoriaRow += '<div class="sumatoria-content"><strong>Sumatoria<br>del equipo</strong></div>';
+            categoriaRow += '</th>';
+            categoriaRow += '</tr>';
+            
+            // Construir fila de subcategorías
+            var subcategoriaRow = '<tr class="subcategoria-row">';
+            Object.keys(this.preguntasAgrupadas).forEach(function(categoria) {
+                Object.keys(self.preguntasAgrupadas[categoria]).forEach(function(sub) {
+                    var count = self.preguntasAgrupadas[categoria][sub].length;
+                    subcategoriaRow += '<th colspan="' + count + '">' + self.escapeHtml(sub) + '</th>';
+                });
+            });
+            subcategoriaRow += '</tr>';
+            
+            // Construir fila de preguntas
+            var preguntasRow = '<tr class="preguntas-row">';
+            Object.keys(this.preguntasAgrupadas).forEach(function(categoria) {
+                Object.keys(self.preguntasAgrupadas[categoria]).forEach(function(sub) {
+                    self.preguntasAgrupadas[categoria][sub].forEach(function(pregunta) {
+                        preguntasRow += '<th><div>' + self.escapeHtml(pregunta.texto) + '</div></th>';
+                    });
+                });
+            });
+            preguntasRow += '</tr>';
+            
+            // Construir cuerpo de la tabla (oficinas)
+            var tbody = '<tbody>';
+            
+            this.oficinas.forEach(function(oficina) {
+                tbody += '<tr class="usuario-row">';
+                tbody += '<td class="td-user-name"><strong>' + self.escapeHtml(oficina.name) + '</strong></td>';
+                
+                Object.keys(self.preguntasAgrupadas).forEach(function(categoria) {
+                    Object.keys(self.preguntasAgrupadas[categoria]).forEach(function(sub) {
+                        self.preguntasAgrupadas[categoria][sub].forEach(function(pregunta) {
+                            var color = 'gris';
+                            if (oficina.totalesPorPregunta && oficina.totalesPorPregunta[pregunta.id]) {
+                                color = oficina.totalesPorPregunta[pregunta.id].color || 'gris';
+                            }
+                            tbody += '<td class="celda-respuesta color-' + color + '"></td>';
+                        });
+                    });
+                });
+                
+                tbody += '<td class="celda-total color-' + oficina.totalesOficina.color + '">';
+                tbody += oficina.totalesOficina.verde + '/' + oficina.totalesOficina.total + '<br>';
+                tbody += '<small>' + Math.round(oficina.totalesOficina.porcentaje) + '%</small>';
+                tbody += '</td>';
+                tbody += '</tr>';
+            });
+            
+            tbody += '</tbody>';
+            
+            // Construir pie de tabla (totales) - SIEMPRE SE MUESTRA EN REPORTES GENERALES
+            var tfoot = '<tfoot><tr class="totales-row">';
+            tfoot += '<td><strong>Totales</strong></td>';
+            
+            Object.keys(this.preguntasAgrupadas).forEach(function(categoria) {
+                Object.keys(self.preguntasAgrupadas[categoria]).forEach(function(sub) {
+                    self.preguntasAgrupadas[categoria][sub].forEach(function(pregunta) {
+                        var total = self.totalesPorPregunta[pregunta.id] || { verdes: 0, total: 0, porcentaje: 0, color: 'gris' };
+                        tfoot += '<td class="celda-total color-' + total.color + '">';
+                        tfoot += (total.verdes || 0) + '/' + (total.total || 0) + '<br>';
+                        tfoot += '<small>' + Math.round(total.porcentaje || 0) + '%</small>';
+                        tfoot += '</td>';
+                    });
+                });
+            });
+            
+            tfoot += '<td class="celda-total color-' + this.totalesGenerales.color + '">';
+            tfoot += (this.totalesGenerales.verde || 0) + '/' + (this.totalesGenerales.total || 0) + '<br>';
+            tfoot += '<small>' + Math.round(this.totalesGenerales.porcentaje || 0) + '%</small>';
+            tfoot += '</td>';
+            tfoot += '</tr></tfoot>';
+            
+            // Ensamblar tabla completa
+            html = '<table class="report-matrix">';
+            html += '<thead>' + categoriaRow + subcategoriaRow + preguntasRow + '</thead>';
+            html += tbody;
+            html += tfoot;
+            html += '</table>';
+            
+            $container.html(html);
+            console.log('*** _renderizarTablaGeneral FINALIZADO ***');
+        },
+
+        // ════════════════════════════════════════════════════════
+        //  REPORTE DETALLADO (por oficina o usuario)
+        // ════════════════════════════════════════════════════════
+        cargarDatosReporteDetallado: function () {
+            var self = this;
+            
+            var cargarPreguntas = Espo.Ajax.getRequest('Pregunta', {
+                where: [
+                    {
+                        type: 'and',
+                        value: [
+                            {
+                                type: 'or',
+                                value: [
+                                    { type: 'equals', attribute: 'rolObjetivo', value: this.rolObjetivo },
+                                    { type: 'contains', attribute: 'rolObjetivo', value: this.rolObjetivo }
+                                ]
+                            },
+                            { type: 'equals', attribute: 'estaActiva', value: 1 }
+                        ]
+                    }
+                ],
+                orderBy: 'orden',
+                maxSize: 200
+            });
+
+            var whereEncuestas = [{ type: 'equals', attribute: 'rolUsuario', value: this.rolObjetivo }];
+            if (this.oficinaIdParaFiltrar) {
+                whereEncuestas.push({ type: 'equals', attribute: 'equipoId', value: this.oficinaIdParaFiltrar });
+            }
+            if (this.usuarioId) {
+                whereEncuestas.push({ type: 'equals', attribute: 'usuarioEvaluadoId', value: this.usuarioId });
+            }
+            if (this.fechaInicio && this.fechaCierre) {
+                whereEncuestas.push({ type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: this.fechaInicio });
+                whereEncuestas.push({ type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: this.fechaCierre + ' 23:59:59' });
+            }
+
+            // Cargar TODAS las encuestas con paginación (lotes de 200)
+            var cargarTodasLasEncuestas = function() {
+                return new Promise(function(resolve, reject) {
+                    var maxSize = 200;
+                    var offset = 0;
+                    var todasLasEncuestas = [];
+                    
+                    function fetchNextPage() {
+                        Espo.Ajax.getRequest('Encuesta', {
+                            where: whereEncuestas,
+                            select: 'id,name,usuarioEvaluadoId,usuarioEvaluadoName,fechaEncuesta,porcentajeCompletado,equipoName',
+                            maxSize: maxSize,
+                            offset: offset
+                        }).then(function(response) {
+                            var encuestas = response.list || [];
+                            todasLasEncuestas = todasLasEncuestas.concat(encuestas);
+                            
+                            if (encuestas.length < maxSize) {
+                                resolve(todasLasEncuestas);
+                            } else {
+                                offset += maxSize;
+                                fetchNextPage();
+                            }
+                        }).catch(function(error) {
+                            console.error('Error cargando página de encuestas:', error);
+                            reject(error);
+                        });
+                    }
+                    
+                    fetchNextPage();
+                });
+            };
+
+            Promise.all([cargarPreguntas, cargarTodasLasEncuestas()]).then(function(results) {
+                var preguntas = results[0] && results[0].list ? results[0].list : [];
+                var encuestas = results[1] || [];
+
+                console.log('📊 Reporte Detallado - Datos cargados:', {
+                    totalPreguntas: preguntas.length,
+                    totalEncuestas: encuestas.length,
+                    rolObjetivo: self.rolObjetivo,
+                    oficinaId: self.oficinaIdParaFiltrar,
+                    usuarioId: self.usuarioId
+                });
+
+                self.procesarPreguntas(preguntas);
+                self.procesarEncuestas(encuestas);
+            }).catch(function(error) {
+                console.error('❌ Error al cargar datos del reporte detallado:', error);
+                Espo.Ui.error('Error al cargar los datos del reporte');
+                self.wait(false);
+            });
+        },
+
+        procesarPreguntas: function (preguntas) {
+            var agrupadas = {};
+            
+            preguntas.forEach(function(p) {
+                var cat = p.categoria || 'Sin Categoría';
+                var sub = p.subCategoria || 'General';
+                
+                if (!agrupadas[cat]) agrupadas[cat] = {};
+                if (!agrupadas[cat][sub]) agrupadas[cat][sub] = [];
+                
+                agrupadas[cat][sub].push({ 
+                    id: p.id, 
+                    texto: p.textoPregunta || p.name, 
+                    orden: p.orden || 0 
+                });
+            });
+
+            // Ordenar preguntas dentro de cada subcategoría
+            Object.keys(agrupadas).forEach(function(cat) {
+                Object.keys(agrupadas[cat]).forEach(function(sub) {
+                    agrupadas[cat][sub].sort(function(a, b) { 
+                        return (a.orden || 0) - (b.orden || 0); 
+                    });
+                });
+            });
+
+            this.preguntasAgrupadas = agrupadas;
+            console.log('📚 Preguntas agrupadas:', Object.keys(agrupadas).length, 'categorías');
+        },
+
+        procesarEncuestas: function (encuestas) {
+            var self = this;
+            
+            if (encuestas.length === 0) {
+                console.log('ℹ️ No hay encuestas para procesar');
+                this.usuariosData = [];
+                this.wait(false);
+                this.reRender();
+                this.cargarPlanesAccion();
+                return;
+            }
+
+            var encuestasUnicas = encuestas.map(function(e) {
+                return {
+                    id:                  e.id,
+                    userId:              e.usuarioEvaluadoId,
+                    userName:            e.usuarioEvaluadoName || 'Usuario sin nombre',
+                    fechaEncuesta:       e.fechaEncuesta,
+                    porcentajeCompletado: e.porcentajeCompletado || 0,
+                    oficinaName:         e.equipoName || ''
+                };
+            });
+
+            this.cargarRespuestasParaEncuestas(encuestasUnicas);
+        },
+
+        cargarRespuestasParaEncuestas: function (encuestas) {
+            var self = this;
+            
+            var encuestasIds = encuestas.map(function(e) { return e.id; });
+            
+            if (encuestasIds.length === 0) {
+                self.usuariosData = [];
+                self.wait(false);
+                self.reRender();
+                return;
+            }
+
+            console.log('📥 Cargando respuestas para', encuestasIds.length, 'encuestas');
+
+            // Dividir en lotes de encuestas
+            var lotesEncuestas = [];
+            var tamanoLoteEncuestas = 200;
+            for (var i = 0; i < encuestasIds.length; i += tamanoLoteEncuestas) {
+                lotesEncuestas.push(encuestasIds.slice(i, i + tamanoLoteEncuestas));
+            }
+
+            var promesasTotales = [];
+
+            lotesEncuestas.forEach(function(loteEncuestasIds) {
+                var promesaLote = new Promise(function(resolve, reject) {
+                    var maxSize = 200;
+                    var offset = 0;
+                    var todasLasRespuestasDelLote = [];
+                    
+                    function fetchNextPage() {
+                        Espo.Ajax.getRequest('RespuestaEncuesta', {
+                            where: [
+                                { 
+                                    type: 'in', 
+                                    attribute: 'encuestaId', 
+                                    value: loteEncuestasIds 
+                                }
+                            ],
+                            select: 'preguntaId,respuesta,encuestaId',
+                            maxSize: maxSize,
+                            offset: offset
+                        }).then(function(response) {
+                            var respuestas = response.list || [];
+                            todasLasRespuestasDelLote = todasLasRespuestasDelLote.concat(respuestas);
+                            
+                            if (respuestas.length < maxSize) {
+                                resolve(todasLasRespuestasDelLote);
+                            } else {
+                                offset += maxSize;
+                                fetchNextPage();
+                            }
+                        }).catch(function(error) {
+                            console.error('Error cargando página de respuestas:', error);
+                            reject(error);
+                        });
+                    }
+                    
+                    fetchNextPage();
+                });
+                
+                promesasTotales.push(promesaLote);
+            });
+
+            Promise.all(promesasTotales).then(function(resultadosLotes) {
+                var todasLasRespuestas = [];
+                resultadosLotes.forEach(function(lote) {
+                    todasLasRespuestas = todasLasRespuestas.concat(lote);
+                });
+
+                console.log('✅ Total respuestas cargadas:', todasLasRespuestas.length);
+
+                // Crear mapa de respuestas por encuesta
+                var respuestasPorEncuesta = {};
+                
+                todasLasRespuestas.forEach(function(r) {
+                    if (!respuestasPorEncuesta[r.encuestaId]) {
+                        respuestasPorEncuesta[r.encuestaId] = {};
+                    }
+                    respuestasPorEncuesta[r.encuestaId][r.preguntaId] = r.respuesta;
+                });
+
+                // Asignar respuestas a cada encuesta
+                encuestas.forEach(function(e) {
+                    e.respuestas = respuestasPorEncuesta[e.id] || {};
+                });
+
+                self.usuariosData = encuestas;
+                self.usuariosMap = {};
+                self.usuariosData.forEach(function(u) { 
+                    self.usuariosMap[u.userId] = u; 
+                });
+
+                self.calcularTotales();
+                self.wait(false);
+                self.reRender();
+                self.cargarPlanesAccion();
+
+            }).catch(function(error) {
+                console.error('❌ Error al cargar respuestas:', error);
+                self.usuariosData = [];
+                self.wait(false);
+                self.reRender();
+            });
+        },
+
+        // ════════════════════════════════════════════════════════
+        //  RENDERIZAR TABLA DETALLADA
+        //  MODIFICADO: Mostrar/ocultar totales según reglas específicas
+        // ════════════════════════════════════════════════════════
+        _renderizarTablaDetallada: function() {
+            console.log('*** _renderizarTablaDetallada INICIADO ***');
+            
+            if (!this.isRendered()) {
+                console.log('DOM no renderizado aún, esperando...');
+                setTimeout(this._renderizarTablaDetallada.bind(this), 100);
+                return;
+            }
+            
+            var $container = this.$el.find('.reporte-matrix-scroll');
+            if (!$container.length) {
+                console.error('No se encontró el contenedor .reporte-matrix-scroll');
+                return;
+            }
+            
+            if (!this.preguntasAgrupadas || !this.usuariosData || this.usuariosData.length === 0) {
+                $container.html('<div class="alert alert-info">No hay datos para mostrar</div>');
+                return;
+            }
+            
+            var html = '';
+            var self = this;
+            
+            // Construir headers de categorías
+            var categoriaRow = '<tr class="categoria-row">';
+            categoriaRow += '<th class="th-main-header" rowspan="3">';
+            categoriaRow += '<div class="header-content">';
+            if (this.logoOficina) {
+                categoriaRow += '<div class="logo-expanded"><img src="' + this.logoOficina + '" alt="Logo" onerror="this.style.display=\'none\'"></div>';
+            }
+            categoriaRow += '<div class="header-text"><strong>' + this.textoEncabezado + '</strong></div>';
+            categoriaRow += '</div></th>';
+            
+            Object.keys(this.preguntasAgrupadas).forEach(function(categoria) {
+                var count = 0;
+                Object.keys(self.preguntasAgrupadas[categoria]).forEach(function(sub) {
+                    count += self.preguntasAgrupadas[categoria][sub].length;
+                });
+                categoriaRow += '<th colspan="' + count + '"><strong>' + self.escapeHtml(categoria) + '</strong></th>';
+            });
+            
+            categoriaRow += '<th class="th-sumatoria" rowspan="3">';
+            categoriaRow += '<div class="sumatoria-content"><strong>Sumatoria<br>del usuario</strong></div>';
+            categoriaRow += '</th>';
+            categoriaRow += '</tr>';
+            
+            // Construir fila de subcategorías
+            var subcategoriaRow = '<tr class="subcategoria-row">';
+            Object.keys(this.preguntasAgrupadas).forEach(function(categoria) {
+                Object.keys(self.preguntasAgrupadas[categoria]).forEach(function(sub) {
+                    var count = self.preguntasAgrupadas[categoria][sub].length;
+                    subcategoriaRow += '<th colspan="' + count + '">' + self.escapeHtml(sub) + '</th>';
+                });
+            });
+            subcategoriaRow += '</tr>';
+            
+            // Construir fila de preguntas
+            var preguntasRow = '<tr class="preguntas-row">';
+            Object.keys(this.preguntasAgrupadas).forEach(function(categoria) {
+                Object.keys(self.preguntasAgrupadas[categoria]).forEach(function(sub) {
+                    self.preguntasAgrupadas[categoria][sub].forEach(function(pregunta) {
+                        preguntasRow += '<th><div>' + self.escapeHtml(pregunta.texto) + '</div></th>';
+                    });
+                });
+            });
+            preguntasRow += '</tr>';
+            
+            // Construir cuerpo de la tabla (usuarios)
+            var tbody = '<tbody>';
+            
+            this.usuariosData.forEach(function(usuario) {
+                tbody += '<tr class="usuario-row">';
+                tbody += '<td class="td-user-name"><strong>' + self.escapeHtml(usuario.userName) + '</strong></td>';
+                
+                Object.keys(self.preguntasAgrupadas).forEach(function(categoria) {
+                    Object.keys(self.preguntasAgrupadas[categoria]).forEach(function(sub) {
+                        self.preguntasAgrupadas[categoria][sub].forEach(function(pregunta) {
+                            var color = 'gris';
+                            if (usuario.respuestas && usuario.respuestas[pregunta.id]) {
+                                var respuesta = usuario.respuestas[pregunta.id];
+                                color = respuesta; // 'verde', 'amarillo', 'rojo'
+                            }
+                            tbody += '<td class="celda-respuesta color-' + color + '"></td>';
+                        });
+                    });
+                });
+                
+                tbody += '<td class="celda-total color-' + usuario.totales.color + '">';
+                tbody += usuario.totales.verdes + '/' + usuario.totales.total + '<br>';
+                tbody += '<small>' + Math.round(usuario.totales.porcentaje) + '%</small>';
+                tbody += '</td>';
+                tbody += '</tr>';
+            });
+            
+            tbody += '</tbody>';
+            
+            // --- INICIO MODIFICACIÓN: Reglas específicas para mostrar/ocultar totales ---
+            var mostrarTotales = false;
+            
+            // Reglas:
+            // 1. Reporte general de gerentes (generalGerentes) → SÍ lleva (ya manejado en _renderizarTablaGeneral)
+            // 2. Reporte general de asesores (generalAsesores) → SÍ lleva (ya manejado en _renderizarTablaGeneral)
+            // 3. Reporte de gerentes oficina (oficinaGerentes) → NO lleva
+            // 4. Reporte de asesores oficina (oficinaAsesores) → SÍ lleva
+            // 5. Reporte de asesor único (asesor) → NO lleva
+            // 6. Reporte de gerentes por oficina del gerente (gerentes) → NO lleva (es el mismo que oficinaGerentes pero para el gerente)
+            // 7. Reporte de asesores por oficina del gerente (asesores) → SÍ lleva (es el mismo que oficinaAsesores)
+            
+            if (this.tipoReporte === 'oficinaAsesores' || this.tipoReporte === 'asesores') {
+                mostrarTotales = true;
+                console.log('Reporte de asesores por oficina: SÍ lleva totales');
+            } else if (this.tipoReporte === 'oficinaGerentes' || this.tipoReporte === 'gerentes') {
+                mostrarTotales = false;
+                console.log('Reporte de gerentes por oficina: NO lleva totales');
+            } else if (this.tipoReporte === 'asesor') {
+                mostrarTotales = false;
+                console.log('Reporte de asesor único: NO lleva totales');
+            }
+            // --- FIN MODIFICACIÓN ---
+            
+            // Construir pie de tabla (totales) según la decisión
+            var tfoot;
+            if (mostrarTotales) {
+                console.log('Construyendo fila de totales CON datos');
+                tfoot = '<tfoot><tr class="totales-row">';
+                tfoot += '<td><strong>Totales</strong></td>';
+
+                Object.keys(this.preguntasAgrupadas).forEach(function(categoria) {
+                    Object.keys(self.preguntasAgrupadas[categoria]).forEach(function(sub) {
+                        self.preguntasAgrupadas[categoria][sub].forEach(function(pregunta) {
+                            var total = self.totalesPorPregunta[pregunta.id] || { verdes: 0, total: 0, porcentaje: 0, color: 'gris' };
+                            tfoot += '<td class="celda-total color-' + total.color + '">';
+                            tfoot += (total.verdes || 0) + '/' + (total.total || 0) + '<br>';
+                            tfoot += '<small>' + Math.round(total.porcentaje || 0) + '%</small>';
+                            tfoot += '</td>';
+                        });
+                    });
+                });
+
+                tfoot += '<td></td>'; // Celda vacía para la columna de sumatoria en el pie
+                tfoot += '</tr></tfoot>';
+            } else {
+                console.log('Construyendo fila de totales VACÍA (sin datos)');
+                // Pie de tabla vacío para mantener estructura
+                tfoot = '<tfoot><tr class="totales-row">';
+                tfoot += '<td></td>'; // Celda vacía para la columna de nombres
+
+                // Añadir celdas vacías para cada pregunta
+                Object.keys(this.preguntasAgrupadas).forEach(function(categoria) {
+                    Object.keys(self.preguntasAgrupadas[categoria]).forEach(function(sub) {
+                        self.preguntasAgrupadas[categoria][sub].forEach(function(pregunta) {
+                            tfoot += '<td></td>';
+                        });
+                    });
+                });
+
+                tfoot += '<td></td>'; // Celda vacía para la columna de sumatoria
+                tfoot += '</tr></tfoot>';
+            }
+            
+            // Ensamblar tabla completa
+            html = '<table class="report-matrix">';
+            html += '<thead>' + categoriaRow + subcategoriaRow + preguntasRow + '</thead>';
+            html += tbody;
+            html += tfoot;
+            html += '</table>';
+            
+            $container.html(html);
+            console.log('*** _renderizarTablaDetallada FINALIZADO ***');
+        },
+
+        calcularTotales: function () {
+            var self = this;
+            var todasLasPreguntas = [];
+            var totalPorPregunta = {};
+
+            // Obtener todas las preguntas
+            Object.keys(this.preguntasAgrupadas || {}).forEach(function(cat) {
+                Object.keys(self.preguntasAgrupadas[cat]).forEach(function(sub) {
+                    self.preguntasAgrupadas[cat][sub].forEach(function(p) { 
+                        todasLasPreguntas.push(p.id); 
+                    });
+                });
+            });
+
+            // Totales por columna (pregunta)
+            todasLasPreguntas.forEach(function(pid) {
+                var verdes = 0, amarillos = 0, rojos = 0, total = 0;
+                
+                self.usuariosData.forEach(function(u) {
+                    var r = u.respuestas[pid];
+                    if (r) {
+                        total++;
+                        if (r === 'verde') verdes++;
+                        else if (r === 'amarillo') amarillos++;
+                        else if (r === 'rojo') rojos++;
+                    }
+                });
+
+                var pct = total > 0 ? (verdes / total) * 100 : 0;
+                totalPorPregunta[pid] = {
+                    verdes: verdes, 
+                    amarillos: amarillos, 
+                    rojos: rojos,
+                    total: total, 
+                    porcentaje: pct,
+                    color: self.obtenerColorDistribucion(verdes, amarillos, rojos, total)
+                };
+            });
+
+            // Totales por fila (usuario)
+            this.usuariosData.forEach(function(u) {
+                var verdes = 0, amarillos = 0, rojos = 0, total = 0;
+                
+                todasLasPreguntas.forEach(function(pid) {
+                    var r = u.respuestas[pid];
+                    if (r) {
+                        total++;
+                        if (r === 'verde') verdes++;
+                        else if (r === 'amarillo') amarillos++;
+                        else if (r === 'rojo') rojos++;
+                    }
+                });
+
+                var pct = total > 0 ? (verdes / total) * 100 : 0;
+                u.totales = {
+                    verdes: verdes, 
+                    amarillos: amarillos, 
+                    rojos: rojos,
+                    total: total, 
+                    porcentaje: pct,
+                    color: self.obtenerColorDistribucion(verdes, amarillos, rojos, total)
+                };
+            });
+
+            this.totalesPorPregunta = totalPorPregunta;
+            
+            console.log('📊 Totales calculados:', {
+                totalUsuarios: this.usuariosData.length,
+                totalPreguntas: todasLasPreguntas.length,
+                preguntasConDatos: Object.values(totalPorPregunta).filter(t => t.total > 0).length
+            });
+        },
+
+        obtenerColorDistribucion: function (verdes, amarillos, rojos, total) {
+            if (total === 0) return 'gris';
+
+            var pV = (verdes   / total) * 100;
+            var pA = (amarillos / total) * 100;
+            var pR = (rojos    / total) * 100;
+
+            if (pV >= 80) return 'verde';
+            if (pV >= 60) return 'amarillo';
+
+            if (pV >= 40) {
+                if (pR === 0) return 'amarillo';
+                if (pA >= pR) return 'amarillo';
+                return 'rojo';
+            }
+
+            return 'rojo';
+        },
+
+        obtenerColorCelda: function (usuarioId, preguntaId) {
+            var u = this.usuariosMap[usuarioId];
+            if (!u || !u.respuestas[preguntaId]) return 'gris';
+            return u.respuestas[preguntaId];
+        },
+
+        // ════════════════════════════════════════════════════════
         //  LOGO Y TÍTULO
         // ════════════════════════════════════════════════════════
         configurarLogoYTitulo: function (userModel) {
@@ -172,14 +875,12 @@ define([
             else if (this.tipoReporte === 'gerentes' || this.tipoReporte === 'asesores') {
                 var teamIds   = userModel.get('teamsIds')   || [];
                 var teamNames = userModel.get('teamsNames') || {};
-                // FIX: ignorar equipos CLA para encontrar la oficina real
                 var equipoReal = teamIds.find(function (id) { return !claPattern.test(id); }) || teamIds[0];
                 if (equipoReal) {
                     this.oficinaIdParaFiltrar = equipoReal;
                     this.nombreOficina        = teamNames[equipoReal] || 'Mi Oficina';
-                    this.tituloReporte        = 'Reporte de ' + (this.rolObjetivo === 'gerente' ? 'Gerentes y Directores' : 'Asesores') +
+                    this.tituloReporte        = 'Reporte de ' + (this.rolObjetivo === 'gerente' ? 'Gerentes, Directores y Coordinadores' : 'Asesores') +
                                                ' (' + this.nombreOficina + ')';
-                    // Propagar la oficina real al manager
                     this.planesManager.actualizarConfig({ oficina: equipoReal });
                     this.buscarLogoPorOficina(equipoReal);
                 } else {
@@ -191,7 +892,7 @@ define([
                     teamModel.id = self.oficinaId;
                     teamModel.fetch().then(function () {
                         self.nombreOficina = teamModel.get('name');
-                        self.tituloReporte = 'Reporte de ' + (self.rolObjetivo === 'gerente' ? 'Gerentes y Directores' : 'Asesores') +
+                        self.tituloReporte = 'Reporte de ' + (self.rolObjetivo === 'gerente' ? 'Gerentes, Directores y Coordinadores' : 'Asesores') +
                                              ' - ' + self.nombreOficina;
                         self.planesManager.actualizarConfig({ oficina: self.oficinaId });
                         self.buscarLogoPorOficina(self.oficinaId);
@@ -240,12 +941,14 @@ define([
         // ════════════════════════════════════════════════════════
         registrarHandlebarsHelpers: function () {
             var self = this;
+            
             Handlebars.registerHelper('getColumnCount', function (cat) {
                 var c = 0; if (!cat) return 0;
                 Object.keys(cat).forEach(function (s) { c += cat[s].length; }); return c;
             });
+            
             Handlebars.registerHelper('getCeldaColor',    function (uid, pid) { return self.obtenerColorCelda(uid, pid); });
-            Handlebars.registerHelper('lookupColor',      function (o, k) { return (o && o[k]) ? o[k].color : 'gris'; });
+            
             Handlebars.registerHelper('withLookup',       function (o, k, opts) { return opts.fn((o && o[k]) || {}); });
             Handlebars.registerHelper('formatPorcentaje', function (p) { return Math.round(p || 0); });
             Handlebars.registerHelper('truncateText',     function (t, l) { return (!t) ? '' : (t.length > l ? t.substring(0, l) + '...' : t); });
@@ -258,25 +961,38 @@ define([
         // ════════════════════════════════════════════════════════
         afterRender: function () {
             Dep.prototype.afterRender.call(this);
-            // Asesores no ven la sección de planes de acción
-            if (!this.esAsesor && !this.esReporteGeneralCasaNacional) {
+            
+            console.log('afterRender ejecutado');
+            console.log('tipoReporte:', this.tipoReporte);
+            console.log('esReporteGeneralCasaNacional:', this.esReporteGeneralCasaNacional);
+            console.log('oficinas disponibles:', this.oficinas ? this.oficinas.length : 0);
+            console.log('usuariosData disponibles:', this.usuariosData ? this.usuariosData.length : 0);
+            
+            // Si es reporte general y tenemos oficinas, renderizar tabla general
+            if (this.esReporteGeneralCasaNacional && this.oficinas && this.oficinas.length > 0) {
+                console.log('Renderizando tabla general');
+                this._renderizarTablaGeneral();
+            }
+            // Si no es reporte general y tenemos usuarios, renderizar tabla detallada
+            else if (!this.esReporteGeneralCasaNacional && this.usuariosData && this.usuariosData.length > 0) {
+                console.log('Renderizando tabla detallada');
+                this._renderizarTablaDetallada();
+            }
+            
+            // Renderizar planes de acción si no es reporte general
+            if (!this.esAsesor && !this.esReporteGeneralCasaNacional && this.usuariosData && this.usuariosData.length > 0) {
                 this.planesManager.render();
             }
         },
 
-        // cargarPlanesAccion es llamado desde cargaDatos al terminar de cargar.
-        // Solo aplica en reportes por oficina o por usuario — no en generales.
         cargarPlanesAccion: function () {
             if (this.esReporteGeneralCasaNacional) return;
-            if (this.esAsesor) return;  // Asesores no ven planes de acción
+            if (this.esAsesor) return;
 
-            // Construir lista de usuarios desde los datos del reporte
             var usuarios = (this.usuariosData || []).map(function (u) {
                 return { id: u.userId, name: u.userName };
             });
 
-            // Construir items/subitems desde preguntasAgrupadas
-            // { 'Categoria': ['Subcategoria1', 'Subcategoria2', ...] }
             var items = {};
             var pg = this.preguntasAgrupadas || {};
             Object.keys(pg).forEach(function (cat) {
@@ -285,6 +1001,16 @@ define([
 
             this.planesManager.actualizarConfig({ usuarios: usuarios, items: items });
             this.planesManager.cargar();
+        },
+
+        escapeHtml: function (text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         },
 
         data: function () {
@@ -298,7 +1024,6 @@ define([
                 totalesPorPregunta:          this.totalesPorPregunta,
                 tienedatos:                  (this.usuariosData && this.usuariosData.length > 0) ||
                                              (this.esReporteGeneralCasaNacional && this.oficinas.length > 0),
-                // tfoot de totales: ocultar en reportes de gerentes (no en asesores ni generales)
                 mostrarSoloGerentes:         this.rolObjetivo === 'gerente' && !this.esReporteGeneralCasaNacional,
                 totalUsuarios:               this.usuariosData ? this.usuariosData.length : 0,
                 esReporteGeneralCasaNacional: this.esReporteGeneralCasaNacional,

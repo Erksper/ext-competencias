@@ -1,4 +1,11 @@
+// client/custom/modules/competencias/src/views/encuesta.js
 define(['view'], function (View) {
+
+    if (!Handlebars.helpers.eq) {
+        Handlebars.registerHelper('eq', function (a, b) {
+            return a === b;
+        });
+    }
     
     return View.extend({
         
@@ -29,7 +36,36 @@ define(['view'], function (View) {
                 this.mostrarInfoModal(e);
             },
             'click [data-action="back"]': function () {
-                this.getRouter().navigate('#Competencias/userSelection?teamId=' + this.teamId + '&teamName=' + encodeURIComponent(this.teamName) + '&role=' + this.role, {trigger: true});
+                console.log('*** EVENTO BACK DISPARADO ***');
+                console.log('Estado actual - fromListaEdicion:', this.fromListaEdicion);
+                console.log('Estado actual - retornoUrl:', this.retornoUrl);
+                console.log('Estado actual - from:', this.from);
+                
+                if (this.fromListaEdicion && this.retornoUrl) {
+                    console.log('Volviendo a listaEdicion:', this.retornoUrl);
+                    var url = this.retornoUrl;
+                    if (url.startsWith('#')) {
+                        this.getRouter().navigate(url.substring(1), {trigger: true});
+                    } else {
+                        this.getRouter().navigate(url, {trigger: true});
+                    }
+                } 
+                else if (this.from === 'seleccion' && this.retornoUrl) {
+                    console.log('Volviendo a seleccionEvaluados:', this.retornoUrl);
+                    var url = this.retornoUrl;
+                    if (url.startsWith('#')) {
+                        this.getRouter().navigate(url.substring(1), {trigger: true});
+                    } else {
+                        this.getRouter().navigate(url, {trigger: true});
+                    }
+                }
+                else {
+                    console.log('Volviendo a selección de usuario (ruta antigua)');
+                    var backUrl = '#Competencias/userSelection?teamId=' + this.teamId + 
+                                  '&teamName=' + encodeURIComponent(this.teamName || '') + 
+                                  '&role=' + this.role;
+                    this.getRouter().navigate(backUrl, {trigger: true});
+                }
             },
             'click [data-action="backToHome"]': function () {
                 this.getRouter().navigate('#', {trigger: true});
@@ -37,13 +73,14 @@ define(['view'], function (View) {
         },
         
         setup: function () {
-            this.parseURLParams();
+            console.log('*** SETUP INICIADO ***');
             
             this.respuestas = {};
             this.encuestaId = null;
             this.guardandoEncuesta = false;
             this.totalPreguntasDisponibles = 0;
             this.preguntas = {};
+            this.datosCargados = false; // Flag para saber si ya cargamos los datos
             
             this.fechaInicio = null;
             this.fechaCierre = null;
@@ -52,12 +89,115 @@ define(['view'], function (View) {
 
             this.accesoDenegado = false;
             this.encuestaInactiva = false;
+            
+            this.teamId = null;
+            this.teamName = null;
+            this.userId = null;
+            this.userName = null;
+            this.role = null;
+            this.fromListaEdicion = false;
+            this.encuestaIdUrl = null;
+            this.retornoUrl = null;
+            
+            this.parseURLParams();
+            
+            console.log('*** SETUP FINALIZADO - fromListaEdicion:', this.fromListaEdicion);
+            console.log('*** SETUP FINALIZADO - retornoUrl:', this.retornoUrl);
 
             this.wait(true);
             this.cargarDatosIniciales();
         },
 
+        parseURLParams: function () {
+            console.log('*** parseURLParams INICIADO ***');
+            var hash = window.location.hash;
+            var params = {};
+            
+            if (hash.includes('?')) {
+                var queryString = hash.split('?')[1];
+                var pairs = queryString.split('&');
+                
+                pairs.forEach(function(pair) {
+                    var parts = pair.split('=');
+                    if (parts.length === 2) {
+                        params[parts[0]] = decodeURIComponent(parts[1]);
+                    }
+                });
+            }
+            
+            console.log('Raw params from URL:', params);
+            
+            this.from = params.from || 'normal';
+            this.fromListaEdicion = params.from === 'listaEdicion';
+            this.retornoUrl = params.retorno ? decodeURIComponent(params.retorno) : null;
+            
+            if (params.data) {
+                var dataString = decodeURIComponent(params.data);
+                var dataPairs = dataString.split('|');
+                
+                dataPairs.forEach(function(pair) {
+                    var parts = pair.split(':');
+                    if (parts.length === 2) {
+                        var key = parts[0];
+                        var value = parts[1];
+                        
+                        switch(key) {
+                            case 'encuestaId':
+                                this.encuestaIdUrl = value;
+                                break;
+                            case 'userId':
+                                this.userId = value || null;
+                                break;
+                            case 'userName':
+                                this.userName = value || null;
+                                break;
+                            case 'teamId':
+                                this.teamId = value || null;
+                                break;
+                            case 'teamName':
+                                this.teamName = value || null;
+                                break;
+                            case 'role':
+                                this.role = value || null;
+                                break;
+                        }
+                    }
+                }, this);
+            }
+            
+            if (!params.data) {
+                this.teamId = params.teamId || null;
+                this.teamName = params.teamName || null;
+                this.userId = params.userId || null;
+                this.userName = params.userName || null;
+                this.role = params.role || null;
+                this.encuestaIdUrl = params.encuestaId || null;
+            }
+            
+            console.log('URL params parsed:', { 
+                teamId: this.teamId, 
+                userId: this.userId, 
+                role: this.role,
+                from: this.from,
+                fromListaEdicion: this.fromListaEdicion,
+                encuestaIdUrl: this.encuestaIdUrl,
+                retornoUrl: this.retornoUrl
+            });
+        },
+
         cargarDatosIniciales: function() {
+            console.log('*** cargarDatosIniciales INICIADO ***');
+            console.log('fromListaEdicion:', this.fromListaEdicion);
+            console.log('encuestaIdUrl:', this.encuestaIdUrl);
+            
+            if (this.fromListaEdicion && this.encuestaIdUrl) {
+                console.log('Modo edición desde lista - cargando encuesta:', this.encuestaIdUrl);
+                this.encuestaId = this.encuestaIdUrl;
+                this._cargarEncuestaExistente();
+                return;
+            }
+            
+            console.log('Flujo normal - verificando permisos y período');
             this.getModelFactory().create('User', function (userModel) {
                 userModel.id = this.getUser().id;
                 userModel.fetch({ relations: { roles: true } }).then(function () {
@@ -71,10 +211,14 @@ define(['view'], function (View) {
                         }).then(function () {
                             this.evaluadorRoles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
                             this.esCasaNacional = this.evaluadorRoles.includes('casa nacional');
-                            const puedeAcceder = this.esCasaNacional || this.evaluadorRoles.includes('gerente') || this.evaluadorRoles.includes('director');
-
+                            const puedeAcceder = this.esCasaNacional || 
+                                this.evaluadorRoles.includes('gerente') || 
+                                this.evaluadorRoles.includes('director') || 
+                                this.evaluadorRoles.includes('coordinador');
+                            
                             if (!puedeAcceder) {
                                 this.accesoDenegado = true;
+                                this.reRender();
                                 this.wait(false);
                                 return;
                             }
@@ -93,6 +237,7 @@ define(['view'], function (View) {
 
                             if (!encuestaActiva) {
                                 this.encuestaInactiva = true;
+                                this.reRender();
                                 this.wait(false);
                                 return;
                             }
@@ -109,55 +254,86 @@ define(['view'], function (View) {
                 }.bind(this));
             }.bind(this));
         },
-
-        parseURLParams: function () {
-            var hash = window.location.hash;
-            var params = {};
+        
+        _cargarEncuestaExistente: function() {
+            console.log('*** _cargarEncuestaExistente INICIADO ***');
+            console.log('encuestaId:', this.encuestaId);
+            console.log('retornoUrl preservado:', this.retornoUrl);
+            console.log('fromListaEdicion preservado:', this.fromListaEdicion);
             
-            if (hash.includes('?')) {
-                var queryString = hash.split('?')[1];
-                var pairs = queryString.split('&');
-                
-                pairs.forEach(function(pair) {
-                    var parts = pair.split('=');
-                    if (parts.length === 2) {
-                        params[parts[0]] = decodeURIComponent(parts[1]);
-                    }
-                });
-            }
-            
-            this.teamId = params.teamId || 'unknown';
-            this.teamName = params.teamName || 'Equipo Desconocido';
-            this.userId = params.userId || 'unknown';
-            this.userName = params.userName || 'Usuario Desconocido';
-            this.role = params.role || 'unknown';
+            this.getModelFactory().create('Encuesta', function (encuestaModel) {
+                encuestaModel.id = this.encuestaId;
+                encuestaModel.fetch().then(function () {
+                    this.teamId = this.teamId || encuestaModel.get('equipoId');
+                    this.teamName = this.teamName || encuestaModel.get('equipoName');
+                    this.userId = this.userId || encuestaModel.get('usuarioEvaluadoId');
+                    this.userName = this.userName || encuestaModel.get('usuarioEvaluadoName');
+                    this.role = this.role || encuestaModel.get('rolUsuario');
+                    
+                    console.log('Datos de encuesta cargados:', {
+                        teamId: this.teamId,
+                        teamName: this.teamName,
+                        userId: this.userId,
+                        userName: this.userName,
+                        role: this.role,
+                        fromListaEdicion: this.fromListaEdicion,
+                        retornoUrl: this.retornoUrl
+                    });
+                    
+                    this.getModelFactory().create('User', function (userModel) {
+                        userModel.id = this.getUser().id;
+                        userModel.fetch({ relations: { roles: true } }).then(function () {
+                            this.evaluadorRoles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
+                            this.esCasaNacional = this.evaluadorRoles.includes('casa nacional');
+                            
+                            this.cargarPreguntas();
+                        }.bind(this));
+                    }.bind(this));
+                    
+                }.bind(this)).catch(function (error) {
+                    console.error('Error cargando encuesta:', error);
+                    Espo.Ui.error('No se pudo cargar la encuesta solicitada.');
+                    this.wait(false);
+                }.bind(this));
+            }.bind(this));
         },
 
         afterRender: function () {
-            var $firstCategoriaHeader = this.$el.find('.categoria-header').first();
-            if ($firstCategoriaHeader.length) {
-                $firstCategoriaHeader.addClass('active');
-                $firstCategoriaHeader.next('.categoria-content').show();
-                
-                var $firstSubcategoriaHeader = $firstCategoriaHeader.next('.categoria-content').find('.subcategoria-header').first();
-                if ($firstSubcategoriaHeader.length) {
-                    $firstSubcategoriaHeader.addClass('active');
-                    $firstSubcategoriaHeader.next('.subcategoria-content').show();
-                }
+            console.log('*** afterRender INICIADO ***');
+            console.log('fromListaEdicion en afterRender:', this.fromListaEdicion);
+            
+            // Inicializar tooltips si existen
+            this.inicializarTooltips();
+            
+            // Si ya tenemos datos cargados, renderizar las preguntas
+            if (this.datosCargados) {
+                console.log('Datos ya cargados, renderizando preguntas');
+                this._renderizarPreguntas();
+                this._actualizarRespuestasUI();
             }
             
-            this.renderRespuestasEnUI();
-            this.actualizarIndicadoresDeProgreso();
-            this.inicializarTooltips();
+            // Adaptar botones según el modo
+            if (this.fromListaEdicion) {
+                console.log('Modo edición desde lista - adaptando botones');
+                this.$el.find('[data-action="saveSurvey"]').hide();
+                
+                var $completeBtn = this.$el.find('[data-action="completeSurvey"]');
+                $completeBtn.html('<i class="fas fa-save"></i> Guardar Cambios');
+                $completeBtn.removeClass('encuesta-btn-success').addClass('encuesta-btn-primary');
+            } else {
+                console.log('Modo normal - mostrando botones normales');
+            }
         },
 
         inicializarTooltips: function() {
-            this.$el.find('[data-toggle="tooltip"]').tooltip({
-                placement: 'top',
-                html: true,
-                container: 'body',
-                trigger: 'hover'
-            });
+            if (this.$el && this.$el.find) {
+                this.$el.find('[data-toggle="tooltip"]').tooltip({
+                    placement: 'top',
+                    html: true,
+                    container: 'body',
+                    trigger: 'hover'
+                });
+            }
         },
 
         mostrarInfoModal: function(e) {
@@ -208,10 +384,16 @@ define(['view'], function (View) {
          },
         
         cargarPreguntas: function () {
-            if (this.fechaCierre) {
-                this.fechaCierre = this.fechaCierre + ' 23:59:59';
+            console.log('*** cargarPreguntas INICIADO ***');
+            console.log('Cargando preguntas para rol:', this.role);
+            
+            if (!this.role) {
+                console.error('No se ha definido el rol para filtrar preguntas');
+                Espo.Ui.error('Error: No se pudo determinar el tipo de evaluación');
+                this.wait(false);
+                return;
             }
-
+            
             $.ajax({
                 url: 'api/v1/Pregunta',
                 type: 'GET',
@@ -229,35 +411,233 @@ define(['view'], function (View) {
                     'Content-Type': 'application/json'
                 },
                 success: function (response) {
+                    console.log('Respuesta de preguntas:', response);
                     if (response.list && response.list.length > 0) {
                         var preguntasFiltradas = this.filtrarPreguntasPorRol(response.list);
+                        console.log('Preguntas filtradas para rol', this.role, ':', preguntasFiltradas.length);
+                        
                         this.totalPreguntasDisponibles = preguntasFiltradas.length;
-                        this.procesarPreguntasAPI(preguntasFiltradas);
-                        this.buscarEncuestaExistente();
+                        this.preguntas = this.procesarPreguntasAPI(preguntasFiltradas);
+                        
+                        console.log('Preguntas agrupadas:', Object.keys(this.preguntas).length, 'categorías');
+                        
+                        this.datosCargados = true;
+                        
+                        // Si el DOM ya está renderizado, mostrar las preguntas
+                        if (this.isRendered()) {
+                            console.log('DOM ya renderizado, mostrando preguntas ahora');
+                            this._renderizarPreguntas();
+                        }
+                        
+                        if (this.encuestaId) {
+                            console.log('Cargando respuestas para encuesta:', this.encuestaId);
+                            this.cargarRespuestasGuardadas();
+                        } else {
+                            console.log('Buscando encuesta existente');
+                            this.buscarEncuestaExistente();
+                        }
                     } else {
+                        console.log('No se recibieron preguntas');
                         this.preguntas = {};
+                        this.datosCargados = true;
+                        if (this.isRendered()) {
+                            this._renderizarPreguntas();
+                        }
                         this.wait(false);
                     }
                 }.bind(this),
                 error: function (xhr, status, error) {
-                    Espo.Ui.error('Error al cargar las preguntas. Por favor, intente de nuevo.');
+                    console.error('Error cargando preguntas:', error);
+                    Espo.Ui.error('Error al cargar las preguntas.');
                     this.wait(false);
                 }.bind(this)
             });
         },
 
+        _renderizarPreguntas: function() {
+            console.log('*** _renderizarPreguntas INICIADO ***');
+            
+            var $container = this.$el.find('.encuesta-preguntas-container');
+            if (!$container.length) {
+                console.error('No se encontró el contenedor de preguntas');
+                return;
+            }
+            
+            if (!this.preguntas || Object.keys(this.preguntas).length === 0) {
+                $container.html('<div class="alert alert-info">No hay preguntas disponibles</div>');
+                return;
+            }
+            
+            var html = '';
+            var self = this;
+            
+            Object.keys(this.preguntas).forEach(function(categoriaNombre) {
+                var subcategorias = self.preguntas[categoriaNombre];
+                var categoriaId = 'cat-' + self._slugify(categoriaNombre);
+                
+                html += '<div class="encuesta-categoria">';
+                html += '<div class="encuesta-categoria-header" data-action="toggleCategoria" data-categoria-nombre="' + self.escapeHtml(categoriaNombre) + '">';
+                html += '<div class="encuesta-categoria-titulo">';
+                html += '<i class="fas fa-folder"></i>';
+                html += '<span>' + self.escapeHtml(categoriaNombre) + '</span>';
+                html += '</div>';
+                html += '<div class="encuesta-categoria-estado">';
+                html += '<span class="estado-completitud" id="' + categoriaId + '"></span>';
+                html += '<i class="fas fa-chevron-down encuesta-categoria-chevron"></i>';
+                html += '</div>';
+                html += '</div>';
+                
+                html += '<div class="encuesta-categoria-content" data-categoria-nombre="' + self.escapeHtml(categoriaNombre) + '">';
+                
+                Object.keys(subcategorias).forEach(function(subcategoriaNombre) {
+                    var preguntas = subcategorias[subcategoriaNombre];
+                    var subcategoriaId = 'sub-' + self._slugify(subcategoriaNombre);
+                    
+                    html += '<div class="encuesta-subcategoria">';
+                    html += '<div class="encuesta-subcategoria-header" data-action="toggleSubcategoria" data-subcategoria-nombre="' + self.escapeHtml(subcategoriaNombre) + '">';
+                    html += '<div class="encuesta-subcategoria-titulo">';
+                    html += '<i class="fas fa-folder-open"></i>';
+                    html += '<span>' + self.escapeHtml(subcategoriaNombre) + '</span>';
+                    html += '</div>';
+                    html += '<div class="encuesta-subcategoria-estado">';
+                    html += '<span class="estado-completitud" id="' + subcategoriaId + '"></span>';
+                    html += '<i class="fas fa-chevron-down encuesta-subcategoria-chevron"></i>';
+                    html += '</div>';
+                    html += '</div>';
+                    
+                    html += '<div class="encuesta-subcategoria-content" data-subcategoria-nombre="' + self.escapeHtml(subcategoriaNombre) + '">';
+                    html += '<div class="encuesta-tabla-container">';
+                    html += '<table class="encuesta-tabla">';
+                    html += '<thead><tr>';
+                    html += '<th>Competencia</th>';
+                    html += '<th><span class="encuesta-color-badge verde">Verde</span></th>';
+                    html += '<th><span class="encuesta-color-badge amarillo">Amarillo</span></th>';
+                    html += '<th><span class="encuesta-color-badge rojo">Rojo</span></th>';
+                    html += '</tr></thead>';
+                    html += '<tbody>';
+                    
+                    preguntas.forEach(function(pregunta) {
+                        var textoPregunta = (pregunta.orden || '') + '. ' + (pregunta.texto || '');
+                        
+                        html += '<tr class="encuesta-pregunta-row">';
+                        html += '<td>';
+                        html += '<div class="encuesta-pregunta-container">';
+                        
+                        if (pregunta.info) {
+                            html += '<i class="fas fa-info-circle encuesta-info-icon" ';
+                            html += 'data-action="showInfo" ';
+                            html += 'data-info="' + self.escapeHtml(pregunta.info) + '" ';
+                            html += 'data-pregunta-texto="' + self.escapeHtml(textoPregunta) + '" ';
+                            html += 'title="Ver información adicional"></i>';
+                        }
+                        
+                        html += '<span class="encuesta-pregunta-texto">' + self.escapeHtml(textoPregunta) + '</span>';
+                        html += '</div>';
+                        html += '</td>';
+                        html += '<td>';
+                        html += '<div class="encuesta-color-opcion color-verde" ';
+                        html += 'data-action="selectColor" ';
+                        html += 'data-pregunta-id="' + pregunta.id + '" ';
+                        html += 'data-color="verde" ';
+                        html += 'title="Verde - Competente"></div>';
+                        html += '</td>';
+                        html += '<td>';
+                        html += '<div class="encuesta-color-opcion color-amarillo" ';
+                        html += 'data-action="selectColor" ';
+                        html += 'data-pregunta-id="' + pregunta.id + '" ';
+                        html += 'data-color="amarillo" ';
+                        html += 'title="Amarillo - En desarrollo"></div>';
+                        html += '</td>';
+                        html += '<td>';
+                        html += '<div class="encuesta-color-opcion color-rojo" ';
+                        html += 'data-action="selectColor" ';
+                        html += 'data-pregunta-id="' + pregunta.id + '" ';
+                        html += 'data-color="rojo" ';
+                        html += 'title="Rojo - Requiere mejora"></div>';
+                        html += '</td>';
+                        html += '</tr>';
+                    });
+                    
+                    html += '</tbody></table>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '</div>';
+                });
+                
+                html += '</div>';
+                html += '</div>';
+            });
+            
+            $container.html(html);
+            
+            // Vincular eventos después de renderizar
+            this._bindToggleEvents();
+            
+            // Actualizar indicadores después de renderizar
+            console.log('Actualizando indicadores de progreso después de renderizar');
+            this.actualizarIndicadoresDeProgreso();
+            
+            // Abrir primera categoría
+            var $firstCategoriaHeader = this.$el.find('.encuesta-categoria-header').first();
+            if ($firstCategoriaHeader.length) {
+                $firstCategoriaHeader.addClass('active');
+                $firstCategoriaHeader.next('.encuesta-categoria-content').show();
+                $firstCategoriaHeader.find('.encuesta-categoria-chevron')
+                    .removeClass('fa-chevron-down')
+                    .addClass('fa-chevron-up');
+                
+                var $firstSubcategoriaHeader = $firstCategoriaHeader.next('.encuesta-categoria-content')
+                    .find('.encuesta-subcategoria-header').first();
+                if ($firstSubcategoriaHeader.length) {
+                    $firstSubcategoriaHeader.addClass('active');
+                    $firstSubcategoriaHeader.next('.encuesta-subcategoria-content').show();
+                    $firstSubcategoriaHeader.find('.encuesta-subcategoria-chevron')
+                        .removeClass('fa-chevron-down')
+                        .addClass('fa-chevron-up');
+                }
+            }
+            
+            console.log('*** _renderizarPreguntas FINALIZADO ***');
+        },
+
+        _slugify: function(text) {
+            if (!text) return '';
+            
+            // Mapa de caracteres acentuados
+            var map = {
+                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+                'Á': 'a', 'É': 'e', 'Í': 'i', 'Ó': 'o', 'Ú': 'u',
+                'ñ': 'n', 'Ñ': 'n',
+                'ü': 'u', 'Ü': 'u'
+            };
+            
+            return text.toString()
+                .replace(/[áéíóúñü]/gi, function(matched) {
+                    return map[matched] || matched;
+                })
+                .toLowerCase()
+                .replace(/\s+/g, '-')
+                .replace(/[^\w\-]+/g, '')
+                .replace(/\-\-+/g, '-')
+                .replace(/^-+/, '')
+                .replace(/-+$/, '');
+        },
+
         buscarEncuestaExistente: function() {
+            if (!this.userId || !this.fechaInicio || !this.fechaCierre) {
+                this.wait(false);
+                return;
+            }
+            
+            var fechaCierreMax = this.fechaCierre + ' 23:59:59';
+            
             this.getCollectionFactory().create('Encuesta', function (encuestaCollection) {
                 encuestaCollection.fetch({
                     data: {
                         where: [
-                            {
-                                type: 'equals',
-                                attribute: 'usuarioEvaluadoId',
-                                value: this.userId
-                            },
+                            { type: 'equals', attribute: 'usuarioEvaluadoId', value: this.userId },
                             { type: 'greaterThanOrEquals', attribute: 'fechaCreacion', value: this.fechaInicio },
-                            { type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: this.fechaCierre }
+                            { type: 'lessThanOrEquals', attribute: 'fechaCreacion', value: fechaCierreMax }
                         ],
                         maxSize: 1,
                         sortBy: 'fechaCreacion',
@@ -271,31 +651,35 @@ define(['view'], function (View) {
                     } else {
                         this.wait(false);
                     }
-                }.bind(this)).catch(function() {
-                    Espo.Ui.error('Error buscando encuesta existente.');
+                }.bind(this)).catch(function(error) {
+                    console.error('Error buscando encuesta:', error);
                     this.wait(false);
                 }.bind(this));
             }.bind(this));
         },
 
         cargarRespuestasGuardadas: function() {
+            console.log('*** cargarRespuestasGuardadas INICIADO ***');
+            console.log('Cargando respuestas para encuesta:', this.encuestaId);
+            
             var preguntasActivasIds = new Set();
-            Object.values(this.preguntas).forEach(subcategorias => {
-                Object.values(subcategorias).forEach(preguntas => {
+            Object.values(this.preguntas).forEach(categorias => {
+                Object.values(categorias).forEach(preguntas => {
                     preguntas.forEach(pregunta => preguntasActivasIds.add(pregunta.id));
                 });
             });
 
             this.getCollectionFactory().create('RespuestaEncuesta', function (respuestasGuardadasCollection) {
                 respuestasGuardadasCollection.maxSize = 200;
-
                 respuestasGuardadasCollection.fetch({
                     data: {
-                        where: [
-                            { type: 'equals', attribute: 'encuestaId', value: this.encuestaId }
-                        ]
+                        where: [{ type: 'equals', attribute: 'encuestaId', value: this.encuestaId }]
                     }
                 }).then(function () {
+                    console.log('Respuestas guardadas recibidas:', respuestasGuardadasCollection.total);
+                    
+                    this.respuestas = {};
+                    
                     if (respuestasGuardadasCollection && Array.isArray(respuestasGuardadasCollection.models)) {
                         respuestasGuardadasCollection.models.forEach(function (respuesta) {
                             var preguntaId = respuesta.get('preguntaId');
@@ -306,31 +690,64 @@ define(['view'], function (View) {
                         }, this);
                     }
                     
-                    this.renderRespuestasEnUI();
-                    this.actualizarIndicadoresDeProgreso();
+                    // Actualizar UI con las respuestas seleccionadas
+                    this._actualizarRespuestasUI();
+                    
                     this.wait(false);
                 }.bind(this)).catch(function(xhr) {
-                    var errorMessage = 'Error cargando las respuestas guardadas.';
-                    if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage += ' Detalle: ' + xhr.responseJSON.message;
-                    } else if (xhr && xhr.statusText) {
-                        errorMessage += ' Estado: ' + xhr.statusText;
-                    }
-                    Espo.Ui.error(errorMessage);
+                    console.error('Error cargando respuestas:', xhr);
                     this.wait(false);
                 }.bind(this));
             }.bind(this));
         },
 
+        _actualizarRespuestasUI: function() {
+            console.log('*** _actualizarRespuestasUI INICIADO ***');
+            
+            if (!this.isRendered()) {
+                console.log('DOM no renderizado aún, esperando...');
+                return;
+            }
+            
+            // Limpiar selecciones previas
+            this.$el.find('.encuesta-color-opcion').removeClass('selected');
+            
+            // Aplicar selecciones actuales
+            Object.keys(this.respuestas).forEach(function(preguntaId) {
+                var color = this.respuestas[preguntaId];
+                this.$el.find('[data-pregunta-id="' + preguntaId + '"][data-color="' + color + '"]').addClass('selected');
+            }, this);
+            
+            // Actualizar indicadores de progreso
+            console.log('Actualizando indicadores después de cambiar respuestas');
+            this.actualizarIndicadoresDeProgreso();
+        },
+
+        _bindToggleEvents: function() {
+            console.log('Vinculando eventos de toggle');
+            
+            this.$el.find('[data-action="toggleCategoria"]').off('click').on('click', function(e) {
+                this.toggleCategoria(e);
+            }.bind(this));
+            
+            this.$el.find('[data-action="toggleSubcategoria"]').off('click').on('click', function(e) {
+                this.toggleSubcategoria(e);
+            }.bind(this));
+        },
+
         filtrarPreguntasPorRol: function (todasLasPreguntas) {
+            console.log('Filtrando preguntas para rol:', this.role);
             var preguntasFiltradas = [];
+            
+            var rolBusqueda = this.role === 'asesor' ? 'asesor' : 'gerente';
+            console.log('Rol de búsqueda en BD:', rolBusqueda);
             
             todasLasPreguntas.forEach(function(pregunta) {
                 var rolObjetivo = pregunta.rolObjetivo || [];
                 var incluir = false;
                 
                 if (Array.isArray(rolObjetivo)) {
-                    if (rolObjetivo.includes(this.role)) {
+                    if (rolObjetivo.includes(rolBusqueda)) {
                         incluir = true;
                     }
                 }
@@ -347,6 +764,8 @@ define(['view'], function (View) {
                 }
             }.bind(this));
             
+            console.log('Preguntas filtradas:', preguntasFiltradas.length);
+            
             preguntasFiltradas.sort(function(a, b) {
                 return (a.orden || 0) - (b.orden || 0);
             });
@@ -355,6 +774,8 @@ define(['view'], function (View) {
         },
 
         procesarPreguntasAPI: function (preguntasArray) {
+            console.log('*** procesarPreguntasAPI INICIADO ***');
+            
             var preguntasAgrupadas = {};
             
             preguntasArray.forEach(function(pregunta) {
@@ -385,7 +806,8 @@ define(['view'], function (View) {
                 });
             });
             
-            this.preguntas = preguntasAgrupadas;
+            console.log('*** procesarPreguntasAPI FINALIZADO ***');
+            return preguntasAgrupadas;
         },
         
         seleccionarColor: function (preguntaId, color) {
@@ -397,34 +819,27 @@ define(['view'], function (View) {
             this.actualizarIndicadoresDeProgreso();
         },
 
-        renderRespuestasEnUI: function() {
-            if (Object.keys(this.respuestas).length === 0) {
-                return;
-            }
-            Object.keys(this.respuestas).forEach(function(preguntaId) {
-                var color = this.respuestas[preguntaId];
-                this.$el.find('[data-pregunta-id="' + preguntaId + '"]').removeClass('selected');
-                this.$el.find('[data-pregunta-id="' + preguntaId + '"][data-color="' + color + '"]').addClass('selected');
-            }.bind(this));
-        },
-
         actualizarIndicadoresDeProgreso: function () {
+            console.log('*** actualizarIndicadoresDeProgreso INICIADO ***');
             var respuestas = this.respuestas;
             var preguntasAgrupadas = this.preguntas;
 
-            var escapeCss = function (str) {
-                return (str + '').replace(/([!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1');
-            };
+            if (!preguntasAgrupadas || Object.keys(preguntasAgrupadas).length === 0) {
+                console.log('No hay preguntas para actualizar indicadores');
+                return;
+            }
 
             Object.keys(preguntasAgrupadas).forEach(function (categoriaNombre) {
                 var categoriaData = preguntasAgrupadas[categoriaNombre];
                 var totalPreguntasCategoria = 0;
                 var respondidasCategoria = 0;
+                var categoriaId = 'cat-' + this._slugify(categoriaNombre);
 
                 Object.keys(categoriaData).forEach(function (subcategoriaNombre) {
                     var preguntasSubcat = categoriaData[subcategoriaNombre];
                     var totalPreguntasSubcat = preguntasSubcat.length;
                     var respondidasSubcat = 0;
+                    var subcategoriaId = 'sub-' + this._slugify(subcategoriaNombre);
 
                     preguntasSubcat.forEach(function (pregunta) {
                         if (respuestas.hasOwnProperty(pregunta.id)) {
@@ -432,121 +847,139 @@ define(['view'], function (View) {
                         }
                     });
 
-                    var selectorSubcat = `.subcategoria-header[data-subcategoria-nombre="${escapeCss(subcategoriaNombre)}"] .estado-completitud`;
-                    var $indicadorSubcat = this.$el.find(selectorSubcat);
-                    if (totalPreguntasSubcat > 0) {
-                        if (respondidasSubcat === totalPreguntasSubcat) {
-                            $indicadorSubcat.text('Completo').removeClass('incompleto').addClass('completo');
-                        } else {
-                            $indicadorSubcat.text('Incompleto').removeClass('completo').addClass('incompleto');
+                    var $indicadorSubcat = this.$el.find('#' + subcategoriaId);
+                    
+                    if ($indicadorSubcat.length) {
+                        if (totalPreguntasSubcat > 0) {
+                            if (respondidasSubcat === totalPreguntasSubcat) {
+                                $indicadorSubcat.text('Completo').removeClass('incompleto').addClass('completo');
+                                console.log('Subcategoría ' + subcategoriaNombre + ': COMPLETO');
+                            } else {
+                                $indicadorSubcat.text('Incompleto').removeClass('completo').addClass('incompleto');
+                                console.log('Subcategoría ' + subcategoriaNombre + ': INCOMPLETO (' + respondidasSubcat + '/' + totalPreguntasSubcat + ')');
+                            }
                         }
+                    } else {
+                        console.log('No se encontró indicador para subcategoría:', subcategoriaId);
                     }
 
                     totalPreguntasCategoria += totalPreguntasSubcat;
                     respondidasCategoria += respondidasSubcat;
                 }.bind(this));
 
-                var selectorCat = `.categoria-header[data-categoria-nombre="${escapeCss(categoriaNombre)}"] .estado-completitud`;
-                var $indicadorCat = this.$el.find(selectorCat);
-                if (totalPreguntasCategoria > 0) {
-                    if (respondidasCategoria === totalPreguntasCategoria) {
-                        $indicadorCat.text('Completo').removeClass('incompleto').addClass('completo');
-                    } else {
-                        $indicadorCat.text('Incompleto').removeClass('completo').addClass('incompleto');
+                var $indicadorCat = this.$el.find('#' + categoriaId);
+                
+                if ($indicadorCat.length) {
+                    if (totalPreguntasCategoria > 0) {
+                        if (respondidasCategoria === totalPreguntasCategoria) {
+                            $indicadorCat.text('Completo').removeClass('incompleto').addClass('completo');
+                            console.log('Categoría ' + categoriaNombre + ': COMPLETO');
+                        } else {
+                            $indicadorCat.text('Incompleto').removeClass('completo').addClass('incompleto');
+                            console.log('Categoría ' + categoriaNombre + ': INCOMPLETO (' + respondidasCategoria + '/' + totalPreguntasCategoria + ')');
+                        }
                     }
+                } else {
+                    console.log('No se encontró indicador para categoría:', categoriaId);
                 }
             }.bind(this));
+            
+            console.log('*** actualizarIndicadoresDeProgreso FINALIZADO ***');
         },
 
         toggleCategoria: function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Toggle categoría');
             var $header = $(e.currentTarget);
-            var $content = $header.next('.categoria-content');
+            var $content = $header.next('.encuesta-categoria-content');
             var wasActive = $header.hasClass('active');
 
-            this.$el.find('.categoria-header').removeClass('active');
-            this.$el.find('.categoria-content').slideUp('fast');
+            if ($content.is(':animated')) {
+                return;
+            }
 
-            if (!wasActive) {
+            if (wasActive) {
+                $header.removeClass('active');
+                $content.slideUp(300, function() {
+                    $header.find('.encuesta-categoria-chevron')
+                        .removeClass('fa-chevron-up')
+                        .addClass('fa-chevron-down');
+                });
+            } else {
+                this.$el.find('.encuesta-categoria-header').removeClass('active');
+                this.$el.find('.encuesta-categoria-content').slideUp(300);
+                this.$el.find('.encuesta-categoria-chevron')
+                    .removeClass('fa-chevron-up')
+                    .addClass('fa-chevron-down');
+                
                 $header.addClass('active');
-                $content.slideDown('fast');
+                $content.slideDown(300, function() {
+                    $header.find('.encuesta-categoria-chevron')
+                        .removeClass('fa-chevron-down')
+                        .addClass('fa-chevron-up');
+                    
+                    var $firstSub = $content.find('.encuesta-subcategoria-header').first();
+                    if ($firstSub.length && !$firstSub.hasClass('active')) {
+                        $firstSub.addClass('active');
+                        $firstSub.next('.encuesta-subcategoria-content').slideDown(300);
+                        $firstSub.find('.encuesta-subcategoria-chevron')
+                            .removeClass('fa-chevron-down')
+                            .addClass('fa-chevron-up');
+                    }
+                });
             }
         },
 
         toggleSubcategoria: function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Toggle subcategoría');
             var $header = $(e.currentTarget);
-            var $content = $header.next('.subcategoria-content');
+            var $content = $header.next('.encuesta-subcategoria-content');
+            var wasActive = $header.hasClass('active');
 
-            if ($header.hasClass('active')) {
+            if ($content.is(':animated')) {
+                return;
+            }
+
+            if (wasActive) {
                 $header.removeClass('active');
-                $content.slideUp('fast');
+                $content.slideUp(300, function() {
+                    $header.find('.encuesta-subcategoria-chevron')
+                        .removeClass('fa-chevron-up')
+                        .addClass('fa-chevron-down');
+                });
             } else {
-                var $parentCategoria = $header.closest('.categoria-content');
-                $parentCategoria.find('.subcategoria-header').removeClass('active');
-                $parentCategoria.find('.subcategoria-content').slideUp('fast');
+                var $parentCategoria = $header.closest('.encuesta-categoria-content');
+                $parentCategoria.find('.encuesta-subcategoria-header').removeClass('active');
+                $parentCategoria.find('.encuesta-subcategoria-content').slideUp(300);
+                $parentCategoria.find('.encuesta-subcategoria-chevron')
+                    .removeClass('fa-chevron-up')
+                    .addClass('fa-chevron-down');
 
                 $header.addClass('active');
-                $content.slideDown('fast');
+                $content.slideDown(300, function() {
+                    $header.find('.encuesta-subcategoria-chevron')
+                        .removeClass('fa-chevron-down')
+                        .addClass('fa-chevron-up');
+                });
             }
-        },
-
-        mostrarInfoModal: function(e) {
-            var infoTexto = $(e.currentTarget).data('info');
-            var preguntaTexto = $(e.currentTarget).data('pregunta-texto');
-            
-            if (!infoTexto) return;
-
-            // Crear el modal si no existe
-            var modalId = 'infoModal';
-            var $modal = $('#' + modalId);
-            
-            if ($modal.length === 0) {
-                var modalHtml = 
-                    '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog">' +
-                    '  <div class="modal-dialog modal-lg" role="document">' +
-                    '    <div class="modal-content">' +
-                    '      <div class="modal-header">' +
-                    '        <button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
-                    '          <span aria-hidden="true">&times;</span>' +
-                    '        </button>' +
-                    '        <h4 class="modal-title"><i class="fas fa-info-circle"></i> Información de la Pregunta</h4>' +
-                    '      </div>' +
-                    '      <div class="modal-body">' +
-                    '        <div class="info-pregunta-container">' +
-                    '          <h5 class="info-pregunta-titulo">Pregunta:</h5>' +
-                    '          <p class="info-pregunta-texto"></p>' +
-                    '        </div>' +
-                    '        <div class="info-contenido-container">' +
-                    '          <h5 class="info-contenido-titulo">Información adicional:</h5>' +
-                    '          <div class="info-contenido-texto"></div>' +
-                    '        </div>' +
-                    '      </div>' +
-                    '      <div class="modal-footer">' +
-                    '        <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>' +
-                    '      </div>' +
-                    '    </div>' +
-                    '  </div>' +
-                    '</div>';
-                
-                $('body').append(modalHtml);
-                $modal = $('#' + modalId);
-            }
-            
-            // Actualizar contenido del modal
-            $modal.find('.info-pregunta-texto').text(preguntaTexto);
-            $modal.find('.info-contenido-texto').html(infoTexto.replace(/\n/g, '<br>'));
-            
-            // Mostrar el modal
-            $modal.modal('show');
         },
 
         guardarEncuesta: function (completar) {
+            console.log('*** guardarEncuesta INICIADO ***');
+            console.log('fromListaEdicion:', this.fromListaEdicion);
+            console.log('completar:', completar);
+            
             completar = completar || false;
             const preguntasRespondidasCount = Object.keys(this.respuestas).length;
             const totalPreguntasDisponibles = this.totalPreguntasDisponibles || 0;
             const estaCompleta = (totalPreguntasDisponibles > 0) && (preguntasRespondidasCount === totalPreguntasDisponibles);
 
-            // Modificación: Casa Nacional puede finalizar sin completar todas las preguntas
-            if (completar && !estaCompleta && !this.esCasaNacional) {
+            if (completar && !estaCompleta && !this.esCasaNacional && !this.fromListaEdicion) {
                 Espo.Ui.warning('Debe responder todas las preguntas para completar la evaluación.');
                 return;
             }
@@ -574,16 +1007,16 @@ define(['view'], function (View) {
                     let estadoActual = isUpdate ? model.get('estado') : null;
                     let estadoEncuesta = estadoActual;
 
-                    if (estadoActual !== 'completada') {
+                    if (this.fromListaEdicion && completar) {
+                        estadoEncuesta = 'completada';
+                    } else if (estadoActual !== 'completada') {
                         if (completar && estaCompleta) {
                             estadoEncuesta = this.esCasaNacional ? 'completada' : 'revision';
                         } else if (completar && this.esCasaNacional) {
-                            // Casa Nacional puede marcar como completada aunque falten preguntas
                             estadoEncuesta = 'completada';
                         } else if (estaCompleta && !completar) {
                             estadoEncuesta = 'revision';
                         } else {
-                            // No está completa
                             estadoEncuesta = 'incompleta';
                         }
                     }
@@ -602,9 +1035,11 @@ define(['view'], function (View) {
                     };
 
                     if (!isUpdate) {
+                        var rolParaBD = this.role === 'asesor' ? 'asesor' : 'gerente';
+                        
                         Object.assign(dataToSet, {
                             name: 'Evaluación ' + this.userName + ' - ' + new Date().toLocaleString(),
-                            rolUsuario: this.role,
+                            rolUsuario: rolParaBD,
                             fechaEncuesta: now,
                             equipoId: this.teamId,
                             usuarioEvaluadoId: this.userId,
@@ -652,7 +1087,6 @@ define(['view'], function (View) {
             
             this.getCollectionFactory().create('RespuestaEncuesta', function (respuestasAntiguasCollection) {
                 respuestasAntiguasCollection.maxSize = 200;
-
                 respuestasAntiguasCollection.fetch({
                     data: { where: [{ type: 'equals', attribute: 'encuestaId', value: encuestaId }] }
                 }).then(function() {
@@ -717,7 +1151,7 @@ define(['view'], function (View) {
                     }
 
                 }.bind(this)).catch(function() {
-                    Espo.Ui.error('No se pudo sincronizar con las respuestas guardadas. Intente de nuevo.');
+                    Espo.Ui.error('No se pudo sincronizar con las respuestas guardadas.');
                     var $saveButton = this.$el.find('[data-action="saveSurvey"]');
                     var $completeButton = this.$el.find('[data-action="completeSurvey"]');
                     this.guardandoEncuesta = false;
@@ -730,6 +1164,10 @@ define(['view'], function (View) {
         },
 
         finalizarGuardado: function(creadas, errores, total, encuestaModel) {
+            console.log('*** finalizarGuardado INICIADO ***');
+            console.log('fromListaEdicion:', this.fromListaEdicion);
+            console.log('retornoUrl:', this.retornoUrl);
+            
             if (errores.length === 0) {
                 Espo.Ui.success(`Encuesta guardada exitosamente. ${creadas}/${total} respuestas procesadas.`);
             } else {
@@ -739,28 +1177,63 @@ define(['view'], function (View) {
             this.guardandoEncuesta = false;
             var $saveButton = this.$el.find('[data-action="saveSurvey"]');
             var $completeButton = this.$el.find('[data-action="completeSurvey"]');
-            $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
-            if ($completeButton.length) {
-                $completeButton.prop('disabled', false).html('<i class="fas fa-check-circle"></i> Completar Encuesta');
+            
+            if (this.fromListaEdicion) {
+                $saveButton.hide();
+                $completeButton.html('<i class="fas fa-save"></i> Guardar Cambios').prop('disabled', false);
+            } else {
+                $saveButton.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Encuesta');
+                if ($completeButton.length) {
+                    $completeButton.prop('disabled', false).html('<i class="fas fa-check-circle"></i> Completar Encuesta');
+                }
             }
 
             setTimeout(function() {
-                var backUrl = '#Competencias/userSelection?teamId=' + this.teamId + '&teamName=' + encodeURIComponent(this.teamName) + '&role=' + this.role;
-                this.getRouter().navigate(backUrl, {trigger: true});
+                if (this.fromListaEdicion && this.retornoUrl) {
+                    console.log('Redirigiendo a listaEdicion:', this.retornoUrl);
+                    var url = this.retornoUrl;
+                    if (url.startsWith('#')) {
+                        this.getRouter().navigate(url.substring(1), {trigger: true});
+                    } else {
+                        this.getRouter().navigate(url, {trigger: true});
+                    }
+                } else if (this.from === 'seleccion' && this.retornoUrl) {
+                    console.log('Redirigiendo a seleccionEvaluados:', this.retornoUrl);
+                    var url = this.retornoUrl;
+                    if (url.startsWith('#')) {
+                        this.getRouter().navigate(url.substring(1), {trigger: true});
+                    } else {
+                        this.getRouter().navigate(url, {trigger: true});
+                    }
+                } else {
+                    console.log('Redirigiendo a selección de usuario');
+                    var backUrl = '#Competencias/userSelection?teamId=' + this.teamId + 
+                                  '&teamName=' + encodeURIComponent(this.teamName || '') + 
+                                  '&role=' + this.role;
+                    this.getRouter().navigate(backUrl, {trigger: true});
+                }
             }.bind(this), 2000);
         },
 
         convertirRespuestasParaAPI: function () {
             var respuestasArray = [];
-            
             Object.keys(this.respuestas).forEach(function (preguntaId) {
                 respuestasArray.push({
                     pregunta: preguntaId,
                     color: this.respuestas[preguntaId]
                 });
             }.bind(this));
-            
             return respuestasArray;
+        },
+
+        escapeHtml: function (text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         },
 
         data: function () {
@@ -771,7 +1244,8 @@ define(['view'], function (View) {
                 preguntas: this.preguntas || {},
                 accesoDenegado: this.accesoDenegado,
                 encuestaInactiva: this.encuestaInactiva,
-                esCasaNacional: this.esCasaNacional
+                esCasaNacional: this.esCasaNacional,
+                fromListaEdicion: this.fromListaEdicion
             };
         }
     });
