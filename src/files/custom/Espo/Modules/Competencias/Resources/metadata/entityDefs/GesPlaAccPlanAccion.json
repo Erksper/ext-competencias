@@ -39,6 +39,10 @@
             "type": "varchar",
             "maxLength": 100
         },
+        "oficinaEjecutor": {
+            "type": "link",
+            "entity": "Team"
+        },
         "modulo": {
             "type": "varchar",
             "maxLength": 100
@@ -102,6 +106,11 @@
             "type": "belongsTo",
             "entity": "User",
             "foreign": "gesplaaccPlanesEjecutados"
+        },
+        "oficinaEjecutor": {
+            "type": "belongsTo",
+            "entity": "Team",
+            "foreign": "gesplaaccPlanesOficina"
         },
         "chats": {
             "type": "hasMany",

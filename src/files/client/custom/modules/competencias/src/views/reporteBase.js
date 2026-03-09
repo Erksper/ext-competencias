@@ -52,15 +52,10 @@ define([
             this.logoOficina                 = null;
             this.nombreOficina               = null;
 
-            var etiquetaEjecutor = this.rolObjetivo === 'gerente'
-                ? 'Gerente, Director o Coordinador evaluado'
-                : 'Asesor evaluado';
-
             this.planesManager = new PlanesAccionManager(this, {
-                modulo:           'Competencias',
-                usuarios:         [],
-                items:            {},
-                etiquetaEjecutor: etiquetaEjecutor
+                modulo:  'Competencias',
+                items:   {},
+                oficina: null
             });
 
             this.registrarHandlebarsHelpers();
@@ -121,7 +116,7 @@ define([
                 }
 
                 self.configurarLogoYTitulo(userModel);
-                self.planesManager.actualizarConfig({ modulo: 'Competencias' });
+                self.planesManager.actualizarConfig({ modulo: 'Competencias', oficina: null });
 
                 if (self.tipoReporte === 'generalGerentes' || self.tipoReporte === 'generalAsesores') {
                     self.esReporteGeneralCasaNacional = true;
@@ -876,17 +871,15 @@ define([
             if (this.esReporteGeneralCasaNacional) return;
             if (this.esAsesor) return;
 
-            var usuarios = (this.usuariosData || []).map(function (u) {
-                return { id: u.userId, name: u.userName };
-            });
-
             var items = {};
             var pg = this.preguntasAgrupadas || {};
             Object.keys(pg).forEach(function (cat) {
                 items[cat] = Object.keys(pg[cat] || {});
             });
 
-            this.planesManager.actualizarConfig({ usuarios: usuarios, items: items });
+            // La oficina ya fue asignada en configurarLogoYTitulo() vía actualizarConfig({ oficina: ... })
+            // Aquí solo actualizamos los items y disparamos la carga
+            this.planesManager.actualizarConfig({ items: items });
             this.planesManager.cargar();
         },
 

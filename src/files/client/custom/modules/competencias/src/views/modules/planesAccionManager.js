@@ -1,11 +1,15 @@
 /**
  * PlanesAccionManager
+ * Gestiona planes de acción por OFICINA (no por usuario individual).
+ * - Casa Nacional: crea y gestiona planes.
+ * - Gerentes/Directores/Coordinadores: ven y responden, NO crean.
+ * - Asesores: no ven la sección.
  */
 define([], function () {
 
     var ESTADOS_CN = {
         'pendienteCN':  { bg: '#fff3cd', color: '#856404', texto: 'Por revisar' },
-        'pendienteGDC': { bg: '#d4edda', color: '#155724', texto: 'Esperando por Gerente/Director/Coordinador' },
+        'pendienteGDC': { bg: '#d4edda', color: '#155724', texto: 'Esperando oficina' },
         'cancelado':    { bg: '#f8d7da', color: '#721c24', texto: 'Cancelado' },
         'pausado':      { bg: '#e2e3e5', color: '#383d41', texto: 'Pausado' },
         'completado':   { bg: '#d1ecf1', color: '#0c5460', texto: 'Completado' }
@@ -13,8 +17,7 @@ define([], function () {
 
     var ESTADOS_GDC = {
         'pendienteCN':  { bg: '#d4edda', color: '#155724', texto: 'Esperando por Casa Nacional' },
-        'pendienteGDC': { bg: '#fff3cd', color: '#856404', texto: 'Por revisar' },
-        'cancelado':    { bg: '#f8d7da', color: '#721c24', texto: 'Cancelado' },
+        'pendienteGDC': { bg: '#fff3cd', color: '#856404', texto: 'Por revisar' },        'cancelado':    { bg: '#f8d7da', color: '#721c24', texto: 'Cancelado' },
         'pausado':      { bg: '#e2e3e5', color: '#383d41', texto: 'Pausado' },
         'completado':   { bg: '#d1ecf1', color: '#0c5460', texto: 'Completado' }
     };
@@ -30,11 +33,6 @@ define([], function () {
     function fmtFechaHora(s) {
         if (!s) return '';
         return s.substring(0, 16).replace('T', ' ');
-    }
-
-    function iniciales(nombre) {
-        if (!nombre) return '?';
-        return nombre.split(' ').slice(0, 2).map(function (n) { return n[0] || ''; }).join('').toUpperCase();
     }
 
     function nowISO() {
@@ -77,11 +75,9 @@ define([], function () {
         this.view     = view;
         this.opciones = opciones || {};
 
-        this.modulo   = this.opciones.modulo   || 'Competencias';
-        this.usuarios = this.opciones.usuarios  || [];
-        this.items    = this.opciones.items     || {};
-        this.oficina  = this.opciones.oficina   || null;
-        this.etiquetaEjecutor = this.opciones.etiquetaEjecutor || 'Evaluado';
+        this.modulo  = this.opciones.modulo  || 'Competencias';
+        this.items   = this.opciones.items   || {};
+        this.oficina = this.opciones.oficina || null;
 
         this.planes         = [];
         this.paginacion     = { pagina: 1, porPagina: 10, total: 0, totalPaginas: 0 };
@@ -109,20 +105,19 @@ define([], function () {
             } else if (v.esGerenteODirector) {
                 this.usuarioRol = 'Gerente';
             } else {
-                this.usuarioRol = 'Asesor';
+                this.usuarioRol = 'Usuario';
             }
 
+            // Casa Nacional puede crear; GDC puede ver y responder; Asesores no ven nada
             this.puedeCrear = this.esCasaNacional;
             this.puedeVer   = this.esCasaNacional || this.esGerenteODirector;
         },
 
         actualizarConfig: function (opciones) {
             opciones = opciones || {};
-            if (opciones.modulo           !== undefined) this.modulo           = opciones.modulo;
-            if (opciones.usuarios         !== undefined) this.usuarios         = opciones.usuarios;
-            if (opciones.items            !== undefined) this.items            = opciones.items;
-            if (opciones.oficina          !== undefined) this.oficina          = opciones.oficina;
-            if (opciones.etiquetaEjecutor !== undefined) this.etiquetaEjecutor = opciones.etiquetaEjecutor;
+            if (opciones.modulo  !== undefined) this.modulo  = opciones.modulo;
+            if (opciones.items   !== undefined) this.items   = opciones.items;
+            if (opciones.oficina !== undefined) this.oficina = opciones.oficina;
             this._resolverUsuario();
         },
 
@@ -151,6 +146,7 @@ define([], function () {
 
             var porPagina = this.paginacion.porPagina;
 
+            // Filtrar siempre por equipoId (oficina del reporte)
             var wp = {
                 'where[0][type]':      'equals',
                 'where[0][attribute]': 'modulo',
@@ -166,6 +162,7 @@ define([], function () {
                 whereIdx++;
             }
 
+            // GDC solo ve planes que no están completados o cancelados
             if (!self.esCasaNacional && self.esGerenteODirector) {
                 wp['where[' + whereIdx + '][type]']         = 'notIn';
                 wp['where[' + whereIdx + '][attribute]']    = 'estado';
@@ -191,8 +188,10 @@ define([], function () {
                         return;
                     }
 
-                    var selectFields = 'id,titulo,estado,fechaInicio,fechaFin,asesorEjecutorId,asesorEjecutorName,' +
-                                       'asesorGeneradorId,asesorGeneradorName,itemEvaluado,subItemEvaluado,rolEjecutor,rolGenerador';
+                    var selectFields = 'id,titulo,estado,fechaInicio,fechaFin,' +
+                                       'oficinaEjecutorId,oficinaEjecutorName,' +
+                                       'asesorGeneradorId,asesorGeneradorName,' +
+                                       'itemEvaluado,subItemEvaluado,rolGenerador,equipoId,equipoName';
 
                     if (total <= 200) {
                         Espo.Ajax.getRequest('GesPlaAccPlanAccion', Object.assign({}, wp, {
@@ -201,12 +200,12 @@ define([], function () {
                             var ordenCN  = { 'pendienteCN': 0, 'pendienteGDC': 1, 'pausado': 2, 'completado': 3, 'cancelado': 4 };
                             var ordenGDC = { 'pendienteGDC': 0, 'pendienteCN': 1, 'pausado': 2, 'completado': 3, 'cancelado': 4 };
                             var orden    = self.esCasaNacional ? ordenCN : ordenGDC;
-                            var lista   = (r.list || []).sort(function (a, b) {
+                            var lista    = (r.list || []).sort(function (a, b) {
                                 var oa = orden[a.estado] !== undefined ? orden[a.estado] : 2;
                                 var ob = orden[b.estado] !== undefined ? orden[b.estado] : 2;
                                 return oa - ob;
                             });
-                            var ini     = (pagina - 1) * porPagina;
+                            var ini             = (pagina - 1) * porPagina;
                             self.planes         = lista.slice(ini, ini + porPagina);
                             self.cargandoPagina = false;
                             self.render();
@@ -273,7 +272,7 @@ define([], function () {
                             '</div>' +
                             '<div>' +
                                 '<h2 style="margin:0;color:white;font-weight:700;font-size:1.3rem;">Planes de Acción</h2>' +
-                                '<p style="margin:4px 0 0;color:rgba(255,255,255,0.9);font-size:0.85rem;">Seguimiento y gestión de mejoras</p>' +
+                                '<p style="margin:4px 0 0;color:rgba(255,255,255,0.9);font-size:0.85rem;">Seguimiento y gestión de mejoras para la oficina</p>' +
                             '</div>' +
                         '</div>' +
                         btnNuevo +
@@ -299,11 +298,11 @@ define([], function () {
                     (this.puedeCrear ? '<p style="font-size:0.9em;">Usa <strong>Nuevo Plan</strong> para crear el primero.</p>' : '') +
                     '</div>';
             } else {
-                var labelEjecutor = esc(this.etiquetaEjecutor);
                 var filas = planes.map(function (plan, idx) {
-                    var b      = self._badge(plan.estado);
-                    var nombre = plan.asesorEjecutorName || '—';
-                    var sub    = plan.itemEvaluado
+                    var b           = self._badge(plan.estado);
+                    // Mostrar nombre de la oficina evaluada usando equipoName
+                    var oficinaNombre = plan.equipoName || plan.oficinaEjecutorName || '—';
+                    var sub = plan.itemEvaluado
                         ? '<br><small style="color:#666;">' + esc(plan.itemEvaluado) +
                           (plan.subItemEvaluado ? ' › ' + esc(plan.subItemEvaluado) : '') + '</small>'
                         : '';
@@ -313,8 +312,8 @@ define([], function () {
                             '<div style="display:flex;align-items:center;gap:10px;">' +
                                 '<div style="width:32px;height:32px;background:#B8A279;border-radius:50%;display:flex;' +
                                     'align-items:center;justify-content:center;color:white;font-weight:600;flex-shrink:0;font-size:12px;">' +
-                                    iniciales(nombre) + '</div>' +
-                                '<span style="font-weight:500;">' + esc(nombre) + '</span>' +
+                                    '<i class="fas fa-building" style="font-size:14px;"></i></div>' +
+                                '<span style="font-weight:500;">' + esc(oficinaNombre) + '</span>' +
                             '</div>' +
                         '</td>' +
                         '<td style="padding:14px 12px;"><strong>' + esc(plan.titulo || '—') + '</strong>' + sub + '</td>' +
@@ -331,7 +330,7 @@ define([], function () {
                     '<table style="width:100%;border-collapse:collapse;">' +
                     '<thead style="background:#f5f5f5;border-bottom:2px solid #B8A279;"><tr>' +
                         '<th style="padding:14px 12px;text-align:center;width:50px;font-weight:700;color:#333;">N°</th>' +
-                        '<th style="padding:14px 12px;text-align:left;font-weight:700;color:#333;">' + labelEjecutor + '</th>' +
+                        '<th style="padding:14px 12px;text-align:left;font-weight:700;color:#333;">Oficina</th>' +
                         '<th style="padding:14px 12px;text-align:left;font-weight:700;color:#333;">Título del Plan</th>' +
                         '<th style="padding:14px 12px;text-align:center;font-weight:700;color:#333;white-space:nowrap;">Fecha Inicio</th>' +
                         '<th style="padding:14px 12px;text-align:center;font-weight:700;color:#333;white-space:nowrap;">Fecha Fin</th>' +
@@ -345,14 +344,14 @@ define([], function () {
 
             if (this.esCasaNacional) {
                 etiqPorRev = 'Por revisar';
-                etiqEspGDC = 'Esperando por Gerente/Director/Coordinador';
-                cntPorRev = porRevCN;
-                cntEspGDC = espGDC;
+                etiqEspGDC = 'Esperando oficina';
+                cntPorRev  = porRevCN;
+                cntEspGDC  = espGDC;
             } else {
                 etiqPorRev = 'Por revisar';
                 etiqEspGDC = 'Esperando por Casa Nacional';
-                cntPorRev = espGDC;
-                cntEspGDC = porRevCN;
+                cntPorRev  = espGDC;
+                cntEspGDC  = porRevCN;
             }
 
             var paginacionHtml = this._buildPaginacion();
@@ -397,9 +396,9 @@ define([], function () {
             if (fin < total - 1) pages.push('...');
             if (total > 1) pages.push(total);
 
-            var btnStyle     = 'min-width:36px;height:36px;border:1px solid #ddd;background:white;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;color:#555;padding:0 8px;';
-            var btnActivo    = 'min-width:36px;height:36px;border:2px solid #B8A279;background:#B8A279;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;color:white;padding:0 8px;';
-            var btnDisabled  = 'min-width:36px;height:36px;border:1px solid #eee;background:#f8f9fa;border-radius:6px;cursor:not-allowed;font-size:13px;color:#ccc;padding:0 8px;';
+            var btnStyle    = 'min-width:36px;height:36px;border:1px solid #ddd;background:white;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;color:#555;padding:0 8px;';
+            var btnActivo   = 'min-width:36px;height:36px;border:2px solid #B8A279;background:#B8A279;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;color:white;padding:0 8px;';
+            var btnDisabled = 'min-width:36px;height:36px;border:1px solid #eee;background:#f8f9fa;border-radius:6px;cursor:not-allowed;font-size:13px;color:#ccc;padding:0 8px;';
 
             var btns = pages.map(function (p) {
                 if (p === '...') return '<span style="padding:0 4px;color:#999;">…</span>';
@@ -435,14 +434,13 @@ define([], function () {
         },
 
         _abrirModalNuevo: function () {
-            var self  = this;
+            var self = this;
             this._cerrarModal();
 
             var today = new Date().toISOString().substring(0, 10);
 
-            var opcsUsuarios = this.usuarios.map(function (u) {
-                return '<option value="' + u.id + '">' + esc(u.name) + '</option>';
-            }).join('');
+            // Nombre de la oficina actual del reporte
+            var oficinaNombre = this.view.nombreOficina || this.oficina || 'Oficina';
 
             var itemKeys  = Object.keys(this.items);
             var opcsItems = itemKeys.map(function (k) {
@@ -468,16 +466,18 @@ define([], function () {
                     '<div style="padding:24px;">' +
                         '<div style="display:grid;gap:16px;">' +
 
+                            // Oficina evaluada — solo informativa, preseleccionada
                             '<div>' +
-                                '<label style="' + LABEL_STYLE + '">' + esc(self.etiquetaEjecutor) + ' *</label>' +
-                                '<select id="gpa-asesorEjecutorId" style="' + INPUT_STYLE + 'background:#fff;">' +
-                                    '<option value="">— Seleccionar —</option>' + opcsUsuarios +
-                                '</select>' +
+                                '<label style="' + LABEL_STYLE + '">Oficina</label>' +
+                                '<div style="' + INPUT_STYLE + 'background:#f8f9fa;color:#555;display:flex;align-items:center;gap:8px;">' +
+                                    '<i class="fas fa-building" style="color:#B8A279;"></i>' +
+                                    '<span>' + esc(oficinaNombre) + '</span>' +
+                                '</div>' +
                             '</div>' +
 
                             '<div>' +
                                 '<label style="' + LABEL_STYLE + '">Título del Plan *</label>' +
-                                '<input id="gpa-titulo" type="text" placeholder="Ej: Mejorar técnicas de cierre..." style="' + INPUT_STYLE + '">' +
+                                '<input id="gpa-titulo" type="text" placeholder="Ej: Mejorar indicadores de la oficina..." style="' + INPUT_STYLE + '">' +
                             '</div>' +
 
                             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
@@ -546,9 +546,9 @@ define([], function () {
             });
 
             $('#gpa-itemEvaluado').on('change', function () {
-                var itemSelec  = $(this).val();
-                var $sub       = $('#gpa-subItemEvaluado');
-                var subs       = (itemSelec && self.items[itemSelec]) ? self.items[itemSelec] : [];
+                var itemSelec = $(this).val();
+                var $sub      = $('#gpa-subItemEvaluado');
+                var subs      = (itemSelec && self.items[itemSelec]) ? self.items[itemSelec] : [];
                 if (subs.length) {
                     var opcs = subs.map(function (s) {
                         return '<option value="' + esc(s) + '">' + esc(s) + '</option>';
@@ -565,22 +565,20 @@ define([], function () {
         _guardarNuevo: function () {
             var self = this;
 
-            var asesorId  = $('#gpa-asesorEjecutorId').val();
-            var titulo    = $('#gpa-titulo').val().trim();
-            var fechaIni  = $('#gpa-fechaInicio').val();
-            var fechaFin  = $('#gpa-fechaFin').val();
-            var item      = $('#gpa-itemEvaluado').val();
-            var subItem   = $('#gpa-subItemEvaluado').val();
-            var mensaje   = $('#gpa-mensajeInicial').val().trim();
+            var titulo   = $('#gpa-titulo').val().trim();
+            var fechaIni = $('#gpa-fechaInicio').val();
+            var fechaFin = $('#gpa-fechaFin').val();
+            var item     = $('#gpa-itemEvaluado').val();
+            var subItem  = $('#gpa-subItemEvaluado').val();
+            var mensaje  = $('#gpa-mensajeInicial').val().trim();
 
             var errores = [];
-            if (!asesorId)  errores.push(self.etiquetaEjecutor);
-            if (!titulo)    errores.push('Título del Plan');
-            if (!fechaIni)  errores.push('Fecha Inicio');
-            if (!fechaFin)  errores.push('Fecha Fin');
-            if (!item)      errores.push('Ítem evaluado');
-            if (!subItem)   errores.push('Sub ítem evaluado');
-            if (!mensaje)   errores.push('Mensaje inicial');
+            if (!titulo)   errores.push('Título del Plan');
+            if (!fechaIni) errores.push('Fecha Inicio');
+            if (!fechaFin) errores.push('Fecha Fin');
+            if (!item)     errores.push('Competencia');
+            if (!subItem)  errores.push('Subcompetencia');
+            if (!mensaje)  errores.push('Plan de acción');
 
             if (errores.length) {
                 Espo.Ui.warning('Completa los campos obligatorios: ' + errores.join(', ') + '.');
@@ -592,19 +590,20 @@ define([], function () {
                 return;
             }
 
-            var asesorObj    = self.usuarios.filter(function (u) { return u.id === asesorId; })[0];
-            var asesorNombre = asesorObj ? asesorObj.name : '';
+            if (!self.oficina) {
+                Espo.Ui.warning('No se pudo determinar la oficina. Intente de nuevo.');
+                return;
+            }
 
             var data = {
                 name:                        titulo,
                 titulo:                      titulo,
                 asesorGeneradorId:           self.usuarioId,
                 rolGenerador:                self.usuarioRol,
-                asesorEjecutorId:            asesorId,
-                asesorEjecutorName:          asesorNombre,
-                rolEjecutor:                 'Asesor',
+                // La oficina evaluada se guarda en oficina_ejecutor_id y en equipo_id
+                oficinaEjecutorId:           self.oficina,
+                equipoId:                    self.oficina,
                 modulo:                      self.modulo,
-                equipoId:                    self.oficina || null,
                 fechaInicio:                 fechaIni + ' 00:00:00',
                 fechaFin:                    fechaFin + ' 23:59:59',
                 estado:                      'pendienteGDC',
@@ -671,6 +670,9 @@ define([], function () {
             var b     = this._badge(plan.estado);
             var puedeGestionar = this.esCasaNacional;
 
+            // Nombre de oficina evaluada
+            var oficinaNombre = plan.equipoName || plan.oficinaEjecutorName || '—';
+
             var chatHtml = this.chats.length === 0
                 ? '<div style="text-align:center;padding:30px;color:#999;">' +
                   '<i class="fas fa-comments" style="font-size:2em;margin-bottom:10px;display:block;"></i>Sin mensajes aún</div>'
@@ -724,8 +726,9 @@ define([], function () {
                                 '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
                                     '<span style="background:' + b.bg + ';color:' + b.color + ';padding:3px 10px;' +
                                         'border-radius:20px;font-size:0.8rem;font-weight:600;" class="gpa-estado-badge">' + b.texto + '</span>' +
+                                    // Oficina en lugar de usuario
                                     '<span style="color:rgba(255,255,255,0.9);font-size:0.85rem;">' +
-                                        '<i class="fas fa-user" style="margin-right:4px;"></i>' + esc(plan.asesorEjecutorName || '—') + '</span>' +
+                                        '<i class="fas fa-building" style="margin-right:4px;"></i>' + esc(oficinaNombre) + '</span>' +
                                     '<span style="color:rgba(255,255,255,0.9);font-size:0.85rem;">' +
                                         '<i class="fas fa-calendar" style="margin-right:4px;"></i>' +
                                         fmtFecha(plan.fechaInicio) + ' – ' + fmtFecha(plan.fechaFin) + '</span>' +
@@ -777,7 +780,7 @@ define([], function () {
             var texto = $('#gpa-chatTexto').val().trim();
             if (!texto) return;
 
-            var now     = nowISO();
+            var now         = nowISO();
             var nuevoEstado = this.esCasaNacional ? 'pendienteGDC' : 'pendienteCN';
             var rolAutor    = this.usuarioRol;
 
