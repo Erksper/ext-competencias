@@ -140,13 +140,22 @@ define([], function () {
 
         _fetchPagina: function (pagina) {
             if (this.cargandoPagina) return;
-            var self            = this;
+            var self = this;
             this.cargandoPagina = true;
             this._renderCargando();
 
+            // Asegurar que la oficina esté sincronizada con la vista actual
+            if (!this.oficina && this.view && this.view.oficinaIdParaFiltrar) {
+                this.oficina = this.view.oficinaIdParaFiltrar;
+                console.log('[DEBUG PlanesAccionManager] Oficina recuperada de la vista:', this.oficina);
+            }
+
+            console.log('[DEBUG PlanesAccionManager] _fetchPagina - oficina:', self.oficina);
+            console.log('[DEBUG PlanesAccionManager] esCasaNacional:', self.esCasaNacional);
+            console.log('[DEBUG PlanesAccionManager] esGerenteODirector:', self.esGerenteODirector);
+
             var porPagina = this.paginacion.porPagina;
 
-            // Filtrar siempre por equipoId (oficina del reporte)
             var wp = {
                 'where[0][type]':      'equals',
                 'where[0][attribute]': 'modulo',
@@ -156,20 +165,25 @@ define([], function () {
             var whereIdx = 1;
 
             if (self.oficina) {
+                console.log('[DEBUG PlanesAccionManager] Agregando filtro por oficina:', self.oficina);
                 wp['where[' + whereIdx + '][type]']      = 'equals';
                 wp['where[' + whereIdx + '][attribute]'] = 'equipoId';
                 wp['where[' + whereIdx + '][value]']     = self.oficina;
                 whereIdx++;
+            } else {
+                console.warn('[DEBUG PlanesAccionManager] No hay oficina definida, no se filtrará por equipo');
             }
 
-            // GDC solo ve planes que no están completados o cancelados
             if (!self.esCasaNacional && self.esGerenteODirector) {
+                console.log('[DEBUG PlanesAccionManager] Agregando filtro de estados visibles para GDC');
                 wp['where[' + whereIdx + '][type]']         = 'notIn';
                 wp['where[' + whereIdx + '][attribute]']    = 'estado';
                 wp['where[' + whereIdx + '][value][0]']     = 'completado';
                 wp['where[' + whereIdx + '][value][1]']     = 'cancelado';
                 whereIdx++;
             }
+
+            console.log('[DEBUG PlanesAccionManager] Parámetros de consulta:', wp);
 
             Espo.Ajax.getRequest('GesPlaAccPlanAccion', Object.assign({}, wp, { maxSize: 1, offset: 0, select: 'id' }))
                 .then(function (resp) {

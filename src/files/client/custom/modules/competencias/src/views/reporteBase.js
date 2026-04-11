@@ -774,15 +774,22 @@ define([
             else if (this.tipoReporte === 'gerentes' || this.tipoReporte === 'asesores') {
                 var teamIds   = userModel.get('teamsIds')   || [];
                 var teamNames = userModel.get('teamsNames') || {};
+                console.log('[DEBUG reporteBase] Team IDs:', teamIds);
+                console.log('[DEBUG reporteBase] Team Names:', teamNames);
+                
                 var equipoReal = teamIds.find(function (id) { return !claPattern.test(id); }) || teamIds[0];
+                console.log('[DEBUG reporteBase] Equipo real encontrado:', equipoReal);
+                
                 if (equipoReal) {
                     this.oficinaIdParaFiltrar = equipoReal;
                     this.nombreOficina        = teamNames[equipoReal] || 'Mi Oficina';
                     this.tituloReporte        = 'Reporte de ' + (this.rolObjetivo === 'gerente' ? 'Gerentes, Directores y Coordinadores' : 'Asesores') +
-                                               ' (' + this.nombreOficina + ')';
+                                            ' (' + this.nombreOficina + ')';
+                    console.log('[DEBUG reporteBase] Configurando planesManager con oficina:', equipoReal);
                     this.planesManager.actualizarConfig({ oficina: equipoReal });
                     this.buscarLogoPorOficina(equipoReal);
                 } else {
+                    console.warn('[DEBUG reporteBase] No se pudo determinar una oficina para el usuario gerente');
                     this.buscarLogoUsuarioCasaNacional();
                 }
             }
