@@ -37,6 +37,9 @@ define(['view'], function (View) {
                     '#Competencias/listaEdicion?periodoId=' + encodeURIComponent(periodoId),
                     { trigger: true }
                 );
+            },
+            'click [data-action="ajustesPeriodo"]': function () {
+                this.getRouter().navigate('#Competencias/ajustesPeriodo', { trigger: true });
             }
         },
 
@@ -256,6 +259,7 @@ define(['view'], function (View) {
             return {
                 esAdmin: this.esAdmin,
                 esCasaNacional: this.esCasaNacional,
+                esCasaNacionalOAdmin: this.esCasaNacional || this.esAdmin,
                 totalPreguntas: this.totalPreguntas,
                 sinPreguntas: (this.totalPreguntas === 0),
                 errorEntidad: (this.totalPreguntas === -1),

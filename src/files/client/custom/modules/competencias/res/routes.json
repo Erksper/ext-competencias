@@ -40,5 +40,12 @@
             "controller": "Competencias",
             "action": "listaEdicion"
         }
+    },
+    {
+        "route": "#Competencias/ajustesPeriodo",
+        "params": {
+            "controller": "Competencias",
+            "action": "ajustesPeriodo"
+        }
     }
 ]

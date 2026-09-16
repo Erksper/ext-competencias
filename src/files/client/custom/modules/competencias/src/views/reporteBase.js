@@ -14,9 +14,17 @@ define([
         template: 'competencias:reporteBase',
 
         events: {
-            'click [data-action="back"]':          function () { this.getRouter().navigate('#Competencias/reports', {trigger: true}); },
+            'click [data-action="back"]':          function () { this.volverAReportes(); },
             'click [data-action="exportarExcel"]': function () { this.exportarExcel(); },
             'click [data-action="exportarCSV"]':   function () { this.exportarCSV(); }
+        },
+
+        volverAReportes: function () {
+            var qp = [];
+            if (this.retPeriodoId) qp.push('periodoId=' + encodeURIComponent(this.retPeriodoId));
+            if (this.retCla)       qp.push('cla='       + encodeURIComponent(this.retCla));
+            if (this.retOficina)   qp.push('oficina='   + encodeURIComponent(this.retOficina));
+            this.getRouter().navigate('#Competencias/reports' + (qp.length ? '?' + qp.join('&') : ''), { trigger: true });
         },
 
         setup: function () {
@@ -26,6 +34,10 @@ define([
             this.tipoReporte = urlParams.get('tipo')      || this.options.tipo      || 'desconocido';
             this.oficinaId   = urlParams.get('oficinaId') || this.options.oficinaId || null;
             this.periodoId   = urlParams.get('periodoId') || this.options.periodoId || null;
+
+            this.retPeriodoId = urlParams.get('retPeriodoId') || this.periodoId;
+            this.retCla        = urlParams.get('retCla')        || null;
+            this.retOficina    = urlParams.get('retOficina')    || null;
 
             this.fechaInicio = null;
             this.fechaCierre = null;
@@ -300,6 +312,7 @@ define([
             html += '</table>';
             
             $container.html(html);
+            this._aplicarCabeceraFija();
         },
 
         cargarDatosReporteDetallado: function () {
@@ -671,6 +684,7 @@ define([
             html += '</table>';
             
             $container.html(html);
+            this._aplicarCabeceraFija();
         },
 
         calcularTotales: function () {
@@ -872,6 +886,59 @@ define([
             if (!this.esAsesor && !this.esReporteGeneralCasaNacional && this.usuariosData && this.usuariosData.length > 0) {
                 this.planesManager.render();
             }
+
+            if (!this._resizeCabeceraFijaHandler) {
+                var self = this;
+                this._resizeCabeceraFijaHandler = function () {
+                    clearTimeout(self._resizeCabeceraFijaTimeout);
+                    self._resizeCabeceraFijaTimeout = setTimeout(function () {
+                        self._aplicarCabeceraFija();
+                    }, 150);
+                };
+                window.addEventListener('resize', this._resizeCabeceraFijaHandler);
+            }
+        },
+
+        remove: function () {
+            if (this._resizeCabeceraFijaHandler) {
+                window.removeEventListener('resize', this._resizeCabeceraFijaHandler);
+                clearTimeout(this._resizeCabeceraFijaTimeout);
+            }
+            Dep.prototype.remove.call(this);
+        },
+
+        /**
+         * Calcula la altura real del navbar de EspoCRM y de cada fila del
+         * encabezado (categoría / subcategoría / preguntas) y asigna el
+         * "top" correspondiente a cada una para que queden fijas (sticky)
+         * mientras se hace scroll viendo la lista de evaluados.
+         */
+        _aplicarCabeceraFija: function () {
+            var $table = this.$el.find('.report-matrix');
+            if (!$table.length) return;
+
+            var navbarEl     = document.getElementById('navbar');
+            var navbarHeight = navbarEl ? navbarEl.offsetHeight : 0;
+
+            var $categoriaRow    = $table.find('thead .categoria-row').first();
+            var $subcategoriaRow = $table.find('thead .subcategoria-row').first();
+            var $preguntasRow    = $table.find('thead .preguntas-row').first();
+
+            if (!$categoriaRow.length || !$subcategoriaRow.length || !$preguntasRow.length) return;
+
+            // Reset para medir alturas naturales antes de fijar el "top"
+            $categoriaRow.add($subcategoriaRow).add($preguntasRow).find('th').css('top', '');
+
+            var alturaCategoria    = $categoriaRow[0].offsetHeight;
+            var alturaSubcategoria = $subcategoriaRow[0].offsetHeight;
+
+            var topCategoria    = navbarHeight;
+            var topSubcategoria = navbarHeight + alturaCategoria;
+            var topPreguntas    = navbarHeight + alturaCategoria + alturaSubcategoria;
+
+            $categoriaRow.find('th').css('top', topCategoria + 'px');
+            $subcategoriaRow.find('th').css('top', topSubcategoria + 'px');
+            $preguntasRow.find('th').css('top', topPreguntas + 'px');
         },
 
         cargarPlanesAccion: function () {

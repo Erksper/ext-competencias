@@ -40,6 +40,10 @@ define('competencias:controllers/competencias', ['controllers/base'], function (
             }, function (view) {
                 view.render();
             });
+        },
+
+        actionAjustesPeriodo: function () {
+            this.main('competencias:views/ajustesPeriodo', {}, view => view.render());
         }
     });
 });

@@ -1,0 +1,8 @@
+{
+    "Sincronizar Oficina Encuestas": {
+        "jobClassName": "Espo\\Modules\\Competencias\\Jobs\\SincronizarOficinaEncuestas",
+        "name": "Sincronizar Oficina Encuestas (periodo activo)",
+        "isSystem": false,
+        "scheduling": "0 */6 * * *"
+    }
+}

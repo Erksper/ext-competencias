@@ -46,8 +46,36 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 encuestasCompletas: 0, encuestasRevision: 0, encuestasIncompletas: 0
             };
 
+            this.filtrosUrl        = this.parseFiltrosUrl();
+            this.claSeleccionadaId = this.filtrosUrl.cla     || null;
+            this.oficinaSeleccionadaId = this.filtrosUrl.oficina || null;
+
             this.wait(true);
             this.cargarDatosIniciales();
+        },
+
+        parseFiltrosUrl: function () {
+            var hash = window.location.hash;
+            var filtros = { periodoId: null, cla: null, oficina: null };
+
+            if (hash && hash.indexOf('?') !== -1) {
+                var params = new URLSearchParams(hash.split('?')[1]);
+                filtros.periodoId = params.get('periodoId') || null;
+                filtros.cla       = params.get('cla')       || null;
+                filtros.oficina   = params.get('oficina')   || null;
+            }
+
+            return filtros;
+        },
+
+        actualizarUrlFiltros: function () {
+            var qp = [];
+            if (this.periodoSeleccionadoId) qp.push('periodoId=' + encodeURIComponent(this.periodoSeleccionadoId));
+            if (this.esCasaNacional) {
+                if (this.claSeleccionadaId)     qp.push('cla='     + encodeURIComponent(this.claSeleccionadaId));
+                if (this.oficinaSeleccionadaId) qp.push('oficina=' + encodeURIComponent(this.oficinaSeleccionadaId));
+            }
+            this.getRouter().navigate('#Competencias/reports' + (qp.length ? '?' + qp.join('&') : ''), { trigger: false });
         },
 
         cargarDatosIniciales: function () {
@@ -89,8 +117,11 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                     }
                 }
 
+                var hoy = new Date().toISOString().split('T')[0];
+
                 self.periodos = periodosCollection.models
                     .filter(function (m) { return m.get('fechaInicio') && m.get('fechaCierre'); })
+                    .filter(function (m) { return m.get('fechaCierre') < hoy; })
                     .map(function (m) {
                         return {
                             id:          m.id,
@@ -108,12 +139,13 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                     return;
                 }
 
-                if (self.esAsesor && !self.esCasaNacional && !self.esGerenteODirector) {
-                    self.periodoSeleccionadoId = self.periodos[0].id;
+                var periodoUrlValido = self.filtrosUrl.periodoId &&
+                    self.periodos.some(function (p) { return p.id === self.filtrosUrl.periodoId; });
+
+                if (periodoUrlValido && !(self.esAsesor && !self.esCasaNacional && !self.esGerenteODirector)) {
+                    self.periodoSeleccionadoId = self.filtrosUrl.periodoId;
                 } else {
-                    var hoy    = new Date().toISOString().split('T')[0];
-                    var activo = self.periodos.find(function (p) { return hoy >= p.fechaInicio && hoy <= p.fechaCierre; });
-                    self.periodoSeleccionadoId = (activo || self.periodos[0]).id;
+                    self.periodoSeleccionadoId = self.periodos[0].id;
                 }
                 self.actualizarPeriodoSeleccionado();
 
@@ -138,6 +170,7 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             this.periodoMostrado    = this.getDateTime().toDisplayDate(periodo.fechaInicio) + ' al ' + this.getDateTime().toDisplayDate(periodo.fechaCierre);
             this.fechaInicioPeriodo = periodo.fechaInicio;
             this.fechaCierrePeriodo = periodo.fechaCierre;
+            this.actualizarUrlFiltros();
             this.cargarDatosReportes(periodo.fechaInicio, periodo.fechaCierre);
         },
 
@@ -305,6 +338,11 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                             $filtroCla.append('<option value="' + cla.id + '">' + cla.name + '</option>');
                         });
                         $filtroCla.prop('disabled', false);
+
+                        if (self.claSeleccionadaId && $filtroCla.find('option[value="' + self.claSeleccionadaId + '"]').length) {
+                            $filtroCla.val(self.claSeleccionadaId);
+                            self._onClaChange(self.claSeleccionadaId, self.oficinaSeleccionadaId);
+                        }
                     } else {
                         $filtroCla.append('<option value="">— Sin CLAs disponibles —</option>');
                     }
@@ -314,14 +352,19 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                 });
 
             $filtroCla.on('change', function () {
-                self._onClaChange($(this).val());
+                self.claSeleccionadaId     = $(this).val() || null;
+                self.oficinaSeleccionadaId = null;
+                self.actualizarUrlFiltros();
+                self._onClaChange(self.claSeleccionadaId);
             });
             $filtroOfi.on('change', function () {
-                self.actualizarReportesOficinaById($(this).val());
+                self.oficinaSeleccionadaId = $(this).val() || null;
+                self.actualizarUrlFiltros();
+                self.actualizarReportesOficinaById(self.oficinaSeleccionadaId);
             });
         },
 
-        _onClaChange: function (claId) {
+        _onClaChange: function (claId, oficinaAPreseleccionar) {
             var self       = this;
             var $filtroOfi = this.$el.find('#filtro-oficina-reportes');
 
@@ -344,6 +387,12 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
                             $filtroOfi.append('<option value="' + o.id + '">' + o.name + '</option>');
                         });
                         $filtroOfi.prop('disabled', false);
+
+                        if (oficinaAPreseleccionar && $filtroOfi.find('option[value="' + oficinaAPreseleccionar + '"]').length) {
+                            $filtroOfi.val(oficinaAPreseleccionar);
+                            self.oficinaSeleccionadaId = oficinaAPreseleccionar;
+                            self.actualizarReportesOficinaById(oficinaAPreseleccionar);
+                        }
                     } else {
                         $filtroOfi.append('<option value="">— Sin oficinas en este CLA —</option>');
                         $filtroOfi.prop('disabled', true);
@@ -416,6 +465,15 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             });
         },
 
+        _construirQueryRetorno: function () {
+            var qp = ['retPeriodoId=' + encodeURIComponent(this.periodoSeleccionadoId || '')];
+            if (this.esCasaNacional) {
+                if (this.claSeleccionadaId)     qp.push('retCla='     + encodeURIComponent(this.claSeleccionadaId));
+                if (this.oficinaSeleccionadaId) qp.push('retOficina=' + encodeURIComponent(this.oficinaSeleccionadaId));
+            }
+            return qp.join('&');
+        },
+
         verReportePorOficina: function (tipo) {
             var oficina = this.$el.find('#filtro-oficina-reportes').val();
             if (!oficina) {
@@ -424,7 +482,8 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
             }
             var periodoId = this.periodoSeleccionadoId || this.periodos[0].id;
             this.getRouter().navigate(
-                '#Competencias/reporteBase?tipo=' + tipo + '&oficinaId=' + oficina + '&periodoId=' + periodoId,
+                '#Competencias/reporteBase?tipo=' + tipo + '&oficinaId=' + oficina + '&periodoId=' + periodoId +
+                '&' + this._construirQueryRetorno(),
                 { trigger: true }
             );
         },
@@ -432,7 +491,8 @@ define(['view', 'jquery', 'lib!selectize'], function (View, $) {
         verReporteGeneral: function (tipo) {
             var periodoId = this.periodoSeleccionadoId || this.periodos[0].id;
             this.getRouter().navigate(
-                '#Competencias/reporteBase?tipo=' + tipo + '&periodoId=' + periodoId,
+                '#Competencias/reporteBase?tipo=' + tipo + '&periodoId=' + periodoId +
+                '&' + this._construirQueryRetorno(),
                 { trigger: true }
             );
         },

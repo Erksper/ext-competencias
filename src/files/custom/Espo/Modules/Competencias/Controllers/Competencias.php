@@ -906,7 +906,10 @@ class Competencias extends Record
             $claId = $request->get('claId');
             if (!$claId) return ['success' => false, 'error' => 'ID de CLA no proporcionado'];
             $pdo = $this->getEntityManager()->getPDO();
-            $sqlUsuarios = "SELECT DISTINCT user_id FROM team_user WHERE team_id = :claId AND deleted = 0";
+            $sqlUsuarios = "SELECT DISTINCT tu.user_id FROM team_user tu
+                            INNER JOIN user u ON u.id = tu.user_id
+                            WHERE tu.team_id = :claId AND tu.deleted = 0
+                            AND u.deleted = 0 AND u.is_active = 1";
             $sthUsuarios = $pdo->prepare($sqlUsuarios);
             $sthUsuarios->bindValue(':claId', $claId);
             $sthUsuarios->execute();
@@ -938,6 +941,78 @@ class Competencias extends Record
             $clas = [];
             while ($row = $sth->fetch(\PDO::FETCH_ASSOC)) $clas[] = ['id' => $row['id'], 'name' => $row['name']];
             return ['success' => true, 'data' => $clas];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Solo Casa Nacional o administradores pueden gestionar los ajustes de período
+     * (ajustar la fecha de cierre del período activo, crear evaluaciones para
+     * períodos anteriores, etc).
+     */
+    private function _puedeGestionarPeriodos(): bool
+    {
+        $user = $this->getUser();
+        if ($user->isAdmin()) return true;
+
+        $pdo = $this->getEntityManager()->getPDO();
+        $sql = "SELECT 1 FROM role_user ru INNER JOIN role r ON ru.role_id = r.id AND r.deleted = 0
+                WHERE ru.user_id = ? AND ru.deleted = 0 AND LOWER(r.name) = 'casa nacional' LIMIT 1";
+        $sth = $pdo->prepare($sql);
+        $sth->execute([$user->get('id')]);
+        return (bool) $sth->fetchColumn();
+    }
+
+    public function getActionActualizarFechaCierre($params, $data, $request)
+    {
+        try {
+            if (!$this->_puedeGestionarPeriodos()) {
+                return ['success' => false, 'error' => 'No tiene permisos para realizar esta acción'];
+            }
+
+            $periodoId        = $request->get('periodoId');
+            $nuevaFechaCierre = $request->get('nuevaFechaCierre');
+
+            if (!$periodoId || !$nuevaFechaCierre) {
+                return ['success' => false, 'error' => 'Faltan parámetros requeridos'];
+            }
+
+            $entityManager = $this->getEntityManager();
+            $periodo = $entityManager->getEntity('Competencias', $periodoId);
+            if (!$periodo) {
+                return ['success' => false, 'error' => 'Período no encontrado'];
+            }
+
+            $fechaInicio       = $periodo->get('fechaInicio');
+            $fechaCierreActual = $periodo->get('fechaCierre');
+            $hoy               = date('Y-m-d');
+
+            // Solo se puede ajustar el período que está activo actualmente
+            if (!$fechaInicio || !$fechaCierreActual || $hoy < $fechaInicio || $hoy > $fechaCierreActual) {
+                return ['success' => false, 'error' => 'El período seleccionado no está actualmente activo'];
+            }
+
+            $manana = date('Y-m-d', strtotime('+1 day'));
+            if ($nuevaFechaCierre < $manana) {
+                return ['success' => false, 'error' => 'La nueva fecha de cierre debe ser posterior al día de hoy'];
+            }
+
+            // La fecha de cierre debe permanecer dentro del mismo año en que inició el período
+            $anioInicio     = substr($fechaInicio, 0, 4);
+            $anioNuevaFecha = substr($nuevaFechaCierre, 0, 4);
+            if ($anioNuevaFecha !== $anioInicio) {
+                return ['success' => false, 'error' => 'La nueva fecha de cierre debe estar dentro del año ' . $anioInicio];
+            }
+
+            $periodo->set('fechaCierre', $nuevaFechaCierre);
+            $entityManager->saveEntity($periodo);
+
+            return ['success' => true, 'data' => [
+                'id' => $periodo->getId(),
+                'fechaInicio' => $fechaInicio,
+                'fechaCierre' => $nuevaFechaCierre
+            ]];
         } catch (\Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }

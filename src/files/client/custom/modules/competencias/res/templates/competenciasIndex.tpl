@@ -63,6 +63,13 @@
                         </button>
                         {{/if}}
 
+                        {{#if esCasaNacionalOAdmin}}
+                        <button class="ci-btn ci-btn-primary ci-btn-lg ci-btn-block"
+                                data-action="ajustesPeriodo">
+                            <i class="fas fa-sliders-h"></i> Ajustes de Período
+                        </button>
+                        {{/if}}
+
                         <button class="ci-btn ci-btn-primary ci-btn-lg ci-btn-block {{#if sinPreguntas}}ci-btn-disabled{{/if}}"
                                 data-action="viewReports">
                             <i class="fas fa-chart-bar"></i> Reportes

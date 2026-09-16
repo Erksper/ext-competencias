@@ -476,6 +476,30 @@
     min-width: 1200px;
 }
 
+/*
+ * Cabecera fija (sticky) de la tabla de reportes.
+ * El valor exacto de "top" de cada fila (navbar + filas anteriores) se
+ * calcula y asigna dinámicamente en JS (ver _aplicarCabeceraFija en
+ * reporteBase.js), porque la altura real de cada fila depende del
+ * contenido (nombres de categorías, preguntas, ancho de pantalla, etc).
+ */
+.report-matrix thead .categoria-row th,
+.report-matrix thead .subcategoria-row th,
+.report-matrix thead .preguntas-row th {
+    position: sticky;
+}
+
+.report-matrix thead .categoria-row th    { z-index: 6; }
+.report-matrix thead .subcategoria-row th { z-index: 5; }
+.report-matrix thead .preguntas-row th    { z-index: 4; }
+
+/* th-main-header y th-sumatoria tienen rowspan=3: solo necesitan el
+   top de la primera fila, pero deben quedar por encima del resto. */
+.report-matrix thead .th-main-header,
+.report-matrix thead .th-sumatoria {
+    z-index: 7;
+}
+
 .report-matrix thead .categoria-row th {
     background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
     color: #fff;

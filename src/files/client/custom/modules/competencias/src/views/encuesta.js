@@ -44,7 +44,7 @@ define(['view'], function (View) {
                         this.getRouter().navigate(url, {trigger: true});
                     }
                 } 
-                else if (this.from === 'seleccion' && this.retornoUrl) {
+                else if ((this.from === 'seleccion' || this.from === 'ajustePeriodo') && this.retornoUrl) {
                     var url = this.retornoUrl;
                     if (url.startsWith('#')) {
                         this.getRouter().navigate(url.substring(1), {trigger: true});
@@ -88,6 +88,8 @@ define(['view'], function (View) {
             this.fromListaEdicion = false;
             this.encuestaIdUrl = null;
             this.retornoUrl = null;
+            this.periodoIdAdmin = null;
+            this.fechaCreacionForzada = null;
             
             this.parseURLParams();
 
@@ -114,6 +116,7 @@ define(['view'], function (View) {
             this.from = params.from || 'normal';
             this.fromListaEdicion = params.from === 'listaEdicion';
             this.retornoUrl = params.retorno ? decodeURIComponent(params.retorno) : null;
+            this.periodoIdAdmin = params.periodoId || null;
             
             if (params.data) {
                 var dataString = decodeURIComponent(params.data);
@@ -169,6 +172,46 @@ define(['view'], function (View) {
             this.getModelFactory().create('User', function (userModel) {
                 userModel.id = this.getUser().id;
                 userModel.fetch({ relations: { roles: true } }).then(function () {
+                    this.evaluadorRoles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
+                    this.esCasaNacional = this.evaluadorRoles.includes('casa nacional');
+
+                    if (this.periodoIdAdmin) {
+                        // Casa Nacional/Admin creando una evaluación para un período anterior específico.
+                        // Se omite la validación de "período activo": el período lo elige Casa Nacional
+                        // desde la página de Ajustes de Período, y esta encuesta solo será accesible
+                        // por Casa Nacional una vez creada.
+                        if (!this.esCasaNacional) {
+                            this.accesoDenegado = true;
+                            this.reRender();
+                            this.wait(false);
+                            return;
+                        }
+
+                        this.getModelFactory().create('Competencias', function (periodoModel) {
+                            periodoModel.id = this.periodoIdAdmin;
+                            periodoModel.fetch().then(function () {
+                                this.fechaInicio = periodoModel.get('fechaInicio');
+                                this.fechaCierre = periodoModel.get('fechaCierre');
+
+                                if (!this.fechaInicio || !this.fechaCierre) {
+                                    Espo.Ui.error('El período seleccionado no es válido.');
+                                    this.wait(false);
+                                    return;
+                                }
+
+                                // La encuesta debe quedar registrada dentro del período seleccionado,
+                                // no en la fecha real de creación (que caería en el período activo actual).
+                                this.fechaCreacionForzada = this.fechaCierre + ' 12:00:00';
+
+                                this.cargarPreguntas();
+                            }.bind(this)).catch(function () {
+                                Espo.Ui.error('Error al cargar el período seleccionado.');
+                                this.wait(false);
+                            }.bind(this));
+                        }.bind(this));
+                        return;
+                    }
+
                     this.getCollectionFactory().create('Competencias', function (competenciaCollection) {
                         competenciaCollection.fetch({ 
                             data: { 
@@ -177,8 +220,6 @@ define(['view'], function (View) {
                                 order: 'desc'
                             } 
                         }).then(function () {
-                            this.evaluadorRoles = Object.values(userModel.get('rolesNames') || {}).map(r => r.toLowerCase());
-                            this.esCasaNacional = this.evaluadorRoles.includes('casa nacional');
                             const puedeAcceder = this.esCasaNacional || 
                                 this.evaluadorRoles.includes('gerente') || 
                                 this.evaluadorRoles.includes('director') || 
@@ -914,7 +955,7 @@ define(['view'], function (View) {
                             equipoId: this.teamId,
                             usuarioEvaluadoId: this.userId,
                             usuarioEvaluadorId: this.getUser().id,
-                            fechaCreacion: now,
+                            fechaCreacion: this.fechaCreacionForzada || now,
                         });
                     }
                     
