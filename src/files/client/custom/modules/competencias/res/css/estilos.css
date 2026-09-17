@@ -432,6 +432,15 @@
     transform: translateY(-1px);
 }
 
+.btn-exportar:focus,
+.btn-exportar:active,
+.btn-exportar.active {
+    background: var(--color-primary-dark) !important;
+    color: #fff !important;
+    outline: none !important;
+    box-shadow: var(--shadow-primary) !important;
+}
+
 .export-group {
     display: flex;
     gap: 10px;
@@ -1585,6 +1594,32 @@
     box-shadow: 0 4px 12px rgba(184,162,121,0.3);
 }
 
+/* Bootstrap trae su propio .btn-primary azul con estados :focus/:active
+   con mayor prioridad de carga, que pisaba estos botones al hacer clic
+   o dejarlos enfocados. Se fuerza aquí a que se mantengan siempre en
+   los tonos dorados/marrones del tema, nunca en azul. */
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.btn-primary:not(:disabled):active,
+.btn-primary:focus:active,
+.encuesta-btn-primary:focus,
+.encuesta-btn-primary:active,
+.encuesta-btn-primary.active,
+.ci-btn-primary:focus,
+.ci-btn-primary:active,
+.ci-btn-primary.active,
+.ci-btn-primary:not(:disabled):active,
+.rep-btn-primary:focus,
+.rep-btn-primary:active,
+.rep-btn-primary.active {
+    background: var(--color-primary-dark) !important;
+    border-color: var(--color-primary-dark) !important;
+    color: #fff !important;
+    outline: none !important;
+    box-shadow: 0 4px 12px rgba(184,162,121,0.3) !important;
+}
+
 .btn-secondary,
 .encuesta-btn-secondary,
 .ci-btn-secondary,
@@ -1614,6 +1649,24 @@
     background: var(--color-secondary-dark);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(54,52,56,0.3);
+}
+
+.btn-secondary:focus,
+.btn-secondary:active,
+.btn-secondary.active,
+.encuesta-btn-secondary:focus,
+.encuesta-btn-secondary:active,
+.ci-btn-secondary:focus,
+.ci-btn-secondary:active,
+.rep-btn-secondary:focus,
+.rep-btn-secondary:active,
+.btn-volver:focus,
+.btn-volver:active {
+    background: var(--color-secondary-dark) !important;
+    border-color: var(--color-secondary-dark) !important;
+    color: #fff !important;
+    outline: none !important;
+    box-shadow: 0 4px 12px rgba(54,52,56,0.3) !important;
 }
 
 .btn-success,
