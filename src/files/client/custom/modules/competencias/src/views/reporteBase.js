@@ -917,9 +917,6 @@ define([
             var $table = this.$el.find('.report-matrix');
             if (!$table.length) return;
 
-            var navbarEl     = document.getElementById('navbar');
-            var navbarHeight = navbarEl ? navbarEl.offsetHeight : 0;
-
             var $categoriaRow    = $table.find('thead .categoria-row').first();
             var $subcategoriaRow = $table.find('thead .subcategoria-row').first();
             var $preguntasRow    = $table.find('thead .preguntas-row').first();
@@ -932,9 +929,11 @@ define([
             var alturaCategoria    = $categoriaRow[0].offsetHeight;
             var alturaSubcategoria = $subcategoriaRow[0].offsetHeight;
 
-            var topCategoria    = navbarHeight;
-            var topSubcategoria = navbarHeight + alturaCategoria;
-            var topPreguntas    = navbarHeight + alturaCategoria + alturaSubcategoria;
+            // El sticky es relativo al scroll interno de .reporte-matrix-scroll
+            // (tiene max-height + overflow-y:auto propios), no a la página.
+            var topCategoria    = 0;
+            var topSubcategoria = alturaCategoria;
+            var topPreguntas    = alturaCategoria + alturaSubcategoria;
 
             $categoriaRow.find('th').css('top', topCategoria + 'px');
             $subcategoriaRow.find('th').css('top', topSubcategoria + 'px');

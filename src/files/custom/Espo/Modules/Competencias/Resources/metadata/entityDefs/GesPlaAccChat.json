@@ -41,6 +41,14 @@
         "rolAutor": {
             "type": "varchar",
             "maxLength": 100
+        },
+        "esBorrador": {
+            "type": "bool",
+            "default": false
+        },
+        "editado": {
+            "type": "bool",
+            "default": false
         }
     },
     "links": {

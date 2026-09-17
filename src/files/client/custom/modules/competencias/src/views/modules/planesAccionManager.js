@@ -46,16 +46,23 @@ define([], function () {
         });
     }
 
-    function buildMensajeHtml(msg, miId) {
-        var mio       = msg.autorId === miId;
-        var bgAvatar  = mio ? '#B8A279' : '#2C3E50';
-        var bgBurbuja = mio ? '#f5f0e8' : '#f0f4f8';
-        var border    = mio ? '#e0d6c4' : '#dce4ed';
-        var radius    = mio ? '12px 12px 4px 12px' : '12px 12px 12px 4px';
-        var dir       = mio ? 'row-reverse' : 'row';
-        var align     = mio ? 'right' : 'left';
-        var ini       = ((msg.autorNombre || msg.rolAutor || '?')[0] || '?').toUpperCase();
-        var fecha     = fmtFechaHora(msg.fechaCreacion || msg.createdAt);
+    function buildMensajeHtml(msg, miId, puedeEditarPropios) {
+        var mio        = msg.autorId === miId;
+        var bgAvatar   = mio ? '#B8A279' : '#2C3E50';
+        var bgBurbuja  = mio ? '#f5f0e8' : '#f0f4f8';
+        var border     = mio ? '#e0d6c4' : '#dce4ed';
+        var radius     = mio ? '12px 12px 4px 12px' : '12px 12px 12px 4px';
+        var dir        = mio ? 'row-reverse' : 'row';
+        var align      = mio ? 'right' : 'left';
+        var ini        = ((msg.autorNombre || msg.rolAutor || '?')[0] || '?').toUpperCase();
+        var fecha      = fmtFechaHora(msg.fechaCreacion || msg.createdAt);
+        var puedeEditar = mio && puedeEditarPropios;
+
+        var botonEditar = puedeEditar
+            ? '<button class="gpa-btn-editar-msg" data-msg-id="' + esc(msg.id) + '" title="Editar mensaje" ' +
+              'style="background:none;border:none;color:#999;cursor:pointer;font-size:11px;padding:0 4px;">' +
+              '<i class="fas fa-pencil-alt"></i></button>'
+            : '';
 
         return '<div style="display:flex;flex-direction:' + dir + ';gap:8px;margin-bottom:12px;align-items:flex-end;">' +
             '<div style="width:28px;height:28px;background:' + bgAvatar + ';border-radius:50%;display:flex;' +
@@ -64,8 +71,10 @@ define([], function () {
                 '<div style="background:' + bgBurbuja + ';border-radius:' + radius + ';padding:10px 14px;border:1px solid ' + border + ';">' +
                     '<p style="margin:0;font-size:14px;color:#333;line-height:1.5;">' + esc(msg.texto) + '</p>' +
                 '</div>' +
-                '<div style="font-size:11px;color:#999;margin-top:3px;text-align:' + align + ';">' +
-                    esc(msg.rolAutor || '') + ' · ' + esc(fecha) +
+                '<div style="font-size:11px;color:#999;margin-top:3px;text-align:' + align + ';display:flex;gap:6px;align-items:center;' +
+                    (mio ? 'justify-content:flex-end;' : '') + '">' +
+                    '<span>' + esc(msg.rolAutor || '') + ' · ' + esc(fecha) + (msg.editado ? ' · <em>editado</em>' : '') + '</span>' +
+                    botonEditar +
                 '</div>' +
             '</div>' +
         '</div>';
@@ -657,7 +666,10 @@ define([], function () {
         _abrirModalVer: function (planId) {
             var self = this;
             this._cerrarModal();
-            this.planActualId = planId;
+            this.planActualId     = planId;
+            this.miBorradorId     = null;
+            this.miBorradorTexto  = '';
+            this.editandoMensajeId = null;
 
             Promise.all([
                 Espo.Ajax.getRequest('GesPlaAccPlanAccion/' + planId),
@@ -671,7 +683,18 @@ define([], function () {
                 })
             ]).then(function (results) {
                 self.planActualData = results[0];
-                self.chats          = results[1].list || [];
+
+                var todos = results[1].list || [];
+                self.chats = todos.filter(function (m) { return !m.esBorrador; });
+
+                var miBorrador = todos.find(function (m) {
+                    return m.esBorrador && m.autorId === self.usuarioId;
+                });
+                if (miBorrador) {
+                    self.miBorradorId    = miBorrador.id;
+                    self.miBorradorTexto = miBorrador.texto || '';
+                }
+
                 self._renderModalVer();
             }).catch(function () {
                 Espo.Ui.error('Error al cargar el plan de acción.');
@@ -690,7 +713,7 @@ define([], function () {
             var chatHtml = this.chats.length === 0
                 ? '<div style="text-align:center;padding:30px;color:#999;">' +
                   '<i class="fas fa-comments" style="font-size:2em;margin-bottom:10px;display:block;"></i>Sin mensajes aún</div>'
-                : this.chats.map(function (msg) { return buildMensajeHtml(msg, self.usuarioId); }).join('');
+                : this.chats.map(function (msg) { return buildMensajeHtml(msg, self.usuarioId, self.esCasaNacional); }).join('');
 
             var botonesEstado = '';
             if (puedeGestionar && plan.estado !== 'completado' && plan.estado !== 'cancelado') {
@@ -707,12 +730,24 @@ define([], function () {
             }
 
             var mostrarInput = plan.estado !== 'completado' && plan.estado !== 'cancelado';
+            var avisoBorrador = (mostrarInput && this.miBorradorId)
+                ? '<div id="gpa-aviso-borrador" style="font-size:12px;color:#B8A279;margin-bottom:6px;">' +
+                  '<i class="fas fa-save" style="margin-right:4px;"></i>Tenías un borrador guardado, se cargó aquí.</div>'
+                : '';
             var inputChat = mostrarInput
-                ? '<div style="display:flex;gap:10px;align-items:flex-end;">' +
+                ? avisoBorrador +
+                  '<div style="display:flex;gap:10px;align-items:flex-end;">' +
                   '<textarea id="gpa-chatTexto" rows="2" placeholder="Escribe un mensaje... (Enter para enviar)" ' +
-                  'style="flex:1;border:2px solid #e0e0e0;border-radius:8px;padding:10px 12px;font-size:14px;resize:none;"></textarea>' +
-                  '<button id="gpa-btn-enviar" style="padding:10px 16px;background:#B8A279;color:white;border:none;' +
+                  'style="flex:1;border:2px solid #e0e0e0;border-radius:8px;padding:10px 12px;font-size:14px;resize:none;">' +
+                  esc(this.miBorradorTexto) + '</textarea>' +
+                  '<button id="gpa-btn-borrador" title="Guardar como borrador" style="padding:10px 14px;background:#e9e4da;color:#7a6a4d;border:none;' +
+                  'border-radius:8px;font-weight:600;cursor:pointer;"><i class="fas fa-save"></i></button>' +
+                  '<button id="gpa-btn-enviar" title="Enviar" style="padding:10px 16px;background:#B8A279;color:white;border:none;' +
                   'border-radius:8px;font-weight:600;cursor:pointer;"><i class="fas fa-paper-plane"></i></button>' +
+                  '</div>' +
+                  '<div id="gpa-edicion-aviso" style="display:none;font-size:12px;color:#856404;margin-top:6px;">' +
+                  '<i class="fas fa-pencil-alt" style="margin-right:4px;"></i>Editando un mensaje enviado. ' +
+                  '<a href="javascript:void(0)" id="gpa-btn-cancelar-edicion" style="color:#856404;text-decoration:underline;">Cancelar</a>' +
                   '</div>'
                 : '<div style="text-align:center;padding:12px;background:#f8f9fa;border-radius:8px;color:#888;font-size:14px;">' +
                   '<i class="fas fa-lock" style="margin-right:6px;"></i>Plan ' + (plan.estado === 'completado' ? 'completado' : 'cancelado') + '. No se pueden agregar mensajes.</div>';
@@ -787,6 +822,15 @@ define([], function () {
                     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); self._enviarMensaje(); }
                 });
             }
+            if ($('#gpa-btn-borrador').length) {
+                $('#gpa-btn-borrador').on('click', function () { self._guardarBorrador(); });
+            }
+            $('.gpa-btn-editar-msg').on('click', function () {
+                self._iniciarEdicion($(this).data('msg-id'));
+            });
+            $('#gpa-btn-cancelar-edicion').on('click', function () {
+                self._cancelarEdicion();
+            });
         },
 
         _enviarMensaje: function () {
@@ -794,20 +838,55 @@ define([], function () {
             var texto = $('#gpa-chatTexto').val().trim();
             if (!texto) return;
 
+            // Modo edición: Casa Nacional corrigiendo un mensaje ya enviado.
+            // Solo se actualiza el texto, no se toca el estado del plan ni la fecha.
+            if (this.editandoMensajeId) {
+                var idEditar = this.editandoMensajeId;
+                this.view.getModelFactory().create('GesPlaAccChat', function (model) {
+                    model.id = idEditar;
+                    model.set({ texto: texto, editado: true });
+                    model.save().then(function () {
+                        var msg = self.chats.find(function (m) { return m.id === idEditar; });
+                        if (msg) { msg.texto = texto; msg.editado = true; }
+
+                        self.editandoMensajeId = null;
+                        $('#gpa-chatTexto').val('');
+                        $('#gpa-edicion-aviso').hide();
+                        $('#gpa-btn-enviar').attr('title', 'Enviar').html('<i class="fas fa-paper-plane"></i>');
+                        if ($('#gpa-btn-borrador').length) $('#gpa-btn-borrador').show();
+
+                        var $chat = $('#gpa-chat-area');
+                        $chat.html(self.chats.map(function (m) { return buildMensajeHtml(m, self.usuarioId, self.esCasaNacional); }).join(''));
+
+                        Espo.Ui.success('Mensaje actualizado.');
+                    }).catch(function () { Espo.Ui.error('Error al actualizar el mensaje.'); });
+                });
+                return;
+            }
+
             var now         = nowISO();
             var nuevoEstado = this.esCasaNacional ? 'pendienteGDC' : 'pendienteCN';
             var rolAutor    = this.usuarioRol;
 
+            // Si había un borrador guardado, se convierte en el mensaje final
+            // (se actualiza el mismo registro) en vez de crear uno nuevo.
+            var idBorrador = this.miBorradorId;
+
             this.view.getModelFactory().create('GesPlaAccChat', function (model) {
+                if (idBorrador) model.id = idBorrador;
                 model.set({
                     name:          'Chat ' + self.planActualId,
                     planAccionId:  self.planActualId,
                     texto:         texto,
                     fechaCreacion: now,
                     autorId:       self.usuarioId,
-                    rolAutor:      rolAutor
+                    rolAutor:      rolAutor,
+                    esBorrador:    false
                 });
                 model.save().then(function () {
+                    self.miBorradorId    = null;
+                    self.miBorradorTexto = '';
+
                     self.view.getModelFactory().create('GesPlaAccPlanAccion', function (planModel) {
                         planModel.id = self.planActualId;
                         planModel.fetch().then(function () {
@@ -825,6 +904,7 @@ define([], function () {
                         .css({ background: b.bg, color: b.color }).text(b.texto);
 
                     self.chats.push({
+                        id:            model.id,
                         autorId:       self.usuarioId,
                         autorNombre:   self.usuarioNombre,
                         rolAutor:      rolAutor,
@@ -832,12 +912,81 @@ define([], function () {
                         fechaCreacion: now
                     });
                     $('#gpa-chatTexto').val('');
+                    $('#gpa-aviso-borrador').remove();
                     var $chat = $('#gpa-chat-area');
-                    $chat.html(self.chats.map(function (msg) { return buildMensajeHtml(msg, self.usuarioId); }).join(''));
+                    $chat.html(self.chats.map(function (msg) { return buildMensajeHtml(msg, self.usuarioId, self.esCasaNacional); }).join(''));
                     $chat.scrollTop($chat[0].scrollHeight);
 
                 }).catch(function () { Espo.Ui.error('Error al enviar el mensaje.'); });
             });
+        },
+
+        _guardarBorrador: function () {
+            var self  = this;
+            var texto = $('#gpa-chatTexto').val().trim();
+
+            if (this.editandoMensajeId) return; // no aplica mientras se edita un mensaje ya enviado
+
+            if (!texto) {
+                if (self.miBorradorId) self._eliminarBorrador();
+                return;
+            }
+
+            var datos = {
+                name:          'Borrador ' + self.planActualId,
+                planAccionId:  self.planActualId,
+                texto:         texto,
+                fechaCreacion: nowISO(),
+                autorId:       self.usuarioId,
+                rolAutor:      self.usuarioRol,
+                esBorrador:    true
+            };
+
+            this.view.getModelFactory().create('GesPlaAccChat', function (model) {
+                if (self.miBorradorId) model.id = self.miBorradorId;
+                model.set(datos);
+                model.save().then(function () {
+                    self.miBorradorId    = model.id;
+                    self.miBorradorTexto = texto;
+                    Espo.Ui.success('Borrador guardado. Puedes continuar más tarde.');
+                }).catch(function () { Espo.Ui.error('Error al guardar el borrador.'); });
+            });
+        },
+
+        _eliminarBorrador: function () {
+            var self = this;
+            if (!self.miBorradorId) return;
+
+            this.view.getModelFactory().create('GesPlaAccChat', function (model) {
+                model.id = self.miBorradorId;
+                model.destroy().then(function () {
+                    self.miBorradorId    = null;
+                    self.miBorradorTexto = '';
+                    $('#gpa-aviso-borrador').remove();
+                }).catch(function () { Espo.Ui.error('Error al eliminar el borrador.'); });
+            });
+        },
+
+        _iniciarEdicion: function (msgId) {
+            var self = this;
+            if (!this.esCasaNacional) return;
+
+            var msg = this.chats.find(function (m) { return m.id === msgId; });
+            if (!msg || msg.autorId !== this.usuarioId) return;
+
+            this.editandoMensajeId = msgId;
+            $('#gpa-chatTexto').val(msg.texto).focus();
+            $('#gpa-edicion-aviso').show();
+            $('#gpa-btn-enviar').attr('title', 'Guardar cambios').html('<i class="fas fa-check"></i>');
+            if ($('#gpa-btn-borrador').length) $('#gpa-btn-borrador').hide();
+        },
+
+        _cancelarEdicion: function () {
+            this.editandoMensajeId = null;
+            $('#gpa-chatTexto').val(this.miBorradorTexto || '');
+            $('#gpa-edicion-aviso').hide();
+            $('#gpa-btn-enviar').attr('title', 'Enviar').html('<i class="fas fa-paper-plane"></i>');
+            if ($('#gpa-btn-borrador').length) $('#gpa-btn-borrador').show();
         },
 
         _cambiarEstado: function (nuevoEstado) {

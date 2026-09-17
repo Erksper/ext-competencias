@@ -460,14 +460,24 @@
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-card);
     border: 1px solid var(--color-gray-light);
-    overflow: hidden;
     margin-bottom: 20px;
 }
 
 .reporte-matrix-scroll {
     overflow-x: auto;
+    overflow-y: auto;
+    max-height: 90vh;
     -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-xl);
 }
+
+/* Como el wrapper ya no recorta con overflow:hidden (eso rompía el
+   sticky del encabezado), redondeamos directamente las esquinas de la
+   tabla para conservar el mismo aspecto visual. */
+.report-matrix thead tr:first-child th:first-child { border-top-left-radius: var(--radius-xl); }
+.report-matrix thead tr:first-child th:last-child  { border-top-right-radius: var(--radius-xl); }
+.report-matrix tbody tr:last-child td:first-child   { border-bottom-left-radius: var(--radius-xl); }
+.report-matrix tbody tr:last-child td:last-child    { border-bottom-right-radius: var(--radius-xl); }
 
 .report-matrix {
     width: 100%;
